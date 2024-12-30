@@ -161,12 +161,9 @@ def generate_random_offset_trajectory(base_trajectory, interval_ticks):
                 random.uniform(-offset, offset)
             ]
 
-    # tck, u = splprep([base_points[:, 0] + offsets[:, 0],
-    #                   base_points[:, 1],
-    #                   base_points[:, 2] + offsets[:, 2]], s=1)
-    tck = interp.splprep([base_points[:, 0] + offsets[:, 0],
-                          base_points[:, 1],
-                          base_points[:, 2] + offsets[:, 2]], s=1)
+    tck, u = interp.splprep([base_points[:, 0] + offsets[:, 0],
+                             base_points[:, 1],
+                             base_points[:, 2] + offsets[:, 2]], s=1)
     u_fine = np.linspace(0, 1, num_base_points)
     interpolated_points = interp.splev(u_fine, tck)
 
