@@ -5,7 +5,9 @@ import global_storage
 import shared_functions
 from global_storage import g
 
-def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step, vertical_angle_step, duration, lifetime):
+
+def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step,
+                                vertical_angle_step, duration, lifetime):
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
 
@@ -46,10 +48,12 @@ def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, ho
                 color_expr = shared_functions.color_expression(start_color, end_color, lifetime)
 
                 # 添加粒子指令
-                shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), lifetime * 20, color_expr)
+                shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), lifetime * 20,
+                                                      color_expr)
 
                 t += t_step
                 n_tick += 1  # 增加n_tick
+
 
 def calculate_inner_angle_steps(outer_horizontal_angle_step, outer_vertical_angle_step, inner_speed, outer_speed):
     # 内外层的半径比例
@@ -61,14 +65,22 @@ def calculate_inner_angle_steps(outer_horizontal_angle_step, outer_vertical_angl
 
     return inner_horizontal_angle_step, inner_vertical_angle_step
 
-def basic_double_layer_firework(tick, x, y, z, inner_start_color, inner_end_color, outer_start_color, outer_end_color, inner_speed, outer_speed, outer_horizontal_angle_step, outer_vertical_angle_step, duration, lifetime):
+
+def basic_double_layer_firework(tick, x, y, z, inner_start_color, inner_end_color, outer_start_color, outer_end_color,
+                                inner_speed, outer_speed, outer_horizontal_angle_step, outer_vertical_angle_step,
+                                duration, lifetime):
     # 计算内层的角度步长
-    inner_horizontal_angle_step, inner_vertical_angle_step = calculate_inner_angle_steps(outer_horizontal_angle_step, outer_vertical_angle_step, inner_speed, outer_speed)
+    inner_horizontal_angle_step, inner_vertical_angle_step = calculate_inner_angle_steps(outer_horizontal_angle_step,
+                                                                                         outer_vertical_angle_step,
+                                                                                         inner_speed, outer_speed)
 
     # 生成内层烟花
-    basic_single_layer_firework(tick, x, y, z, inner_start_color, inner_end_color, inner_speed, inner_horizontal_angle_step, inner_vertical_angle_step, duration, lifetime)
+    basic_single_layer_firework(tick, x, y, z, inner_start_color, inner_end_color, inner_speed,
+                                inner_horizontal_angle_step, inner_vertical_angle_step, duration, lifetime)
     # 生成外层烟花
-    basic_single_layer_firework(tick, x, y, z, outer_start_color, outer_end_color, outer_speed, outer_horizontal_angle_step, outer_vertical_angle_step, duration, lifetime)
+    basic_single_layer_firework(tick, x, y, z, outer_start_color, outer_end_color, outer_speed,
+                                outer_horizontal_angle_step, outer_vertical_angle_step, duration, lifetime)
+
 
 def rotate_vector(vx, vy, vz, rad_horizontal, rad_vertical):
     # 绕水平轴旋转
@@ -87,7 +99,9 @@ def rotate_vector(vx, vy, vz, rad_horizontal, rad_vertical):
 
     return vx, vy, vz
 
-def directional_firework(tick, x, y, z, start_color, end_color, speed, direction_horizontal_angle, direction_vertical_angle, spread_angle, track_count, duration, lifetime):
+
+def directional_firework(tick, x, y, z, start_color, end_color, speed, direction_horizontal_angle,
+                         direction_vertical_angle, spread_angle, track_count, duration, lifetime):
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
 
@@ -95,7 +109,7 @@ def directional_firework(tick, x, y, z, start_color, end_color, speed, direction
         # 在spread_angle范围内添加随机偏移
         random_horizontal_angle = random.uniform(-spread_angle / 2, spread_angle / 2)
         random_vertical_angle = random.uniform(-spread_angle / 2, spread_angle / 2)
-        
+
         total_horizontal_angle = direction_horizontal_angle + random_horizontal_angle
         total_vertical_angle = direction_vertical_angle + random_vertical_angle
 
@@ -108,7 +122,7 @@ def directional_firework(tick, x, y, z, start_color, end_color, speed, direction
         vy0 = speed * math.sin(rad_vertical)
         vz0 = speed * math.cos(rad_vertical) * math.sin(rad_horizontal)
 
-        #print(f"vx0={vx0}, vy0={vy0}, vz0={vz0}")
+        # print(f"vx0={vx0}, vy0={vy0}, vz0={vz0}")
 
         t = 0
         n_tick = initial_tick  # 使用 n_tick 并重置为初始 tick
@@ -129,12 +143,15 @@ def directional_firework(tick, x, y, z, start_color, end_color, speed, direction
             color_expr = shared_functions.color_expression(start_color, end_color, lifetime)
 
             # 添加粒子指令
-            shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), lifetime * 20, color_expr)
+            shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), lifetime * 20,
+                                                  color_expr)
 
             t += t_step
             n_tick += 1  # 增加n_tick
 
-def clustered_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step, vertical_angle_step, track_count, spread_angle, duration, lifetime):
+
+def clustered_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step, vertical_angle_step,
+                       track_count, spread_angle, duration, lifetime):
     horizontal_angles = int(360 / horizontal_angle_step)
     vertical_angles = int(180 / vertical_angle_step)
     for i in range(horizontal_angles):
@@ -144,5 +161,6 @@ def clustered_firework(tick, x, y, z, start_color, end_color, speed, horizontal_
             vertical_angle_offset = random.uniform(-vertical_angle_step / 4, vertical_angle_step / 4)
             horizontal_angle = (i * horizontal_angle_step + horizontal_angle_offset) % 360
             vertical_angle = (j * vertical_angle_step + vertical_angle_offset) % 180 - 90
-            #print(f"{horizontal_angle}, {vertical_angle}")
-            directional_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle, vertical_angle, spread_angle, track_count, duration, lifetime)
+            # print(f"{horizontal_angle}, {vertical_angle}")
+            directional_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle, vertical_angle,
+                                 spread_angle, track_count, duration, lifetime)
