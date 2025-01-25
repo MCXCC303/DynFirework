@@ -6,22 +6,22 @@ import global_storage
 import firework_trajectories
 
 
-def schedule_next_tick():
+def schedule_next_tick(datapack_namespace):
     for tick in range(global_storage.MAX_TICK + 1):
         # 在每个 tick 对应的命令列表后面添加一个 schedule 指令
         if tick == global_storage.MAX_TICK:
             break
-        global_storage.add_command(tick, f'schedule function namespace:{tick + 1} 1t')
+        global_storage.add_command(tick, f'schedule function {datapack_namespace}:{tick + 1} 1t')
 
 
 if __name__ == '__main__':
     # Generate a datapack (1.16.5)
-    datapack_namespace = 'fireworks'
+    datapack_namespace = 'fireworks1'
     datapack_name = 'Fireworks'
     datapack_description = 'Fireworks Test'
     output_dir = os.path.dirname(os.path.abspath(__file__)) + f"/{datapack_name}/data/{datapack_namespace}/functions/"
     datapack_dir = os.path.dirname(os.path.abspath(__file__)) + f"/{datapack_name}/"
-    global_storage.generate_data_pack(datapack_name, datapack_namespace, datapack_description)
+    export_mcfunction.generate_data_pack(datapack_name, datapack_namespace, datapack_description)
     # =====这是一个示例=====
     firework_trajectories.expanding_trajectory_with_random_offset(
         end_tick=39,
@@ -148,9 +148,9 @@ if __name__ == '__main__':
     # =====这是一个示例=====
     print(f"max tick={global_storage.MAX_TICK}")
     # 调用 schedule_next_tick 来生成 schedule 指令
-    schedule_next_tick()
+    schedule_next_tick(datapack_namespace)
 
     # 输出 mcfunction 文件
     export_mcfunction.export_mcfunction(output_dir)
     # Create auto exec function file
-    global_storage.generate_auto_exec_file(output_dir, datapack_namespace)
+    # export_mcfunction.generate_auto_exec_file(output_dir, datapack_namespace)
