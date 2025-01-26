@@ -2,12 +2,14 @@
 import os
 from gui.lib import global_storage
 
+
 def schedule_next_tick(datapack_namespace):
     for tick in range(global_storage.MAX_TICK + 1):
         # 在每个 tick 对应的命令列表后面添加一个 schedule 指令
         if tick == global_storage.MAX_TICK:
             break
         global_storage.add_command(tick, f'schedule function {datapack_namespace}:{tick + 1} 1t')
+
 
 def export_mcfunction(output_dir):
     for tick in range(global_storage.MAX_TICK + 1):

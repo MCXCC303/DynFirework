@@ -48,8 +48,7 @@ class LaunchSparkTrajForm:
         other_label_insertions = dict(zip(other_labels,
                                           [int(end_tick / 20),
                                            end_tick / 20 - duration,
-                                           lifetime, m0,
-                                           particle_count, k]))
+                                           lifetime, m0, k]))
         self.other_entries = {}
 
         for i, label in enumerate(start_pos_labels):
@@ -71,6 +70,7 @@ class LaunchSparkTrajForm:
             entry = tk.Entry(spark_frame)
             entry.insert(0, str(spark_insertions[label]))
             entry.grid(row=i, column=1, padx=10, pady=10)
+            self.spark_entries[label] = entry
 
         for i, label in enumerate(other_labels):
             tk.Label(other_pos_frame, text=label).grid(row=i, column=0, padx=10, pady=10, sticky=tk.W)

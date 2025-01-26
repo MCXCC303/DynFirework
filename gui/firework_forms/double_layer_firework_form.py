@@ -176,8 +176,6 @@ class DoubleLayerFireworkForm:
             outer_horizontal_angle_step=outer_horizontal_angle_step,
             outer_vertical_angle_step=outer_vertical_angle_step,
         )
-        print(tick, x, y, z, inner_start_color, outer_start_color, inner_end_color, outer_end_color, lifetime, duration,
-              inner_speed, outer_speed, outer_horizontal_angle_step, outer_vertical_angle_step)
         continuing = messagebox.askyesno('Double Layer Firework',
                                          f'Generated Double Layer Firework\nAt:\n({x}, {y}, {z})\n'
                                          f'Continue Generating?')

@@ -7,6 +7,7 @@ g = 9.8
 
 project_dir = str(Path(__file__).parent.parent.parent)
 
+
 def update_max_tick(tick):
     global MAX_TICK
     if tick > MAX_TICK:

@@ -148,7 +148,7 @@ class ThickTrajWithIntervalForm:
             lifetime=lifetime,
             points_per_tick=points_per_tick,
             interval_ticks=interval_ticks,
-        range_x=range_x, range_y=range_y, range_z=range_z, particle_count=particle_count)
+            range_x=range_x, range_y=range_y, range_z=range_z, particle_count=particle_count)
         messagebox.showinfo('Thick Trajectory with interval',
                             f'Generated Thick Trajectory with interval\nFrom:\n({x0}, {y0}, {z0})\nTo:\n({x1}, {y1}, {z1})')
         for widget in self.root.winfo_children():

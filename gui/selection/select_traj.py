@@ -6,7 +6,6 @@ from gui.traj_forms.trajectory_with_interval_form import TrajWithIntervalForm
 from gui.traj_forms.thick_trajectory_with_interval_form import ThickTrajWithIntervalForm
 from gui.traj_forms.expanding_trajectory_with_interval_form import ExpdTrajWithIntervalForm
 
-
 trajectory_types = ['Launch\nTrajectory',
                     'Launch Spark\nTrajectory',
                     'Trajectory\nwith random offset',
@@ -49,7 +48,7 @@ class TrajectorySelect:
             label_image.image = image
             label_image.grid(row=2 * (i // 3 + 1) - 1, column=i % 3 + 1, padx=5, pady=5)
 
-    def jump_to_form_page(self, trajectory_type:str):
+    def jump_to_form_page(self, trajectory_type: str):
         for widget in self.root.winfo_children():
             widget.destroy()
         print(trajectory_type.replace('\n', ' '))
