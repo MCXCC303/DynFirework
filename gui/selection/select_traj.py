@@ -13,11 +13,11 @@ trajectory_types = ['Launch\nTrajectory',
                     'Thick Trajectory\nwith random offset',
                     'Expanding Trajectory\nwith random offset']
 
-trajectory_image_names = ['selection/traj_image/lt.png',
-                          'selection/traj_image/lst.png',
-                          'selection/traj_image/t_wro.png',
-                          'selection/traj_image/tt_wro.png',
-                          'selection/traj_image/et_wro.png']
+trajectory_image_names = ['gui/selection/traj_image/lt.png',
+                          'gui/selection/traj_image/lst.png',
+                          'gui/selection/traj_image/t_wro.png',
+                          'gui/selection/traj_image/tt_wro.png',
+                          'gui/selection/traj_image/et_wro.png']
 
 
 class TrajectorySelect:

@@ -4,9 +4,9 @@ from gui.firework_forms.clustered_firework_form import ClusteredFireworkForm
 from gui.firework_forms.single_layer_firework_form import SingleLayerFireworkForm
 from gui.firework_forms.double_layer_firework_form import DoubleLayerFireworkForm
 
-firework_image_names = ['selection/firework_image/slf.png',
-                        'selection/firework_image/dlf.png',
-                        'selection/firework_image/cf.png']
+firework_image_names = ['gui/selection/firework_image/slf.png',
+                        'gui/selection/firework_image/dlf.png',
+                        'gui/selection/firework_image/cf.png']
 
 firework_types = ['Single Layer\nFirework',
                   'Double Layer\nFirework',
