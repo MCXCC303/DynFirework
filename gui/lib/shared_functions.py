@@ -1,5 +1,5 @@
 # shared_functions.py
-import global_storage
+from gui.lib import global_storage
 
 
 def color_expression(start_color, end_color, lifetime):

@@ -1,9 +1,8 @@
 # basic_fireworks.py
 import math
 import random
-import global_storage
-import shared_functions
-from global_storage import g
+from gui.lib import shared_functions
+from gui.lib.global_storage import g
 
 
 def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step,

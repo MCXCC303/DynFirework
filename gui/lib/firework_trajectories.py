@@ -1,13 +1,10 @@
 # firework_trajectories.py
 import math
 import random
-import time
-import global_storage
-import shared_functions
+from gui.lib import shared_functions
 import numpy as np
 from scipy.interpolate import splprep, splev
-from global_storage import g
-import scipy.interpolate as si
+from gui.lib.global_storage import g
 
 
 def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
