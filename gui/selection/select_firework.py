@@ -3,14 +3,17 @@ from PIL import Image, ImageTk
 from gui.firework_forms.clustered_firework_form import ClusteredFireworkForm
 from gui.firework_forms.single_layer_firework_form import SingleLayerFireworkForm
 from gui.firework_forms.double_layer_firework_form import DoubleLayerFireworkForm
+from gui.firework_forms.directional_firework_form import DirectionalFireworkForm
 
 firework_image_names = ['gui/selection/firework_image/slf.png',
                         'gui/selection/firework_image/dlf.png',
-                        'gui/selection/firework_image/cf.png']
+                        'gui/selection/firework_image/cf.png',
+                        'gui/selection/firework_image/df.png', ]
 
 firework_types = ['Single Layer\nFirework',
                   'Double Layer\nFirework',
-                  'Clustered\nFirework']
+                  'Clustered\nFirework',
+                  'Directional\nFirework']
 
 
 class FireworkSelect:
@@ -36,7 +39,7 @@ class FireworkSelect:
         for i, (firework_type, image) in enumerate(selection_info):
             tk.Button(self.root, text=firework_type, command=lambda t=firework_type: self.jump_to_form_page(t)).grid(
                 row=2 * (i // 3 + 1),
-                column=i + 1,
+                column=i % 3 + 1,
                 padx=30,
                 pady=30)
             label_image = tk.Label(self.root, image=image)
@@ -53,3 +56,5 @@ class FireworkSelect:
             DoubleLayerFireworkForm(self.root, self.traj_end_data)
         if firework_type == 'Clustered\nFirework':
             ClusteredFireworkForm(self.root, self.traj_end_data)
+        if firework_type == 'Directional\nFirework':
+            DirectionalFireworkForm(self.root, self.traj_end_data)

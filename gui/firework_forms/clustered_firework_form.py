@@ -11,8 +11,8 @@ start_color_labels = ['R', 'G', 'B']
 end_color = (255, 255, 255)
 end_color_labels = ['R', 'G', 'B']
 speed = 25
-horizontal_angle_step = 45
-vertical_angle_step = 45
+directional_horizontal_angle = 45
+direction_vertical_angle = 45
 angle_step_labels = ['Horizontal', 'Vertical']
 duration = 3.5
 track_count = 5
@@ -40,7 +40,7 @@ class ClusteredFireworkForm:
         angle_step_frame = tk.LabelFrame(self.root, text="Angle Step")
         angle_step_frame.grid(row=2, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
         angle_step_insertions = dict(zip(angle_step_labels,
-                                         [horizontal_angle_step, vertical_angle_step]))
+                                         [directional_horizontal_angle, direction_vertical_angle]))
         self.angle_step_entries = {}
         cluster_frame = tk.LabelFrame(self.root, text="Cluster Info")
         cluster_frame.grid(row=3, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
@@ -108,7 +108,7 @@ class ClusteredFireworkForm:
                 entry.config(state=tk.DISABLED)
 
     def submit(self):
-        global duration, start_color, end_color, lifetime, x, y, z, horizontal_angle_step, vertical_angle_step, speed, track_count, spread_angle
+        global duration, start_color, end_color, lifetime, x, y, z, directional_horizontal_angle, direction_vertical_angle, speed, track_count, spread_angle
         start_color = (int(self.start_color_entries['R'].get()),
                        int(self.start_color_entries['G'].get()),
                        int(self.start_color_entries['B'].get()))
