@@ -33,35 +33,35 @@ class DoubleLayerFireworkForm:
         global tick, x, y, z
         tick, x, y, z = traj_end_data
         self.root.title("Double Layer Firework: Info")
-        tk.Label(self.root, text="Double Layer Firework", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Double Layer Firework", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=0,
-            pady=30,
-            padx=50,
+            pady=3,
+            padx=30,
             columnspan=2)
         inner_start_color_frame = tk.LabelFrame(self.root, text="Inner Start Color (0-255)")
-        inner_start_color_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        inner_start_color_frame.grid(row=1, column=0, padx=30, pady=3, sticky=tk.NSEW)
         inner_start_color_insertions = dict(zip(inner_start_color_labels, inner_start_color))
         self.inner_start_color_entries = {}
         inner_end_color_frame = tk.LabelFrame(self.root, text="Inner End Color (0-255)")
-        inner_end_color_frame.grid(row=1, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        inner_end_color_frame.grid(row=1, column=1, padx=30, pady=3, sticky=tk.NSEW)
         inner_end_color_insertions = dict(zip(inner_end_color_labels, inner_end_color))
         self.inner_end_color_entries = {}
         outer_start_color_frame = tk.LabelFrame(self.root, text="Outer Start Color (0-255)")
-        outer_start_color_frame.grid(row=2, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        outer_start_color_frame.grid(row=2, column=0, padx=30, pady=3, sticky=tk.NSEW)
         outer_start_color_insertions = dict(zip(outer_start_color_labels, outer_start_color))
         self.outer_start_color_entries = {}
         outer_end_color_frame = tk.LabelFrame(self.root, text="Outer End Color (0-255)")
-        outer_end_color_frame.grid(row=2, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        outer_end_color_frame.grid(row=2, column=1, padx=30, pady=3, sticky=tk.NSEW)
         outer_end_color_insertions = dict(zip(outer_end_color_labels, outer_end_color))
         self.outer_end_color_entries = {}
         outer_angle_step_frame = tk.LabelFrame(self.root, text="Outer Angle Step")
-        outer_angle_step_frame.grid(row=3, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
+        outer_angle_step_frame.grid(row=3, column=0, padx=30, pady=3, columnspan=2, sticky=tk.NSEW)
         outer_angle_step_insertions = dict(zip(outer_angle_step_labels,
                                                [outer_horizontal_angle_step, outer_vertical_angle_step]))
         self.outer_angle_step_entries = {}
         other_pos_frame = tk.LabelFrame(self.root, text="Other Data")
-        other_pos_frame.grid(row=4, column=0, columnspan=2, padx=30, pady=30, sticky=tk.NSEW)
+        other_pos_frame.grid(row=4, column=0, columnspan=2, padx=30, pady=3, sticky=tk.NSEW)
         other_label_insertions = dict(zip(other_labels,
                                           [duration, inner_speed, outer_speed, lifetime]))
         self.other_entries = {}

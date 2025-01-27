@@ -14,11 +14,11 @@ class DatapackForm:
     def __init__(self, root):
         self.root = root
         self.root.title("Datapack Generator")
-        tk.Label(self.root, text="Datapack Generator", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Datapack Generator", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=0,
-            pady=50,
-            padx=50,
+            pady=30,
+            padx=30,
             columnspan=3)
         datapack_entries_frame = tk.LabelFrame(self.root, text='Datapack info')
         datapack_entries_frame.grid(column=0, row=1, padx=30, sticky=tk.NSEW)

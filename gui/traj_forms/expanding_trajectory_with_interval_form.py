@@ -38,32 +38,32 @@ class ExpdTrajWithIntervalForm:
     def __init__(self, root):
         self.root = root
         self.root.title("Expanding Trajectory with interval: Info")
-        tk.Label(self.root, text="Expanding Trajectory with interval", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Expanding Trajectory with interval", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=0,
-            pady=30,
-            padx=50,
+            pady=3,
+            padx=30,
             columnspan=2)
         start_pos_frame = tk.LabelFrame(self.root, text="Start Position")
-        start_pos_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        start_pos_frame.grid(row=1, column=0, padx=30, pady=3, sticky=tk.NSEW)
         start_pos_insertions = dict(zip(start_pos_labels,
                                         [x0, y0, z0]))
         self.start_pos_entries = {}
         end_pos_frame = tk.LabelFrame(self.root, text="End Position")
-        end_pos_frame.grid(row=1, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        end_pos_frame.grid(row=1, column=1, padx=30, pady=3, sticky=tk.NSEW)
         end_pos_insertions = dict(zip(end_pos_labels,
                                       [x1, y1, z1]))
         self.end_pos_entries = {}
         interval_frame = tk.LabelFrame(self.root, text="Interval Info")
-        interval_frame.grid(row=2, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        interval_frame.grid(row=2, column=0, padx=30, pady=3, sticky=tk.NSEW)
         interval_insertions = dict(zip(interval_labels, [interval_ticks, points_per_tick]))
         self.interval_entries = {}
         group_frame = tk.LabelFrame(self.root, text="Group Info")
-        group_frame.grid(row=2, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        group_frame.grid(row=2, column=1, padx=30, pady=3, sticky=tk.NSEW)
         group_insertions = dict(zip(expand_labels, [range_x, range_y, range_z, particle_count, speed_factor]))
         self.group_entries = {}
         other_pos_frame = tk.LabelFrame(self.root, text="Other Data")
-        other_pos_frame.grid(row=3, column=0, columnspan=2, padx=30, pady=30, sticky=tk.NSEW)
+        other_pos_frame.grid(row=3, column=0, columnspan=2, padx=30, pady=3, sticky=tk.NSEW)
         other_label_insertions = dict(zip(other_labels,
                                           [int(end_tick / 20),
                                            end_tick / 20 - duration,

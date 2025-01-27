@@ -22,16 +22,16 @@ class FireworkSelect:
         self.root = root
         self.traj_end_data = traj_end_data
         self.root.title("Firework Select")
-        tk.Label(self.root, text="Select Firework", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Select Firework", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=1,
-            pady=50,
-            padx=50,
+            pady=20,
+            padx=30,
             columnspan=3)
         firework_images = []
         for name in firework_image_names:
             image = Image.open(name)
-            resized_image = image.resize((256, 256))
+            resized_image = image.resize((128, 128))
             photo = ImageTk.PhotoImage(resized_image)
             firework_images.append(photo)
 
@@ -41,10 +41,10 @@ class FireworkSelect:
                 row=2 * (i // 3 + 1),
                 column=i % 3 + 1,
                 padx=30,
-                pady=30)
+                pady=20)
             label_image = tk.Label(self.root, image=image)
             label_image.image = image
-            label_image.grid(row=2 * (i // 3 + 1) - 1, column=i % 3 + 1, padx=30, pady=30)
+            label_image.grid(row=2 * (i // 3 + 1) - 1, column=i % 3 + 1, padx=30, pady=20)
 
     def jump_to_form_page(self, firework_type: str):
         for widget in self.root.winfo_children():

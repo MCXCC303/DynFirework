@@ -33,32 +33,32 @@ class LaunchTrajForm:
     def __init__(self, root):
         self.root = root
         self.root.title("Launch Trajectory: Info")
-        tk.Label(self.root, text="Launch Trajectory", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Launch Trajectory", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=0,
-            pady=30,
-            padx=50,
+            pady=3,
+            padx=30,
             columnspan=2)
         start_pos_frame = tk.LabelFrame(self.root, text="Start Position")
-        start_pos_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        start_pos_frame.grid(row=1, column=0, padx=30, pady=3, sticky=tk.NSEW)
         start_pos_insertions = dict(zip(start_pos_labels,
                                         [x0, y0, z0]))
         self.start_pos_entries = {}
         end_pos_frame = tk.LabelFrame(self.root, text="End Position")
-        end_pos_frame.grid(row=1, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        end_pos_frame.grid(row=1, column=1, padx=30, pady=3, sticky=tk.NSEW)
         end_pos_insertions = dict(zip(end_pos_labels,
                                       [x1, y1, z1]))
         self.end_pos_entries = {}
         start_color_frame = tk.LabelFrame(self.root, text="Start Color (0-255)")
-        start_color_frame.grid(row=2, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        start_color_frame.grid(row=2, column=0, padx=30, pady=3, sticky=tk.NSEW)
         start_color_insertions = dict(zip(start_color_labels, start_color))
         self.start_color_entries = {}
         end_color_frame = tk.LabelFrame(self.root, text="End Color (0-255)")
-        end_color_frame.grid(row=2, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        end_color_frame.grid(row=2, column=1, padx=30, pady=3, sticky=tk.NSEW)
         end_color_insertions = dict(zip(end_color_labels, end_color))
         self.end_color_entries = {}
         other_pos_frame = tk.LabelFrame(self.root, text="Other Data")
-        other_pos_frame.grid(row=3, column=0, columnspan=2, padx=30, pady=30, sticky=tk.NSEW)
+        other_pos_frame.grid(row=3, column=0, columnspan=2, padx=30, pady=3, sticky=tk.NSEW)
         other_label_insertions = dict(zip(other_labels,
                                           [int(end_tick / 20), end_tick / 20 - duration, lifetime, m0, rho, k]))
         self.other_entries = {}

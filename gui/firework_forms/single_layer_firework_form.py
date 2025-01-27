@@ -27,27 +27,27 @@ class SingleLayerFireworkForm:
         global tick, x, y, z
         tick, x, y, z = traj_end_data
         self.root.title("Single Layer Firework: Info")
-        tk.Label(self.root, text="Single Layer Firework", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Single Layer Firework", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=0,
-            pady=30,
-            padx=50,
+            pady=3,
+            padx=30,
             columnspan=2)
         start_color_frame = tk.LabelFrame(self.root, text="Start Color (0-255)")
-        start_color_frame.grid(row=2, column=0, padx=30, pady=30, sticky=tk.NSEW)
+        start_color_frame.grid(row=2, column=0, padx=30, pady=3, sticky=tk.NSEW)
         start_color_insertions = dict(zip(start_color_labels, start_color))
         self.start_color_entries = {}
         end_color_frame = tk.LabelFrame(self.root, text="End Color (0-255)")
-        end_color_frame.grid(row=2, column=1, padx=30, pady=30, sticky=tk.NSEW)
+        end_color_frame.grid(row=2, column=1, padx=30, pady=3, sticky=tk.NSEW)
         end_color_insertions = dict(zip(end_color_labels, end_color))
         self.end_color_entries = {}
         angle_step_frame = tk.LabelFrame(self.root, text="Angle Step")
-        angle_step_frame.grid(row=3, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
+        angle_step_frame.grid(row=3, column=0, padx=30, pady=3, columnspan=2, sticky=tk.NSEW)
         angle_step_insertions = dict(zip(angle_step_labels,
                                          [horizontal_angle_step, vertical_angle_step]))
         self.angle_step_entries = {}
         other_pos_frame = tk.LabelFrame(self.root, text="Other Data")
-        other_pos_frame.grid(row=4, column=0, columnspan=2, padx=30, pady=30, sticky=tk.NSEW)
+        other_pos_frame.grid(row=4, column=0, columnspan=2, padx=30, pady=3, sticky=tk.NSEW)
         other_label_insertions = dict(zip(other_labels,
                                           [duration, speed, lifetime]))
         self.other_entries = {}

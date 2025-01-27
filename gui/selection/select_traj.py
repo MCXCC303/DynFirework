@@ -24,16 +24,16 @@ class TrajectorySelect:
     def __init__(self, root):
         self.root = root
         self.root.title("Trajectory Select")
-        tk.Label(self.root, text="Select Trajectory", font=('Arial', 50, 'bold')).grid(
+        tk.Label(self.root, text="Select Trajectory", font=('Arial', 30, 'bold')).grid(
             row=0,
             column=1,
-            pady=50,
-            padx=50,
+            pady=20,
+            padx=30,
             columnspan=3)
         trajectory_images = []
         for name in trajectory_image_names:
             image = Image.open(name)
-            resized_image = image.resize((256, 256))
+            resized_image = image.resize((128, 128))
             photo = ImageTk.PhotoImage(resized_image)
             trajectory_images.append(photo)
 
@@ -43,7 +43,7 @@ class TrajectorySelect:
                 row=2 * (i // 3 + 1),
                 column=i % 3 + 1,
                 padx=30,
-                pady=30)
+                pady=20)
             label_image = tk.Label(self.root, image=image)
             label_image.image = image
             label_image.grid(row=2 * (i // 3 + 1) - 1, column=i % 3 + 1, padx=5, pady=5)
