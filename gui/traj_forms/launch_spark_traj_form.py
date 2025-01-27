@@ -29,6 +29,12 @@ class LaunchSparkTrajForm:
     def __init__(self, root):
         self.root = root
         self.root.title("Launch Spark Trajectory: Info")
+        tk.Label(self.root, text="Launch Spark Trajectory", font=('Arial', 50, 'bold')).grid(
+            row=0,
+            column=0,
+            pady=30,
+            padx=50,
+            columnspan=2)
         start_pos_frame = tk.LabelFrame(self.root, text="Start Position")
         start_pos_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
         start_pos_insertions = dict(zip(start_pos_labels,

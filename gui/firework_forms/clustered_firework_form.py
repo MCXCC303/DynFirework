@@ -11,8 +11,8 @@ start_color_labels = ['R', 'G', 'B']
 end_color = (255, 255, 255)
 end_color_labels = ['R', 'G', 'B']
 speed = 25
-directional_horizontal_angle = 45
-direction_vertical_angle = 45
+horizontal_angle = 45
+vertical_angle = 45
 angle_step_labels = ['Horizontal', 'Vertical']
 duration = 3.5
 track_count = 5
@@ -29,6 +29,13 @@ class ClusteredFireworkForm:
         self.root = root
         global tick, x, y, z
         tick, x, y, z = traj_end_data
+        self.root.title("Clustered Firework: Info")
+        tk.Label(self.root, text="Clustered Firework", font=('Arial', 50, 'bold')).grid(
+            row=0,
+            column=0,
+            pady=30,
+            padx=50,
+            columnspan=2)
         start_color_frame = tk.LabelFrame(self.root, text="Start Color (0-255)")
         start_color_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
         start_color_insertions = dict(zip(start_color_labels, start_color))
@@ -40,7 +47,7 @@ class ClusteredFireworkForm:
         angle_step_frame = tk.LabelFrame(self.root, text="Angle Step")
         angle_step_frame.grid(row=2, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
         angle_step_insertions = dict(zip(angle_step_labels,
-                                         [directional_horizontal_angle, direction_vertical_angle]))
+                                         [horizontal_angle, vertical_angle]))
         self.angle_step_entries = {}
         cluster_frame = tk.LabelFrame(self.root, text="Cluster Info")
         cluster_frame.grid(row=3, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
@@ -108,7 +115,7 @@ class ClusteredFireworkForm:
                 entry.config(state=tk.DISABLED)
 
     def submit(self):
-        global duration, start_color, end_color, lifetime, x, y, z, directional_horizontal_angle, direction_vertical_angle, speed, track_count, spread_angle
+        global duration, start_color, end_color, lifetime, x, y, z, horizontal_angle, vertical_angle, speed, track_count, spread_angle
         start_color = (int(self.start_color_entries['R'].get()),
                        int(self.start_color_entries['G'].get()),
                        int(self.start_color_entries['B'].get()))

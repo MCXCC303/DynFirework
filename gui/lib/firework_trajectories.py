@@ -27,9 +27,9 @@ def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
 
 
 def calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0):
-    vx_low, vx_high = -50, 50
-    vy_low, vy_high = 0, 100  # 发射初始速度不应为负
-    vz_low, vz_high = -50, 50
+    vx_low, vx_high = -200, 200
+    vy_low, vy_high = 0, 200  # 发射初始速度不应为负
+    vz_low, vz_high = -200, 200
 
     # 使用二分法寻找合适的初速度
     precision = 0.01  # 精度要求
