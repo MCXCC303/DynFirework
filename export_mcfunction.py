@@ -4,6 +4,8 @@ import global_storage
 
 
 def export_mcfunction(output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     for tick in range(global_storage.MAX_TICK + 1):
         filename = os.path.join(output_dir, f'{tick}.mcfunction')
         f = open(filename, 'w')

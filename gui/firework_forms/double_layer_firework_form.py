@@ -32,6 +32,13 @@ class DoubleLayerFireworkForm:
         self.root = root
         global tick, x, y, z
         tick, x, y, z = traj_end_data
+        self.root.title("Double Layer Firework: Info")
+        tk.Label(self.root, text="Double Layer Firework", font=('Arial', 50, 'bold')).grid(
+            row=0,
+            column=0,
+            pady=30,
+            padx=50,
+            columnspan=2)
         inner_start_color_frame = tk.LabelFrame(self.root, text="Inner Start Color (0-255)")
         inner_start_color_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
         inner_start_color_insertions = dict(zip(inner_start_color_labels, inner_start_color))

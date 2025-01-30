@@ -11,8 +11,8 @@ start_color_labels = ['R', 'G', 'B']
 end_color = (255, 255, 255)
 end_color_labels = ['R', 'G', 'B']
 speed = 30
-directional_horizontal_angle = 30
-direction_vertical_angle = 30
+horizontal_angle_step = 30
+vertical_angle_step = 30
 angle_step_labels = ['Horizontal', 'Vertical']
 duration = 4
 lifetime = 1.5
@@ -26,6 +26,13 @@ class SingleLayerFireworkForm:
         self.root = root
         global tick, x, y, z
         tick, x, y, z = traj_end_data
+        self.root.title("Single Layer Firework: Info")
+        tk.Label(self.root, text="Single Layer Firework", font=('Arial', 50, 'bold')).grid(
+            row=0,
+            column=0,
+            pady=30,
+            padx=50,
+            columnspan=2)
         start_color_frame = tk.LabelFrame(self.root, text="Start Color (0-255)")
         start_color_frame.grid(row=2, column=0, padx=30, pady=30, sticky=tk.NSEW)
         start_color_insertions = dict(zip(start_color_labels, start_color))
@@ -37,7 +44,7 @@ class SingleLayerFireworkForm:
         angle_step_frame = tk.LabelFrame(self.root, text="Angle Step")
         angle_step_frame.grid(row=3, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
         angle_step_insertions = dict(zip(angle_step_labels,
-                                         [directional_horizontal_angle, direction_vertical_angle]))
+                                         [horizontal_angle_step, vertical_angle_step]))
         self.angle_step_entries = {}
         other_pos_frame = tk.LabelFrame(self.root, text="Other Data")
         other_pos_frame.grid(row=4, column=0, columnspan=2, padx=30, pady=30, sticky=tk.NSEW)
@@ -93,7 +100,7 @@ class SingleLayerFireworkForm:
                 entry.config(state=tk.DISABLED)
 
     def submit(self):
-        global duration, start_color, end_color, lifetime, x, y, z, directional_horizontal_angle, direction_vertical_angle, speed
+        global duration, start_color, end_color, lifetime, x, y, z, horizontal_angle_step, vertical_angle_step, speed
         start_color = (int(self.start_color_entries['R'].get()),
                        int(self.start_color_entries['G'].get()),
                        int(self.start_color_entries['B'].get()))

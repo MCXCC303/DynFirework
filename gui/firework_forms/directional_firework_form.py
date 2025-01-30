@@ -11,7 +11,7 @@ start_color_labels = ['R', 'G', 'B']
 end_color = (255, 255, 255)
 end_color_labels = ['R', 'G', 'B']
 speed = 25
-directional_horizontal_angle = 45
+direction_horizontal_angle = 45
 direction_vertical_angle = 45
 track_count = 5
 spread_angle = 15
@@ -28,6 +28,13 @@ class DirectionalFireworkForm:
         self.root = root
         global tick, x, y, z
         tick, x, y, z = traj_end_data
+        self.root.title("Directional Firework: Info")
+        tk.Label(self.root, text="Directional Firework", font=('Arial', 50, 'bold')).grid(
+            row=0,
+            column=0,
+            pady=30,
+            padx=50,
+            columnspan=2)
         start_color_frame = tk.LabelFrame(self.root, text="Start Color (0-255)")
         start_color_frame.grid(row=1, column=0, padx=30, pady=30, sticky=tk.NSEW)
         start_color_insertions = dict(zip(start_color_labels, start_color))
@@ -39,7 +46,7 @@ class DirectionalFireworkForm:
         direction_frame = tk.LabelFrame(self.root, text="Directions (0-180)")
         direction_frame.grid(row=2, column=0, padx=30, pady=30, columnspan=2, sticky=tk.NSEW)
         direction_insertions = dict(zip(angle_step_labels,
-                                        [directional_horizontal_angle,
+                                        [direction_horizontal_angle,
                                          direction_vertical_angle,
                                          track_count,
                                          spread_angle]))
@@ -98,7 +105,7 @@ class DirectionalFireworkForm:
                 entry.config(state=tk.DISABLED)
 
     def submit(self):
-        global duration, start_color, end_color, lifetime, x, y, z, directional_horizontal_angle, direction_vertical_angle, speed, track_count, spread_angle
+        global duration, start_color, end_color, lifetime, x, y, z, direction_horizontal_angle, direction_vertical_angle, speed, track_count, spread_angle
         start_color = (int(self.start_color_entries['R'].get()),
                        int(self.start_color_entries['G'].get()),
                        int(self.start_color_entries['B'].get()))
@@ -109,7 +116,7 @@ class DirectionalFireworkForm:
         else:
             end_color = start_color
         speed = float(self.other_entries['Explode Speed (speed, m/s)'].get())
-        directional_horizontal_angle = int(self.direction_entries['Horizontal Direction'].get())
+        direction_horizontal_angle = int(self.direction_entries['Horizontal Direction'].get())
         direction_vertical_angle = int(self.direction_entries['Vertical Direction'].get())
         duration = float(self.other_entries['Show Time (duration, s)'].get())
         lifetime = float(self.other_entries['Particles\' Lifetime (lifetime, s)'].get())
@@ -121,14 +128,14 @@ class DirectionalFireworkForm:
             start_color=start_color,
             end_color=end_color,
             speed=speed,
-            direction_horizontal_angle=directional_horizontal_angle,
+            direction_horizontal_angle=direction_horizontal_angle,
             direction_vertical_angle=direction_vertical_angle,
             duration=duration,
             lifetime=lifetime,
             track_count=track_count,
             spread_angle=spread_angle)
-        continuing = messagebox.askyesno('Clustered Firework',
-                                         f'Generated Clustered Firework\nAt:\n({x}, {y}, {z})\n'
+        continuing = messagebox.askyesno('Directional Firework',
+                                         f'Generated Directional Firework\nAt:\n({x}, {y}, {z})\n'
                                          f'Continue Generating?')
         for widget in self.root.winfo_children():
             widget.destroy()
