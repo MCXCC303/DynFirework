@@ -33,7 +33,7 @@
 
 ## > 使用方法
 
-### 1.图形化编辑
+### 方法1.图形化编辑
 
 *DynFirework v1.1*使用tkinter编写图形化界面
 
@@ -43,7 +43,7 @@
 
 执行时，根据Datapack Generator内对namespace的命名，在游戏内执行`/function namespace:0`。 namespace的命名规范请参考[Minecraft Wiki](https://zh.minecraft.wiki/w/%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4ID?variant=zh-cn#%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4)
 
-### 2.代码编辑
+### 方法2.代码编辑
 
 编写main.py，调用[template.md](templates.md)提供的**函数模板介绍**部分进行**自由度更大**的烟花设计。
 
