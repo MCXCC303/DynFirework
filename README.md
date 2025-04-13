@@ -84,3 +84,11 @@ pip install -r requirements.txt
 
 - MCXCC303 编写图形化界面
 
+## > 项目统计
+
+<div align="center">
+
+![Repobeats analytics image](https://repobeats.axiom.co/api/embed/c15d66d9db4d74fe612ab88ffb75fd3231bd278d.svg "Repobeats analytics image")
+
+</div>
+
