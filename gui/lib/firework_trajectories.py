@@ -6,7 +6,6 @@ import numpy as np
 from scipy.interpolate import splprep, splev
 from gui.lib.global_storage import g
 
-
 def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
     t_step = 1.0 / 20  # 一秒20个tick
     t = 0
@@ -24,7 +23,6 @@ def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
         t += t_step
 
     return x, y, z, vy
-
 
 def calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0):
     vx_low, vx_high = -200, 200
@@ -57,7 +55,6 @@ def calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0
 
     return (vx_low + vx_high) / 2, (vy_low + vy_high) / 2, (vz_low + vz_high) / 2
 
-
 def launch_trajectory(end_tick, x0, y0, z0, x1, y1, z1, start_color, end_color, duration, k, m0, lifetime,
                       rho):  # rho表示一个tick内生成多少个粒子
     t_step = 1.0 / 20 / rho  # 一秒20个tick
@@ -87,7 +84,6 @@ def launch_trajectory(end_tick, x0, y0, z0, x1, y1, z1, start_color, end_color, 
 
         t += t_step
         n_tick += 1.0 / rho  # 增加n_tick
-
 
 def launch_spark_trajectory(end_tick, x0, y0, z0, x1, y1, z1, duration, k, m0, lifetime, particle_count):
     t_step = 1.0 / 20  # 一秒20个tick
@@ -123,7 +119,6 @@ def launch_spark_trajectory(end_tick, x0, y0, z0, x1, y1, z1, duration, k, m0, l
         t += t_step
         n_tick += 1  # 增加n_tick
 
-
 def simulate_base_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0, points_per_tick):
     t_step = 1.0 / 20 / points_per_tick  # 一秒20个tick
     trajectory = []
@@ -142,7 +137,6 @@ def simulate_base_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0, points_
         t += t_step
 
     return trajectory
-
 
 def generate_random_offset_trajectory(base_trajectory, interval_ticks):
     offset_trajectory = []
@@ -170,7 +164,6 @@ def generate_random_offset_trajectory(base_trajectory, interval_ticks):
 
     return offset_trajectory
 
-
 def trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, duration, lifetime, interval_ticks,
                                   points_per_tick):
     vx0, vy0, vz0 = calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0)
@@ -183,7 +176,6 @@ def trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, durat
         n_tick = end_tick - int((num_points - i) / points_per_tick)
         shared_functions.add_spark_command(n_tick, x, y, z, 0, 0, 0, lifetime * 20)
 
-
 def thick_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, duration, lifetime, interval_ticks,
                                         points_per_tick, range_x, range_y, range_z, particle_count):
     vx0, vy0, vz0 = calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0)
@@ -194,10 +186,8 @@ def thick_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0,
     num_points = len(spiral_trajectory)
     for i, (x, y, z) in enumerate(spiral_trajectory):
         n_tick = end_tick - int((num_points - i) / points_per_tick)
-        # print(f"n_tick={n_tick}")
         shared_functions.add_thick_spark_command(n_tick, x, y, z, 0, 0, 0, lifetime * 20, range_x, range_y, range_z,
                                                  particle_count)
-
 
 def expanding_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, duration, lifetime, interval_ticks,
                                             points_per_tick, range_x, range_y, range_z, particle_count, speed_factor):

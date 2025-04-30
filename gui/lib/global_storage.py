@@ -5,6 +5,10 @@ commands_by_tick = {}
 MAX_TICK = 0
 g = 9.8
 
+# 默认角度步长
+horizontal_angle_step_default = 30
+vertical_angle_step_default = 30
+
 project_dir = str(Path(__file__).parent.parent.parent)
 
 

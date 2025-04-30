@@ -18,8 +18,7 @@
 
 ## > 简介
 
-*DynFirework*是使用Python编写的*Minecraft*粒子烟花生成器**代码模板**，提供了若干模板函数以便生成一定样式的烟花数据包文件(
-.mcfunction)。
+*DynFirework*是使用Python (基于**PyQt5**框架) 编写的*Minecraft*粒子烟花生成器，提供了图形化界面和核心库函数，用以生成包含复杂烟花效果的数据包文件(.mcfunction)。
 
 **[介绍视频](https://www.bilibili.com/video/BV1xYxxeqEMf/)**
 
@@ -42,17 +41,17 @@ pip install -r requirements.txt
 
 ### 方法1.图形化编辑
 
-*DynFirework v1.1*使用tkinter编写图形化界面
+*DynFirework* 提供基于 **PyQt5** 编写的图形化界面，方便用户配置和生成烟花。
 
-使用方法为，下载源代码后，运行gui.py，在界面中选择需生成的轨迹、烟花类型（暂时可以通过设置相同的起始点和终止点来实现无轨迹）。
+使用方法为，下载源代码后，执行 `python main.py` 启动图形界面，在界面中选择并配置所需的轨迹和烟花类型。
 
-生成器会在根目录下创建一个与GUI界面设置中命名相同的子文件夹，该文件夹即为创建的数据包，可直接复制到存档中的datapacks目录下进行使用。
+生成器会在根目录下创建一个与GUI界面设置中命名相同的子文件夹（数据包名称），该文件夹即为创建的数据包，可直接复制到存档中的`datapacks`目录下进行使用。
 
-执行时，根据Datapack Generator内对namespace的命名，在游戏内执行`/function namespace:0`。 namespace的命名规范请参考[Minecraft Wiki](https://zh.minecraft.wiki/w/%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4ID?variant=zh-cn#%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4)
+执行时，根据你在图形界面中设置的**命名空间(namespace)**，在游戏内执行`/function <你的命名空间>:0`。 命名空间的命名规范请参考[Minecraft Wiki](https://zh.minecraft.wiki/w/%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4ID?variant=zh-cn#%E5%91%BD%E5%90%8D%E7%A9%BA%E9%97%B4)。
 
-### 方法2.代码编辑
+### 方法2.核心库调用
 
-编写main.py，调用[template.md](templates.md)提供的**函数模板介绍**部分进行**自由度更大**的烟花设计。
+对于需要更高自由度或希望将烟花生成集成到其他Python脚本的用户，可以直接调用 `gui/lib/` 目录下的核心库函数 (如 `basic_fireworks.py`, `firework_trajectories.py`) 来手动调用生成轨迹、烟花的函数。具体用法请参考[templates.md](templates.md)。
 
 生成器会在代码目录下创建一个functions子文件夹，一个tick对应该文件夹下的一个.mcfuntion文件。
 
@@ -73,7 +72,8 @@ pip install -r requirements.txt
 ## > 更新日志
 
 - v1.0 2024.9.30 初始版本，提供多种烟花轨迹模板和烟花模板
-- v1.1 2025.1.26 更新图形化界面
+- v1.1 2025.1.26 更新图形化界面 (基于 Tkinter)
+- v1.2 2025.4.30 将 GUI 框架迁移至 PyQt5，重构项目结构。
 
 ## > 作者&技术交流/反馈群
 

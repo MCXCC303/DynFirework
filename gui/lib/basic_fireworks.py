@@ -81,26 +81,9 @@ def basic_double_layer_firework(tick, x, y, z, inner_start_color, inner_end_colo
                                 outer_horizontal_angle_step, outer_vertical_angle_step, duration, lifetime)
 
 
-def rotate_vector(vx, vy, vz, rad_horizontal, rad_vertical):
-    # 绕水平轴旋转
-    cos_h = math.cos(rad_horizontal)
-    sin_h = math.sin(rad_horizontal)
-    x_ = vx * cos_h + vz * sin_h
-    z_ = -vx * sin_h + vz * cos_h
-    vx, vz = x_, z_
-
-    # 绕垂直轴旋转
-    cos_v = math.cos(rad_vertical)
-    sin_v = math.sin(rad_vertical)
-    y_ = vy * cos_v - vz * sin_v
-    z_ = vy * sin_v + vz * cos_v
-    vy, vz = y_, z_
-
-    return vx, vy, vz
-
-
-def directional_firework(tick, x, y, z, start_color, end_color, speed, direction_horizontal_angle,
-                         direction_vertical_angle, spread_angle, track_count, duration, lifetime):
+def directional_firework(tick, x, y, z, start_color, end_color, speed, 
+                         direction_horizontal_angle, direction_vertical_angle, spread_angle, track_count, 
+                         duration, lifetime):
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
 
@@ -161,5 +144,5 @@ def clustered_firework(tick, x, y, z, start_color, end_color, speed, horizontal_
             horizontal_angle = (i * horizontal_angle_step + horizontal_angle_offset) % 360
             vertical_angle = (j * vertical_angle_step + vertical_angle_offset) % 180 - 90
             # print(f"{horizontal_angle}, {vertical_angle}")
-            directional_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle, vertical_angle,
-                                 spread_angle, track_count, duration, lifetime)
+            directional_firework(tick, x, y, z, start_color, end_color, speed, 
+                                 horizontal_angle, vertical_angle, spread_angle, track_count, duration, lifetime)

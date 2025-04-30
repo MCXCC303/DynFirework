@@ -1,17 +1,8 @@
 # main.py
 import os
-import basic_fireworks
-import export_mcfunction
-import global_storage
-import firework_trajectories
-
-
-def schedule_next_tick(datapack_namespace):
-    for tick in range(global_storage.MAX_TICK + 1):
-        # 在每个 tick 对应的命令列表后面添加一个 schedule 指令
-        if tick == global_storage.MAX_TICK:
-            break
-        global_storage.add_command(tick, f'schedule function {datapack_namespace}:{tick + 1} 1t')
+from gui.lib import basic_fireworks
+from gui.lib import export_mcfunction
+from gui.lib import firework_trajectories
 
 
 if __name__ == '__main__':
@@ -146,10 +137,7 @@ if __name__ == '__main__':
         lifetime=1.5
     )
     # =====这是一个示例=====
-    print(f"max tick={global_storage.MAX_TICK}")
-    # 调用 schedule_next_tick 来生成 schedule 指令
-    schedule_next_tick(namespace)
-
+    
     # 输出 mcfunction 文件
     export_mcfunction.export_mcfunction(output_dir)
     # Create auto exec function file
