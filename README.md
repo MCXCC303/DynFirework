@@ -82,7 +82,7 @@ pip install -r requirements.txt
 
 ## > 鸣谢
 
-- MCXCC303 编写图形化界面
+- MCXCC303 编写v1.1图形化界面
 
 ## > 项目统计
 
