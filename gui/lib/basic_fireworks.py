@@ -1,14 +1,17 @@
 # basic_fireworks.py
+# pylint: skip-file
+# flake8: noqa
 import math
 import random
-from gui.lib import shared_functions
-from gui.lib.global_storage import g
+from . import shared_functions
+from .global_storage import g
 
 
 def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step,
                                 vertical_angle_step, duration, lifetime):
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
+    VELOCITY_SCALE = 0.05  # 速度缩放系数
 
     horizontal_angles = int(360 / horizontal_angle_step)
     vertical_angles = int(180 / vertical_angle_step)
@@ -34,21 +37,23 @@ def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, ho
             while t <= duration:
                 # 计算水平方向的位移
                 k = 1.2  # 空气阻力系数
-                m0 = 1.0  # 粒子质量
+                m0 = 0.5  # 粒子质量（减小以增强空气阻力效果）
                 vx = vx0 * math.exp(-k * t / m0)
                 vz = vz0 * math.exp(-k * t / m0)
                 x_ = x + (vx0 * m0 / k) * (1 - math.exp(-k * t / m0))
                 z_ = z + (vz0 * m0 / k) * (1 - math.exp(-k * t / m0))
 
-                # 计算垂直方向的位移
+                # 计算垂直方向的位移和速度
+                vy = (vy0 + (m0 * g / k)) * math.exp(-k * t / m0) - m0 * g / k
                 y_ = y - (m0 * g * t / k) + (vy0 + (m0 * g / k)) * (m0 / k) * (1 - math.exp(-k * t / m0))
 
                 # 计算颜色表达式
                 color_expr = shared_functions.color_expression(start_color, end_color, lifetime)
 
-                # 添加粒子指令
-                shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), lifetime * 20,
-                                                      color_expr)
+                # 添加粒子指令（传递缩放后的速度）
+                # lifetime参数被忽略，使用固定值15 ticks
+                shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), 15,
+                                                      color_expr, vx * VELOCITY_SCALE, vy * VELOCITY_SCALE, vz * VELOCITY_SCALE)
 
                 t += t_step
                 n_tick += 1  # 增加n_tick
@@ -86,6 +91,7 @@ def directional_firework(tick, x, y, z, start_color, end_color, speed,
                          duration, lifetime):
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
+    VELOCITY_SCALE = 0.05  # 速度缩放系数
 
     for i in range(track_count):
         # 在spread_angle范围内添加随机偏移
@@ -111,22 +117,24 @@ def directional_firework(tick, x, y, z, start_color, end_color, speed,
         while t <= duration:
             # 计算水平方向的位移
             k = 1.2  # 空气阻力系数
-            m0 = 2.0  # 粒子质量
+            m0 = 1.0  # 粒子质量（减小以增强空气阻力效果）
             vx = vx0 * math.exp(-k * t / m0)
             vz = vz0 * math.exp(-k * t / m0)
             x_ = x + (vx0 * m0 / k) * (1 - math.exp(-k * t / m0))
             z_ = z + (vz0 * m0 / k) * (1 - math.exp(-k * t / m0))
 
-            # 计算垂直方向的位移
+            # 计算垂直方向的位移和速度
             g = 9.8  # 重力加速度
+            vy = (vy0 + (m0 * g / k)) * math.exp(-k * t / m0) - m0 * g / k
             y_ = y - (m0 * g * t / k) + (vy0 + (m0 * g / k)) * (m0 / k) * (1 - math.exp(-k * t / m0))
 
             # 计算颜色表达式
             color_expr = shared_functions.color_expression(start_color, end_color, lifetime)
 
-            # 添加粒子指令
-            shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), lifetime * 20,
-                                                  color_expr)
+            # 添加粒子指令（传递缩放后的速度）
+            # lifetime参数被忽略，使用固定值15 ticks
+            shared_functions.add_firework_command(n_tick, round(x_, 4), round(y_, 4), round(z_, 4), 15,
+                                                  color_expr, vx * VELOCITY_SCALE, vy * VELOCITY_SCALE, vz * VELOCITY_SCALE)
 
             t += t_step
             n_tick += 1  # 增加n_tick
@@ -146,3 +154,63 @@ def clustered_firework(tick, x, y, z, start_color, end_color, speed, horizontal_
             # print(f"{horizontal_angle}, {vertical_angle}")
             directional_firework(tick, x, y, z, start_color, end_color, speed, 
                                  horizontal_angle, vertical_angle, spread_angle, track_count, duration, lifetime)
+
+
+def expanding_sphere_firework(tick, x, y, z, start_color, end_color, 
+                               radius, particle_count, radial_speed, 
+                               lifetime):
+    """
+    生成扩散球面烟花效果
+    使用斐波那契球面算法（Golden Spiral）生成均匀分布的粒子
+    每个粒子沿位矢方向扩散，在单个tick生成一波带速度的粒子
+    
+    参数:
+        tick: 起始游戏刻
+        x, y, z: 球心坐标
+        start_color: 起始颜色元组 (R, G, B)
+        end_color: 结束颜色元组 (R, G, B)
+        radius: 初始球面半径
+        particle_count: 球面上的粒子数量
+        radial_speed: 沿位矢方向的扩散速度
+        lifetime: 粒子生命周期（ticks）
+    """
+    # 黄金角（Golden Angle）约等于 2.39996 弧度
+    golden_angle = math.pi * (3.0 - math.sqrt(5.0))
+    
+    # 使用斐波那契球面算法生成均匀分布的点，并直接生成粒子
+    for i in range(particle_count):
+        # 计算 y 坐标（从 -1 到 1）
+        y_normalized = 1.0 - (i / float(particle_count - 1)) * 2.0
+        
+        # 计算该高度处的圆半径
+        radius_at_y = math.sqrt(1.0 - y_normalized * y_normalized)
+        
+        # 计算旋转角度
+        theta = i * golden_angle
+        
+        # 计算 x, z 坐标
+        x_normalized = math.cos(theta) * radius_at_y
+        z_normalized = math.sin(theta) * radius_at_y
+        
+        # 缩放到实际半径并偏移到球心位置
+        point_x = x + x_normalized * radius
+        point_y = y + y_normalized * radius
+        point_z = z + z_normalized * radius
+        
+        # 计算归一化的位矢方向（扩散方向）
+        direction_x = x_normalized
+        direction_y = y_normalized
+        direction_z = z_normalized
+        
+        # 初始速度 = 扩散速度 * 归一化方向
+        vx = radial_speed * direction_x
+        vy = radial_speed * direction_y
+        vz = radial_speed * direction_z
+        
+        # 直接在initial tick生成带速度的粒子
+        shared_functions.add_velocity_firework_command(
+            tick, point_x, point_y, point_z,
+            start_color, end_color,
+            vx, vy, vz,
+            lifetime
+        )

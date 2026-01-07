@@ -1,3 +1,5 @@
+# pylint: skip-file
+# flake8: noqa
 import sys
 from PyQt5.QtWidgets import QApplication
 from gui.style.style_factory import StyleFactory

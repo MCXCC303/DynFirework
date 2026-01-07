@@ -1,22 +1,9 @@
 # export_mcfunction.py
 import os
-from gui.lib import global_storage
+from . import global_storage
 
 
-def schedule_next_tick(datapack_namespace):
-    try:
-        for tick in range(global_storage.MAX_TICK + 1):
-            # 在每个 tick 对应的命令列表后面添加一个 schedule 指令
-            if tick == global_storage.MAX_TICK:
-                break
-            global_storage.add_command(tick, f'schedule function {datapack_namespace}:{tick + 1} 1t')
-        return True
-    except Exception as e:
-        print(f"添加命令调度失败: {e}")
-        return False
-
-
-def export_mcfunction(output_dir):
+def export_mcfunction(output_dir, namespace):
     # 确保输出目录存在
     if not os.path.exists(output_dir):
         try:
@@ -26,12 +13,19 @@ def export_mcfunction(output_dir):
             print(f"创建输出目录失败: {e}")
             return False
     
-    # 导出每个 tick 的命令
+    # 导出每个 tick 的命令，如果 tick 不存在则创建空文件
     try:
         for tick in range(global_storage.MAX_TICK + 1):
             filename = os.path.join(output_dir, f'{tick}.mcfunction')
-            with open(filename, 'w') as f:
-                for cmd in global_storage.commands_by_tick[tick]:
+            commands = global_storage.commands_by_tick.get(tick, [])
+            
+            # Add schedule command for the next tick
+            if tick < global_storage.MAX_TICK:
+                commands.append(f'schedule function {namespace}:{tick + 1} 1t')
+
+            # 写入文件，每行都加换行符（Minecraft要求）
+            with open(filename, 'w', encoding='utf-8', newline='\n') as f:
+                for cmd in commands:
                     f.write(f'{cmd}\n')
         return True
     except Exception as e:
@@ -44,7 +38,7 @@ def generate_auto_exec_file(output_dir, namespace):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         
-        with open(os.path.join(output_dir, 'auto_exec.mcfunction'), 'w') as f:
+        with open(os.path.join(output_dir, 'auto_exec.mcfunction'), 'w', encoding='utf-8', newline='\n') as f:
             for tick in range(global_storage.MAX_TICK + 1):
                 f.write(f"schedule function {namespace}:{tick + 1} {tick}t\n")
         return True
@@ -63,10 +57,20 @@ def generate_data_pack(datapack_name, datapack_namespace, datapack_desc):
             os.makedirs(output_dir)
             
         # 创建pack.mcmeta文件
-        with open(os.path.join(datapack_dir, 'pack.mcmeta'), 'w') as f:
+        with open(os.path.join(datapack_dir, 'pack.mcmeta'), 'w', encoding='utf-8', newline='\n') as f:
             f.writelines(f'{{"pack":{{"pack_format": 6,\"description\":\"{datapack_desc}\"}}}}')
             
         return True, output_dir
     except Exception as e:
         print(f"生成数据包失败: {e}")
         return False, None
+
+
+
+
+
+
+
+
+
+
