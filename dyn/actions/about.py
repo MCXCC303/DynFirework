@@ -4,17 +4,17 @@ from dyn.ui.df_about_ui import Ui_Dialog as DFAboutUI
 
 
 class DYNAboutWindow(QtWidgets.QDialog):
-    def __init__(self):
-        super().__init__()
-        self.ui = DFAboutUI()
-        self.ui.setupUi(self)
-        self.show()
+	def __init__(self):
+		super().__init__()
+		self.ui = DFAboutUI()
+		self.ui.setupUi(self)
+		self.show()
 
 
 class DYNHelpWindow(QtWidgets.QDialog):
-    def __init__(self):
-        super().__init__()
-        self.ui = DYNHelpUI()
-        self.ui.setupUi(self)
+	def __init__(self):
+		super().__init__()
+		self.ui = DYNHelpUI()
+		self.ui.setupUi(self)
 
-        self.show()
+		self.show()
