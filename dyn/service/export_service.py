@@ -1,11 +1,15 @@
 """导出服务 将项目元素生成为 Minecraft 数据包."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QRunnable, QThreadPool
 
+from dyn.lib import global_storage, export_mcfunction
+from dyn.lib import trajectories as traj, fireworks as fw
+from dyn.lib.backend_registry import set_backend, resolve_mc_version, BackendType
 from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
@@ -118,11 +122,10 @@ class _ExportTask(QRunnable):
 
 	def _export_tf(self, elem, traj, fw) -> None:
 		"""导出 TrajFireworkElement 分别导出轨迹和烟花部分."""
-		# 轨迹部分
 		pos = elem.start_position or Position()
 		end = elem.mid_position or Position()
 		color = elem.traj_color
-		func = getattr(traj_mod, _TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
+		func = getattr(traj, _TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
 		if func:
 			kwargs = {
 				"x0": pos.x, "y0": pos.y, "z0": pos.z,
@@ -136,52 +139,73 @@ class _ExportTask(QRunnable):
 			if elem.traj_type == "launch":
 				kwargs["rho"] = elem.rho
 			elif elem.traj_type in ("spark",):
-				kwargs["particle_count"] = 1
+				kwargs["particle_count"] = elem.particle_count
+			elif elem.traj_type in ("offset", "thick", "expanding"):
+				kwargs["interval_ticks"] = elem.interval_ticks
+				kwargs["points_per_tick"] = elem.points_per_tick
+				if elem.traj_type in ("thick", "expanding"):
+					kwargs["range_x"] = elem.range_x
+					kwargs["range_y"] = elem.range_y
+					kwargs["range_z"] = elem.range_z
+					kwargs["particle_count"] = elem.particle_count
+				if elem.traj_type == "expanding":
+					kwargs["speed_factor"] = elem.speed_factor
 			func(elem.start_tick, **kwargs)
 
-		# 烟花部分
-		fw_func = getattr(fw_mod, _FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
+		fw_func = getattr(fw, _FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
 		if fw_func:
 			fw_kwargs = {
 				"tick": elem.fw_start_tick,
 				"x": end.x, "y": end.y, "z": end.z,
 				"duration": elem.fw_duration_ticks / 20,
 				"lifetime": elem.fw_duration_ticks / 20,
-				"horizontal_angle_step": elem.horizontal_angle,
-				"vertical_angle_step": elem.vertical_angle,
 			}
 			self._fill_fw_kwargs(elem, fw_kwargs)
 			fw_func(**fw_kwargs)
 
 	@staticmethod
 	def _fill_fw_kwargs(elem, kwargs: dict) -> None:
-		"""填充烟花导出参数."""
+		"""填充烟花导出参数 与 _export_firework 共用."""
+		inner_end = elem.inner_color.end.as_tuple() if elem.inner_color.use_gradient else elem.inner_color.start.as_tuple()
+		outer_end = elem.outer_color.end.as_tuple() if elem.outer_color.use_gradient else elem.outer_color.start.as_tuple()
+
 		if elem.fw_type == "single_layer":
 			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = elem.inner_color.start.as_tuple()
+			kwargs["end_color"] = inner_end
 			kwargs["speed"] = elem.speed
+			kwargs["horizontal_angle_step"] = elem.horizontal_angle
+			kwargs["vertical_angle_step"] = elem.vertical_angle
 		elif elem.fw_type == "double_layer":
 			kwargs["inner_start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["inner_end_color"] = elem.inner_color.start.as_tuple()
+			kwargs["inner_end_color"] = inner_end
 			kwargs["outer_start_color"] = elem.outer_color.start.as_tuple()
-			kwargs["outer_end_color"] = elem.outer_color.start.as_tuple()
+			kwargs["outer_end_color"] = outer_end
 			kwargs["inner_speed"] = elem.inner_speed
 			kwargs["outer_speed"] = elem.outer_speed
-		elif elem.fw_type in ("directional", "clustered"):
+			kwargs["outer_horizontal_angle_step"] = elem.horizontal_angle
+			kwargs["outer_vertical_angle_step"] = elem.vertical_angle
+		elif elem.fw_type == "directional":
 			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = elem.inner_color.start.as_tuple()
+			kwargs["end_color"] = inner_end
 			kwargs["speed"] = elem.speed
 			kwargs["spread_angle"] = elem.spread_angle
 			kwargs["track_count"] = elem.track_count
-			if elem.fw_type == "directional":
-				kwargs["direction_horizontal_angle"] = elem.horizontal_angle
-				kwargs["direction_vertical_angle"] = elem.vertical_angle
+			kwargs["direction_horizontal_angle"] = elem.horizontal_angle
+			kwargs["direction_vertical_angle"] = elem.vertical_angle
+		elif elem.fw_type == "clustered":
+			kwargs["start_color"] = elem.inner_color.start.as_tuple()
+			kwargs["end_color"] = inner_end
+			kwargs["speed"] = elem.speed
+			kwargs["spread_angle"] = elem.spread_angle
+			kwargs["track_count"] = elem.track_count
+			kwargs["horizontal_angle_step"] = elem.horizontal_angle
+			kwargs["vertical_angle_step"] = elem.vertical_angle
 		elif elem.fw_type == "expanding_sphere":
 			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = elem.inner_color.start.as_tuple()
-			kwargs["radius"] = getattr(elem, 'radius', 5.0) if hasattr(elem, 'radius') else 5.0
+			kwargs["end_color"] = inner_end
+			kwargs["radius"] = elem.radius
 			kwargs["particle_count"] = elem.track_count
-			kwargs["radial_speed"] = getattr(elem, 'radial_speed', 3.0) if hasattr(elem, 'radial_speed') else 3.0
+			kwargs["radial_speed"] = elem.radial_speed
 
 	def _export_trajectory(self, elem: TrajectoryElement, traj) -> None:
 		func = getattr(traj, _TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
@@ -230,57 +254,8 @@ class _ExportTask(QRunnable):
 			"x": pos.x, "y": pos.y, "z": pos.z,
 			"duration": elem.duration_ticks / 20,
 			"lifetime": elem.duration_ticks / 20,
-			"horizontal_angle_step": elem.horizontal_angle,
-			"vertical_angle_step": elem.vertical_angle,
 		}
-
-		if elem.fw_type == "single_layer":
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = (
-				elem.inner_color.end.as_tuple()
-				if elem.inner_color.use_gradient
-				else elem.inner_color.start.as_tuple()
-			)
-			kwargs["speed"] = elem.speed
-		elif elem.fw_type == "double_layer":
-			kwargs["inner_start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["inner_end_color"] = (
-				elem.inner_color.end.as_tuple()
-				if elem.inner_color.use_gradient
-				else elem.inner_color.start.as_tuple()
-			)
-			kwargs["outer_start_color"] = elem.outer_color.start.as_tuple()
-			kwargs["outer_end_color"] = (
-				elem.outer_color.end.as_tuple()
-				if elem.outer_color.use_gradient
-				else elem.outer_color.start.as_tuple()
-			)
-			kwargs["inner_speed"] = elem.inner_speed
-			kwargs["outer_speed"] = elem.outer_speed
-		elif elem.fw_type in ("directional", "clustered"):
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = (
-				elem.inner_color.end.as_tuple()
-				if elem.inner_color.use_gradient
-				else elem.inner_color.start.as_tuple()
-			)
-			kwargs["speed"] = elem.speed
-			kwargs["spread_angle"] = elem.spread_angle
-			kwargs["track_count"] = elem.track_count
-			if elem.fw_type == "directional":
-				kwargs["direction_horizontal_angle"] = elem.horizontal_angle
-				kwargs["direction_vertical_angle"] = elem.vertical_angle
-		elif elem.fw_type == "expanding_sphere":
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = (
-				elem.inner_color.end.as_tuple()
-				if elem.inner_color.use_gradient
-				else elem.inner_color.start.as_tuple()
-			)
-			kwargs["radius"] = elem.radius
-			kwargs["particle_count"] = elem.track_count
-			kwargs["radial_speed"] = elem.radial_speed
-
+		self._fill_fw_kwargs(elem, kwargs)
 		func(**kwargs)
 
 class ExportService(QObject):
