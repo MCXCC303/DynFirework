@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal, QTimer
+from PySide6.QtCore import QObject, QUrl, Signal, QTimer
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from dyn.logging_config import get_logger
@@ -57,36 +57,39 @@ class PlaybackController(QObject):
         self._ticks_per_beat = tpb
 
     def load_music(self, path: str | Path) -> bool:
-        from PySide6.QtCore import QUrl
         path = Path(path)
         if not path.exists():
             log.warning(f"音乐文件不存在: {path}")
             return False
         url = QUrl.fromLocalFile(str(path.resolve()))
         self._player.setSource(url)
-        log.info(f"加载音乐: {path}")
+        log.debug(f"加载音乐: {path}")
         self._player.mediaStatusChanged.connect(self._on_media_loaded)
         return True
 
+    def load_music_from_temp(self, temp_path: str) -> bool:
+        """从临时文件路径加载音乐（用于嵌入音乐播放）."""
+        return self.load_music(temp_path)
+
     def _on_media_loaded(self, status) -> None:
-        from PySide6.QtMultimedia import QMediaPlayer
         if status == QMediaPlayer.MediaStatus.LoadedMedia:
             duration_ms = self._player.duration()
             self._total_ticks = self._ms_to_ticks(duration_ms)
+            log.debug(f"媒体加载完成: duration={duration_ms}ms, total_ticks={self._total_ticks}")
             self.duration_changed.emit(self._total_ticks)
 
     def play(self) -> None:
-        log.debug("播放")
+        log.debug(f"播放 (tick={self.current_tick()})")
         self._player.play()
         self._sync_timer.start()
 
     def pause(self) -> None:
-        log.debug("暂停")
+        log.debug(f"暂停 (tick={self.current_tick()})")
         self._player.pause()
         self._sync_timer.stop()
 
     def stop(self) -> None:
-        log.debug("停止")
+        log.debug(f"停止 (tick={self.current_tick()})")
         self._player.stop()
         self._sync_timer.stop()
         self.position_changed.emit(0)
@@ -119,7 +122,7 @@ class PlaybackController(QObject):
         }
         self.state_changed.emit(state_map.get(state, "stopped"))
 
-    # ── 内部转换 ─────────────────────────────────────
+    # ── 内部转换
 
     def _ticks_to_ms(self, ticks: int) -> int:
         beats = ticks / self._ticks_per_beat

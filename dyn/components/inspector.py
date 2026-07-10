@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import logging
+
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPlainTextEdit, QLabel
 from PySide6.QtCore import Qt
 
 from dyn.models.elements import Element
+
+log = logging.getLogger("dyn.components.inspector")
 
 
 class Inspector(QWidget):
@@ -33,14 +38,16 @@ class Inspector(QWidget):
 
     def show_element(self, element: Element | None) -> None:
         if element is None:
+            log.debug("检查器: 清空")
             self._editor.setPlainText("")
             self._editor.setPlaceholderText("未选中任何元素")
             self._label.setText("检查器")
             return
 
+        log.debug(f"检查器: 显示元素 id={element.id}, name={element.name}, type={element.element_type.name}, tick={element.start_tick}")
         json_str = element.to_json()
-        import json
         formatted = json.dumps(json_str, ensure_ascii=False, indent=2)
+        log.debug(f"  数据大小: {len(formatted)} 字符")
         self._editor.setPlainText(formatted)
         self._label.setText(f"检查器 — {element.name}")
 

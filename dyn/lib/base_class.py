@@ -1,7 +1,9 @@
+# @Deprecated
+# Check dyn.models for further support
+
 from abc import ABC, abstractmethod
 
 from PySide6.QtGui import QColor
-
 from dyn.lib.units import MinecraftPosition, MinecraftVelocity, MinecraftTick
 
 

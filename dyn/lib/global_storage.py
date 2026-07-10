@@ -2,8 +2,11 @@
 # flake8: noqa
 # mypy: ignore-errors
 # global_storage.py
+import logging
 from pathlib import Path
 from . import global_storage
+
+log = logging.getLogger("dyn.lib.global_storage")
 
 # A global variable to hold the namespace, accessible by export_mcfunction
 global_storage.namespace = 'fireworks1'
@@ -30,3 +33,12 @@ def add_command(tick, command):
     if tick not in commands_by_tick:
         commands_by_tick[tick] = []
     commands_by_tick[tick].append(command)
+
+
+def reset_storage():
+    """清空全局命令存储."""
+    global commands_by_tick, MAX_TICK
+    count = sum(len(v) for v in commands_by_tick.values())
+    log.debug(f"清空命令存储: {count} 条命令, MAX_TICK={MAX_TICK}")
+    commands_by_tick = {}
+    MAX_TICK = 0

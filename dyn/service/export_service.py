@@ -61,7 +61,7 @@ class _ExportTask(QRunnable):
 
     def run(self) -> None:
         try:
-            log.info(f"导出开始: {self._output_dir}, namespace={self._namespace}, elements={len(self._elements)}")
+            log.debug(f"导出开始: {self._output_dir}, namespace={self._namespace}, elements={len(self._elements)}")
             self._do_export()
             self.signals.finished.emit(True, f"导出完成: {self._output_dir}")
         except Exception as e:
@@ -69,18 +69,12 @@ class _ExportTask(QRunnable):
             self.signals.finished.emit(False, f"导出失败: {e}")
 
     def _do_export(self) -> None:
-        import json
-        from pathlib import Path
-        from dyn.lib import fireworks as fw
-        from dyn.lib import trajectories as traj
-        from dyn.lib import global_storage, export_mcfunction
-        from dyn.lib.backend_registry import set_backend, resolve_mc_version, BackendType
 
         # 根据MC版本设置后端
         try:
             info = resolve_mc_version(self._mc_version)
             set_backend(info.backend)
-            log.info(f"导出后端: {info.backend.value}, MC版本: {self._mc_version}, pack_format: {info.pack_format}")
+            log.debug(f"导出后端: {info.backend.value}, MC版本: {self._mc_version}, pack_format: {info.pack_format}")
         except KeyError:
             log.warning(f"未知MC版本: {self._mc_version}, 使用默认DFP后端")
             set_backend(BackendType.DFP)
@@ -90,21 +84,28 @@ class _ExportTask(QRunnable):
         global_storage.MAX_TICK = 0
 
         total = len(self._elements)
+        log.info(f"开始导出 {total} 个元素, namespace={self._namespace}, mc_version={self._mc_version}")
         for i, elem in enumerate(self._elements):
             if not elem.enabled:
+                log.debug(f"跳过禁用元素: id={elem.id}, name={elem.name}")
                 continue
 
             if isinstance(elem, TrajectoryElement):
+                log.debug(f"导出轨迹 [{i+1}/{total}]: id={elem.id}, name={elem.name}, type={elem.traj_type}")
                 self._export_trajectory(elem, traj)
             elif isinstance(elem, FireworkElement):
+                log.debug(f"导出烟花 [{i+1}/{total}]: id={elem.id}, name={elem.name}, type={elem.fw_type}")
                 self._export_firework(elem, fw)
             elif hasattr(elem, 'traj_type') and hasattr(elem, 'fw_type'):
                 # TrajFireworkElement — 导出轨迹 + 烟花
+                log.debug(f"导出轨迹烟花 [{i+1}/{total}]: id={elem.id}, name={elem.name}")
                 self._export_tf(elem, traj, fw)
 
             self.signals.progress.emit(int((i + 1) / total * 100))
 
         # 创建完整数据包结构
+        cmd_count = sum(len(v) for v in global_storage.commands_by_tick.values())
+        log.info(f"命令生成完成: {cmd_count} 条命令, MAX_TICK={global_storage.MAX_TICK}")
         pack_dir = Path(self._output_dir) / self._datapack_name
         func_dir = pack_dir / "data" / self._namespace / "functions"
         func_dir.mkdir(parents=True, exist_ok=True)
@@ -125,7 +126,6 @@ class _ExportTask(QRunnable):
         pos = elem.start_position or Position()
         end = elem.mid_position or Position()
         color = elem.traj_color
-        from dyn.lib import trajectories as traj_mod
         func = getattr(traj_mod, _TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
         if func:
             kwargs = {
@@ -144,7 +144,6 @@ class _ExportTask(QRunnable):
             func(elem.start_tick, **kwargs)
 
         # 烟花部分
-        from dyn.lib import fireworks as fw_mod
         fw_func = getattr(fw_mod, _FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
         if fw_func:
             fw_kwargs = {

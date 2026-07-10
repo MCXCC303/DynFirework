@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dyn.logging_config import get_logger
+log = get_logger(__name__)
+
 import math
 
 from PySide6.QtCore import QModelIndex, Qt, Signal, QAbstractListModel, QPoint
@@ -32,9 +35,7 @@ from dyn.components.pos_select.pos_undo_commands import (
 )
 
 
-# ═══════════════════════════════════════════════════════
 # PixElementList — 列表模型
-# ═══════════════════════════════════════════════════════
 
 class PixElementList(QAbstractListModel):
     """位置点列表模型 — QListView 的数据源."""
@@ -87,9 +88,7 @@ class PixElementList(QAbstractListModel):
                 self.selection_changed.emit(selected_element)
 
 
-# ═══════════════════════════════════════════════════════
 # PixGraphWidget — 网格图
-# ═══════════════════════════════════════════════════════
 
 class PixGraphWidget(QWidget):
     """网格图（笛卡尔坐标）位置选择器.
@@ -140,13 +139,13 @@ class PixGraphWidget(QWidget):
 
         self.set_proper_pix_size()
 
-    # ── 公共属性 ──────────────────────────────────────
+    # ── 公共属性
 
     @property
     def undo_stack(self) -> QUndoStack:
         return self._undo_stack
 
-    # ── 坐标转换 ──────────────────────────────────────
+    # ── 坐标转换
 
     def _grid_to_widget(self, gx: int, gz: int) -> tuple[float, float]:
         x = self.center_x + gx * self.pix_size + self.offset_x
@@ -160,7 +159,7 @@ class PixGraphWidget(QWidget):
         gz = int(dy // self.pix_size)
         return gx, gz
 
-    # ── 绘制 ──────────────────────────────────────────
+    # ── 绘制
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
         self.center_x = self.rect().center().x()
@@ -288,7 +287,7 @@ class PixGraphWidget(QWidget):
         except Exception:
             pass
 
-    # ── 事件处理 ──────────────────────────────────────
+    # ── 事件处理
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MiddleButton:
@@ -334,9 +333,11 @@ class PixGraphWidget(QWidget):
             self._handle_left_click(gx, gz)
 
     def _handle_left_click(self, gx: int, gz: int) -> None:
+        log.debug(f"网格图点击: grid=({gx}, {gz})")
         if (gx, gz) in self.stored_pix_fastsearch:
             for pt in self.stored_pix_list:
                 if int(pt.x) == gx and int(pt.z) == gz:
+                    log.debug(f"网格图选中点: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f}), label={pt.label}, color=({pt.pix_color.red()},{pt.pix_color.green()},{pt.pix_color.blue()})")
                     self.selected_point = pt
                     self.selection_changed.emit(pt)
                     self.update()
@@ -345,6 +346,7 @@ class PixGraphWidget(QWidget):
             dlg = NewPointEditorDialog((gx, gz))
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 pt = MinecraftPosition(dlg.x, dlg.y, dlg.z, label=dlg.name, main_color=dlg.color)
+                log.debug(f"网格图新建点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
                 self._undo_stack.push(
                     AddPointCommand(self.stored_pix_list, self.stored_pix_fastsearch, pt)
                 )
@@ -370,8 +372,9 @@ class PixGraphWidget(QWidget):
             menu.addAction(act_del)
 
             act_copy = QAction("复制坐标", self)
-            act_copy.triggered.connect(lambda: QApplication.clipboard().setText(
-                f"{point_here.x}, {point_here.y}, {point_here.z}"
+            act_copy.triggered.connect(lambda pt=point_here: (
+                QApplication.clipboard().setText(f"{pt.x}, {pt.y}, {pt.z}"),
+                log.debug(f"复制坐标: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f})")
             ))
             menu.addAction(act_copy)
             menu.addSeparator()
@@ -387,6 +390,7 @@ class PixGraphWidget(QWidget):
         menu.exec(self.mapToGlobal(pos))
 
     def _edit_point(self, pt: MinecraftPosition) -> None:
+        log.debug(f"编辑位置点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
         dlg = NewPointEditorDialog((int(pt.x), int(pt.z)))
         dlg.ui.doubleSpinBox_X.setValue(pt.x)
         dlg.ui.doubleSpinBox_Z.setValue(pt.z)
@@ -407,6 +411,7 @@ class PixGraphWidget(QWidget):
             self.update()
 
     def _delete_point(self, pt: MinecraftPosition) -> None:
+        log.debug(f"删除位置点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
         self._undo_stack.push(
             RemovePointCommand(self.stored_pix_list, self.stored_pix_fastsearch, pt)
         )
@@ -421,7 +426,7 @@ class PixGraphWidget(QWidget):
         self.set_proper_pix_size()
         self.update()
 
-    # ── 缩放 ──────────────────────────────────────────
+    # ── 缩放
 
     def wheelEvent(self, a0):
         old_size = self.pix_size
@@ -458,16 +463,14 @@ class PixGraphWidget(QWidget):
         self.pix_size = max(3, min(50, size))
         self.update()
 
-    # ── 选择同步 ──────────────────────────────────────
+    # ── 选择同步
 
     def get_list_selected_pix(self, selected_point: MinecraftPosition):
         self.selected_point = selected_point
         self.update()
 
 
-# ═══════════════════════════════════════════════════════
 # NewPointEditorDialog — 新建点对话框
-# ═══════════════════════════════════════════════════════
 
 class NewPointEditorDialog(QDialog):
     """新建/编辑位置点对话框."""

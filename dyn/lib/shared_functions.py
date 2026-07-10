@@ -8,20 +8,23 @@
 #
 # 此模块保持与原有调用方100%兼容的接口 — fireworks.py / trajectories.py /
 # special_effects.py 无需任何修改。
+import logging
 from . import global_storage
 from .backend_registry import get_backend, BackendType
+from .backends import dfp_backend, particleex_backend
+
+log = logging.getLogger("dyn.lib.shared_functions")
 
 
 def _get_backend_module():
     """返回当前活动后端的模块对象."""
     backend = get_backend()
     if backend == BackendType.DFP:
-        from .backends import dfp_backend
         return dfp_backend
     elif backend == BackendType.PARTICLEEX:
-        from .backends import particleex_backend
         return particleex_backend
     else:
+        log.error(f"未知后端类型: {backend}")
         raise ValueError(f"Unknown backend: {backend}")
 
 

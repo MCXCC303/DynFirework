@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from PySide6.QtCore import (
@@ -12,6 +13,8 @@ from PySide6.QtCore import (
     Slot,
 )
 
+from PySide6.QtGui import QFont, QColor
+
 from dyn.models.elements import (
     Element,
     ElementType,
@@ -20,6 +23,8 @@ from dyn.models.elements import (
     TrajFireworkElement,
 )
 from dyn.service.element_controller import ElementController
+
+log = logging.getLogger("dyn.components.element_browser")
 
 
 class _TreeNode:
@@ -71,7 +76,7 @@ class ElementBrowserModel(QAbstractItemModel):
         self._element_nodes: dict[str, _TreeNode] = {}
         self._emitting_selection: bool = False
 
-    # ── QAbstractItemModel 接口 ──────────────────────
+    # QAbstractItemModel 接口
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
@@ -133,10 +138,8 @@ class ElementBrowserModel(QAbstractItemModel):
             return None  # 后续可加图标
         elif role == Qt.ForegroundRole:
             if node.is_group:
-                from PySide6.QtGui import QColor
                 return QColor(100, 100, 100)
         elif role == Qt.FontRole and node.is_group:
-            from PySide6.QtGui import QFont
             f = QFont()
             f.setBold(True)
             return f
@@ -157,7 +160,7 @@ class ElementBrowserModel(QAbstractItemModel):
             flags |= Qt.ItemIsEditable
         return flags
 
-    # ── 数据操作 ──────────────────────────────────────
+    # 数据操作
 
     def set_controller(self, controller: ElementController) -> None:
         self._controller = controller
@@ -175,6 +178,7 @@ class ElementBrowserModel(QAbstractItemModel):
 
     @Slot(Element)
     def _on_element_added(self, elem: Element) -> None:
+        log.debug(f"浏览器添加元素: id={elem.id}, name={elem.name}, type={elem.element_type}")
         group = self._group_for_element(elem)
         parent_idx = self._index_for_node(group)
         row = len(group.children)
@@ -198,6 +202,7 @@ class ElementBrowserModel(QAbstractItemModel):
 
     @Slot(str)
     def _on_element_removed(self, element_id: str) -> None:
+        log.debug(f"浏览器移除元素: id={element_id}")
         node = self._element_nodes.pop(element_id, None)
         if node is None:
             return
@@ -231,7 +236,7 @@ class ElementBrowserModel(QAbstractItemModel):
         finally:
             self._emitting_selection = False
 
-    # ── 查询 ──────────────────────────────────────────
+    # 查询
 
     def get_element_from_index(self, index: QModelIndex) -> Element | None:
         if not index.isValid():
@@ -252,9 +257,10 @@ class ElementBrowserModel(QAbstractItemModel):
             return QModelIndex()
         return self.createIndex(node.row, column, node)
 
-    # ── 批量加载 ──────────────────────────────────────
+    # 批量加载
 
     def load_elements(self, elements: list[Element]) -> None:
+        log.debug(f"浏览器批量加载: {len(elements)} 个元素")
         self.beginResetModel()
         self._traj_group.children.clear()
         self._fw_group.children.clear()

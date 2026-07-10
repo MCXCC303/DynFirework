@@ -1,12 +1,15 @@
 # firework_trajectories.py
 # pylint: skip-file
 # flake8: noqa
+import logging
 import math
 import random
 from . import shared_functions
 import numpy as np
 from scipy.interpolate import splprep, splev
 from .global_storage import g
+
+log = logging.getLogger("dyn.lib.trajectories")
 
 def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
     t_step = 1.0 / 20  # 一秒20个tick
@@ -60,6 +63,7 @@ def calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0
 
 def launch_trajectory(end_tick, x0, y0, z0, x1, y1, z1, start_color, end_color, duration, k, m0, lifetime,
                       rho):  # rho表示一个tick内生成多少个粒子
+    log.debug(f"发射轨迹: end_tick={end_tick}, from=({x0:.1f},{y0:.1f},{z0:.1f}) to=({x1:.1f},{y1:.1f},{z1:.1f}), duration={duration:.2f}s, rho={rho}")
     t_step = 1.0 / 20 / rho  # 一秒20个tick
     initial_tick = end_tick - int(duration * 20)  # 计算起始tick
     VELOCITY_SCALE = 0.05  # 速度缩放系数
@@ -92,6 +96,7 @@ def launch_trajectory(end_tick, x0, y0, z0, x1, y1, z1, start_color, end_color, 
         n_tick += 1.0 / rho  # 增加n_tick
 
 def launch_spark_trajectory(end_tick, x0, y0, z0, x1, y1, z1, duration, k, m0, lifetime, particle_count):
+    log.debug(f"火花轨迹: end_tick={end_tick}, particles={particle_count}, duration={duration:.2f}s")
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = end_tick - int(duration * 20)  # 计算起始tick
 

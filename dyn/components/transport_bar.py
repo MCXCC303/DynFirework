@@ -7,7 +7,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot
 
+from dyn.logging_config import get_logger
 from dyn.service.playback_controller import PlaybackController
+
+log = get_logger(__name__)
 
 
 class TransportBar(QWidget):
@@ -87,6 +90,7 @@ class TransportBar(QWidget):
         layout.addWidget(self._label_bpm)
 
     def set_music_path(self, path: str) -> None:
+        log.debug(f"set_music_path {path}")
         self._label_music.setText(path if path else "")
 
     def _setup_connections(self) -> None:
@@ -99,19 +103,22 @@ class TransportBar(QWidget):
 
     @Slot()
     def _on_play_pause(self) -> None:
+        log.debug(f"播放/暂停切换: 当前状态={'playing' if self._controller.is_playing else 'paused/stopped'}")
         self._controller.toggle_play_pause()
 
     @Slot()
     def _on_stop(self) -> None:
+        log.debug("停止播放")
         self._controller.stop()
 
     @Slot()
     def _on_go_to_start(self) -> None:
+        log.debug("跳转到开头")
         self._controller.seek_to_tick(0)
 
     @Slot(int)
     def _on_volume_changed(self, value: int) -> None:
-        from PySide6.QtMultimedia import QAudioOutput
+        log.debug(f"音量变更: {value}%")
         audio = self._controller._player.audioOutput()
         if audio:
             audio.setVolume(value / 100.0)
@@ -133,4 +140,5 @@ class TransportBar(QWidget):
             self._btn_play.setText("▶")
 
     def set_bpm(self, bpm: float) -> None:
+        log.debug(f"set_bpm {bpm}")
         self._label_bpm.setText(f"BPM: {bpm:.0f}")

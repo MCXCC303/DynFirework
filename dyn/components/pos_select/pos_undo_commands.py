@@ -8,7 +8,7 @@ from dyn.lib.units import MinecraftPosition
 
 
 class AddPointCommand(QUndoCommand):
-    """添加点 — 可撤销."""
+    """添加点."""
 
     def __init__(
         self,
@@ -32,7 +32,7 @@ class AddPointCommand(QUndoCommand):
 
 
 class RemovePointCommand(QUndoCommand):
-    """删除点 — 可撤销."""
+    """删除点."""
 
     def __init__(
         self,
@@ -56,7 +56,7 @@ class RemovePointCommand(QUndoCommand):
 
 
 class EditPointCommand(QUndoCommand):
-    """编辑点属性 — 可撤销."""
+    """编辑点属性."""
 
     def __init__(
         self,

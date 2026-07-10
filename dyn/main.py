@@ -3,40 +3,46 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 from dyn.logging_config import setup_logging, get_logger
 
 log = get_logger(__name__)
 
+from PySide6.QtCore import QItemSelectionModel, Qt, Signal, Slot, QSettings
+from PySide6.QtGui import QAction, QColor, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QTreeView, QFrame, QFileDialog, QMessageBox,
     QMenu, QLabel, QDoubleSpinBox, QLineEdit, QDialog, QFormLayout,
     QDialogButtonBox, QScrollArea, QSpinBox,
 )
-from PySide6.QtCore import Qt, Signal, Slot, QSettings
-from PySide6.QtGui import QAction, QKeySequence
 
-from dyn.models.elements import Element, TrajectoryElement, FireworkElement, TrajFireworkElement
-from dyn.models.timeline import Project
+from dyn.lib.backend_registry import MC_VERSION_MAP, resolve_mc_version
 from dyn.lib.units import MinecraftPosition
+from dyn.models.elements import Element, TrajectoryElement, FireworkElement, TrajFireworkElement, Position
+from dyn.models.timeline import Project
 
+from dyn.service.audio_service import load_waveform, load_waveform_from_bytes
 from dyn.service.element_controller import ElementController
-from dyn.service.project_manager import ProjectManager
-from dyn.service.undo_manager import UndoManager
 from dyn.service.export_service import ExportService
 from dyn.service.playback_controller import PlaybackController
+from dyn.service.project_manager import ProjectManager
+from dyn.service.undo_manager import UndoManager
 
 from dyn.components.element_browser import ElementBrowserModel
-from dyn.components.timeline.timeline_widget import TimelineWidget
-from dyn.components.property_panel import PropertyPanel
 from dyn.components.inspector import Inspector
+from dyn.components.property_panel import PropertyPanel
+from dyn.components.timeline.timeline_widget import TimelineWidget
 from dyn.components.transport_bar import TransportBar
 from dyn.components.pos_select.pos_select_main import PosSelectMainWindow
 
 from dyn.actions.about import DYNAboutWindow, DYNHelpWindow
+from dyn.ui.dialogs.export_dialog import ExportDialog
+from dyn.ui.dialogs.project_settings_dialog import ProjectSettingsDialog
 
 
 class MainWin(QMainWindow):
@@ -44,18 +50,18 @@ class MainWin(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        log.info("MainWin 初始化开始")
+        log.debug("MainWin 初始化开始")
         self.setWindowTitle("DynFirework — Minecraft 烟花设计工具")
         self.resize(1600, 900)
 
-        # ── 服务层 ──────────────────────────────────
+        # ── 服务层
         self._controller = ElementController(self)
         self._project_manager = ProjectManager(self)
         self._undo_manager = UndoManager(self._controller, self)
         self._export_service = ExportService(self)
         self._playback = PlaybackController(self)
 
-        # ── UI 组件 ─────────────────────────────────
+        # ── UI 组件
         self._element_browser_model = ElementBrowserModel(self)
         self._element_browser_model.set_controller(self._controller)
 
@@ -71,24 +77,22 @@ class MainWin(QMainWindow):
         self._pos_selector = PosSelectMainWindow()
         self._syncing_tree: bool = False
 
-        # ── 构建 UI ─────────────────────────────────
+        # ── 构建 UI
         self._setup_menu()
         self._setup_layout()
         self._setup_statusbar()
         self._connect_signals()
         self._setup_shortcuts()
 
-        # ── 恢复上次会话 ────────────────────────────
+        # ── 恢复上次会话
         self._restore_window_state()
 
-    # ═══════════════════════════════════════════════════
     # 菜单栏
-    # ═══════════════════════════════════════════════════
 
     def _setup_menu(self) -> None:
         mb = self.menuBar()
 
-        # ── 文件 ────────────────────────────────────
+        # ── 文件
         file_menu = mb.addMenu("文件(&F)")
 
         act = QAction("新建项目(&N)", self)
@@ -133,7 +137,7 @@ class MainWin(QMainWindow):
         act.triggered.connect(self.close)
         file_menu.addAction(act)
 
-        # ── 编辑 ────────────────────────────────────
+        # ── 编辑
         edit_menu = mb.addMenu("编辑(&E)")
 
         act = QAction("新建轨迹(&T)", self)
@@ -183,21 +187,21 @@ class MainWin(QMainWindow):
         act.triggered.connect(self._on_delete_selected)
         edit_menu.addAction(act)
 
-        # ── 视图 ────────────────────────────────────
+        # ── 视图
         view_menu = mb.addMenu("视图(&V)")
 
         act = QAction("位置选择器(&P)", self)
         act.triggered.connect(self._pos_selector.showNormal)
         view_menu.addAction(act)
 
-        # ── 项目 ────────────────────────────────────
+        # ── 项目
         proj_menu = mb.addMenu("项目(&P)")
 
         act = QAction("项目设置...", self)
         act.triggered.connect(self._on_project_settings)
         proj_menu.addAction(act)
 
-        # ── 关于 ────────────────────────────────────
+        # ── 关于
         help_menu = mb.addMenu("关于(&H)")
 
         act = QAction("关于 DynFirework(&A)", self)
@@ -209,9 +213,7 @@ class MainWin(QMainWindow):
         act.triggered.connect(lambda: DYNHelpWindow().exec())
         help_menu.addAction(act)
 
-    # ═══════════════════════════════════════════════════
     # 布局
-    # ═══════════════════════════════════════════════════
 
     def _setup_layout(self) -> None:
         central = QWidget()
@@ -220,11 +222,11 @@ class MainWin(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        # ── 面板/时间线纵向分割 ──────────────────────
+        # ── 面板/时间线纵向分割
         main_splitter = QSplitter(Qt.Vertical)
         root_layout.addWidget(main_splitter, stretch=1)
 
-        # ── 上部：水平三栏 ───────────────────────────
+        # ── 上部：水平三栏
         top_splitter = QSplitter(Qt.Horizontal)
 
         # 左：元素列表
@@ -256,7 +258,7 @@ class MainWin(QMainWindow):
 
         main_splitter.addWidget(top_splitter)
 
-        # ── 下部：传输条 + 时间线 ─────────────────────
+        # ── 下部：传输条 + 时间线
         bottom_widget = QWidget()
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(0, 0, 0, 0)
@@ -279,9 +281,7 @@ class MainWin(QMainWindow):
         self.statusBar().addWidget(self._status_label)
         self.statusBar().showMessage("就绪", 5000)
 
-    # ═══════════════════════════════════════════════════
     # 信号连接
-    # ═══════════════════════════════════════════════════
 
     def _connect_signals(self) -> None:
         # 元素列表 TreeView 点击 → 选中
@@ -303,6 +303,13 @@ class MainWin(QMainWindow):
         self._timeline._fw_track.element_resized.connect(self._on_timeline_element_resized)
         self._timeline._traj_track.element_moved.connect(self._on_timeline_element_moved)
         self._timeline._traj_track.element_resized.connect(self._on_timeline_element_resized)
+        # 拖拽撤销宏 — 一次拖拽的多个属性变更合并为一个撤销步骤
+        self._timeline._fw_track.drag_undo_begin.connect(
+            lambda: self._undo_manager.begin_macro("拖拽修改"))
+        self._timeline._fw_track.drag_undo_end.connect(self._undo_manager.end_macro)
+        self._timeline._traj_track.drag_undo_begin.connect(
+            lambda: self._undo_manager.begin_macro("拖拽修改"))
+        self._timeline._traj_track.drag_undo_end.connect(self._undo_manager.end_macro)
 
         # 控制器的选中变更 → 各个面板
         self._controller.selection_changed.connect(self._on_controller_selection)
@@ -338,9 +345,7 @@ class MainWin(QMainWindow):
         # 项目
         self._project_manager.project_opened.connect(self._on_project_opened)
 
-    # ═══════════════════════════════════════════════════
     # 快捷键
-    # ═══════════════════════════════════════════════════
 
     def _setup_shortcuts(self) -> None:
         space_action = QAction(self)
@@ -348,9 +353,7 @@ class MainWin(QMainWindow):
         space_action.triggered.connect(self._playback.toggle_play_pause)
         self.addAction(space_action)
 
-    # ═══════════════════════════════════════════════════
     # 槽：文件操作
-    # ═══════════════════════════════════════════════════
 
     def _on_new_project(self) -> None:
         log.info("新建项目")
@@ -375,24 +378,26 @@ class MainWin(QMainWindow):
         if not path:
             return
         try:
-            log.info(f"打开项目: {path}"); proj = self._project_manager.open_project(path)
+            log.debug(f"打开项目: {path}"); proj = self._project_manager.open_project(path)
             self._controller.load_from_project(proj)
             self._element_browser_model.load_elements(self._controller.all_elements)
             self._undo_manager.clear()
-            if proj.music_path and Path(proj.music_path).exists():
-                self._playback.load_music(proj.music_path)
-                self._playback.set_bpm(proj.bpm)
-                self._load_waveform(proj.music_path)
-                self._transport_bar.set_music_path(proj.music_path)
+            if proj.has_music:
+                music_path = self._project_manager.get_music_temp_path()
+                if music_path:
+                    self._playback.load_music(music_path)
+                    self._playback.set_bpm(proj.bpm)
+                    self._load_waveform(music_path)
+                    self._transport_bar.set_music_path(proj.music_original_name)
             self._timeline._on_elements_changed()
             self._tree_view.expandAll()
             self.statusBar().showMessage(f"已打开: {path}")
         except Exception as e:
+            log.error(f"打开项目失败: {e}", exc_info=True)
             QMessageBox.critical(self, "打开失败", str(e))
 
     def _sync_positions_to_project(self) -> None:
         """将位置选择器的点同步到项目对象."""
-        from dataclasses import asdict
         pts = self._pos_selector._points
         self._project_manager.project.saved_positions = [
             {"x": p.x, "y": p.y, "z": p.z, "label": p.label,
@@ -406,7 +411,7 @@ class MainWin(QMainWindow):
         if not self._project_manager.has_file:
             self._on_save_as_project()
             return
-        log.info("保存项目")
+        log.info(f"保存项目: {self._project_manager.file_path}")
         if self._project_manager.save_project():
             self.statusBar().showMessage(f"已保存: {self._project_manager.file_path}")
         else:
@@ -418,7 +423,9 @@ class MainWin(QMainWindow):
         )
         if not path:
             return
+        log.info(f"另存为: {path}")
         self._controller.to_project(self._project_manager.project)
+        self._sync_positions_to_project()
         if self._project_manager.save_project(path):
             self.statusBar().showMessage(f"已保存: {path}")
         else:
@@ -431,27 +438,34 @@ class MainWin(QMainWindow):
         )
         if not path:
             return
-        log.info(f"导入音乐: {path}"); self._project_manager.set_music_path(path)
+        log.debug(f"导入音乐: {path}")
+        if not self._project_manager.set_music(path):
+            QMessageBox.warning(self, "导入失败", "无法读取音乐文件。")
+            return
         self._playback.load_music(path)
         self._load_waveform(path)
-        self._transport_bar.set_music_path(path)
-        self.statusBar().showMessage(f"已导入: {path}")
+        self._transport_bar.set_music_path(Path(path).name)
+        self.statusBar().showMessage(f"已导入: {Path(path).name}")
 
     def _load_waveform(self, path: str) -> None:
-        from dyn.service.audio_service import load_waveform
         samples, sr = load_waveform(path)
         if samples:
             bpm = self._project_manager.project.bpm
             self._timeline.set_waveform_data(samples, sr, bpm)
 
+    def _load_waveform_from_bytes(self, data: bytes, suffix: str = ".mp3") -> None:
+        samples, sr = load_waveform_from_bytes(data, suffix)
+        if samples:
+            bpm = self._project_manager.project.bpm
+            self._timeline.set_waveform_data(samples, sr, bpm)
+
     def _on_export_datapack(self) -> None:
-        import re
         elements = self._controller.all_elements
+        log.info(f"导出数据包: {len(elements)} 个元素, MC版本={self._project_manager.project.mc_version}")
         if not elements:
             QMessageBox.warning(self, "无元素", "请先创建至少一个轨迹或烟花元素。")
             return
 
-        from dyn.lib.backend_registry import MC_VERSION_MAP, resolve_mc_version
         proj = self._project_manager.project
         mc_ver = proj.mc_version
 
@@ -464,7 +478,6 @@ class MainWin(QMainWindow):
             default_fmt = 15
             backend_label = f"Minecraft {mc_ver} (未知版本)"
 
-        from dyn.ui.dialogs.export_dialog import ExportDialog
         dlg = ExportDialog(proj.name, self)
         dlg.set_pack_format(default_fmt)
         dlg.set_backend_info(backend_label)
@@ -480,7 +493,7 @@ class MainWin(QMainWindow):
         if not output_dir:
             return
 
-        log.info(f"导出数据包: namespace={ns}, mc_version={mc_ver}"); self._export_service.export_to_datapack(
+        log.debug(f"导出数据包: namespace={ns}, mc_version={mc_ver}"); self._export_service.export_to_datapack(
             elements, output_dir, ns,
             datapack_name=dlg.pack_name, description=dlg.description,
             pack_format=dlg.pack_format, mc_version=mc_ver,
@@ -488,29 +501,30 @@ class MainWin(QMainWindow):
 
     def _on_export_finished(self, success: bool, message: str) -> None:
         if success:
+            log.info(f"导出成功: {message}")
             QMessageBox.information(self, "导出完成", message)
         else:
+            log.error(f"导出失败: {message}")
             QMessageBox.critical(self, "导出失败", message)
 
-    # ═══════════════════════════════════════════════════
     # 槽：编辑操作
-    # ═══════════════════════════════════════════════════
 
     def _on_new_element(self, elem_type: str) -> None:
         cursor_tick = self._timeline._playback_tick if hasattr(self._timeline, '_playback_tick') else 0
         # 创建元素但不添加到 controller（由 undo 的 redo 完成添加）
         if elem_type == "trajectory":
-            log.debug(f"创建轨迹: {cursor_tick}"); elem = TrajectoryElement(
+            elem = TrajectoryElement(
                 name=f"轨迹 {self._controller.trajectory_count}", start_tick=cursor_tick
             )
         elif elem_type == "firework":
-            log.debug(f"创建烟花: {cursor_tick}"); elem = FireworkElement(
+            elem = FireworkElement(
                 name=f"烟花 {self._controller.firework_count}", start_tick=cursor_tick
             )
         else:
-            log.debug(f"创建轨迹烟花: {cursor_tick}"); elem = TrajFireworkElement(
+            elem = TrajFireworkElement(
                 name=f"轨迹烟花 {self._controller.traj_firework_count}", start_tick=cursor_tick
             )
+        log.info(f"创建元素: type={elem_type}, name={elem.name}, id={elem.id}, tick={cursor_tick}")
         self._undo_manager.push_add_element(elem)
         self._tree_view.expandAll()
         self._controller.select_element(elem.id)
@@ -520,7 +534,9 @@ class MainWin(QMainWindow):
         eid = self._controller.selected_id
         if not eid:
             return
-        log.info(f"复制元素: {eid}"); cloned = self._controller.clone_element(eid)
+        cloned = self._controller.clone_element(eid)
+        if cloned:
+            log.info(f"复制元素: src={eid} → new={cloned.id}, name={cloned.name}")
         if cloned:
             self._tree_view.expandAll()
             self.statusBar().showMessage(f"已复制: {cloned.name}")
@@ -530,14 +546,13 @@ class MainWin(QMainWindow):
         if not eid:
             return
         elem = self._controller.get_element(eid)
+        log.info(f"删除元素: id={eid}, name={elem.name if elem else '?'}")
         if elem:
             self._undo_manager.push_remove_element(elem)
         self._tree_view.expandAll()
         self.statusBar().showMessage("已删除")
 
-    # ═══════════════════════════════════════════════════
     # 槽：选中同步
-    # ═══════════════════════════════════════════════════
 
     def _on_tree_selection_changed(self, selected, deselected) -> None:
         if self._syncing_tree or not selected.indexes():
@@ -579,13 +594,17 @@ class MainWin(QMainWindow):
     @Slot(str)
     def _on_controller_selection(self, element_id: str) -> None:
         elem = self._controller.get_element(element_id)
+        if elem:
+            etype = elem.element_type.name if hasattr(elem, 'element_type') else '?'
+            log.debug(f"控制器选中: id={element_id}, name={elem.name}, type={etype}, tick={elem.start_tick}, dur={elem.duration_ticks}")
+        else:
+            log.debug(f"控制器选中: id={element_id} (未找到)")
         self._property_panel.load_element(elem)
         self._inspector.show_element(elem)
 
         # 同步 TreeView 选中（用标志位防循环，不用 blockSignals 确保视图刷新）
         self._syncing_tree = True
         try:
-            from PySide6.QtCore import QItemSelectionModel
             sel = self._tree_view.selectionModel()
             model_idx = self._element_browser_model.get_index_for_element(element_id)
             if model_idx.isValid():
@@ -602,10 +621,10 @@ class MainWin(QMainWindow):
 
     def _on_element_count_changed(self, *args) -> None:
         count = len(self._controller.all_elements)
+        log.debug(f"元素数量变更: {count}")
         self.statusBar().showMessage(f"共 {count} 个元素", 3000)
 
     def _on_tree_context_menu(self, pos) -> None:
-        from PySide6.QtWidgets import QMenu
         menu = QMenu(self)
         idx = self._tree_view.indexAt(pos)
         elem = self._element_browser_model.get_element_from_index(idx) if idx.isValid() else None
@@ -626,12 +645,11 @@ class MainWin(QMainWindow):
 
         menu.exec(self._tree_view.viewport().mapToGlobal(pos))
 
-    # ═══════════════════════════════════════════════════
     # 槽：时间线拖拽
-    # ═══════════════════════════════════════════════════
 
     def _on_timeline_select(self, element_id: str) -> None:
         """时间线选中 — 代理元素只高亮自身，面板加载父元素."""
+        log.debug(f"时间线选中: id={element_id}")
         if not element_id:
             self._controller.clear_selection()
             return
@@ -650,45 +668,47 @@ class MainWin(QMainWindow):
         self._controller.select_element(element_id)
 
     def _on_timeline_element_moved(self, element_id: str, new_tick: int, old_tick: int) -> None:
-        log.debug(f"时间线移动: {element_id} tick={new_tick} old={old_tick}")
         real_id, part = self._resolve_proxy_id(element_id)
-        key = "start_tick"  # TF 代理移动 → 整体平移
         elem = self._controller.get_element(real_id)
+        log.debug(f"时间线移动: {element_id} tick={new_tick} old={old_tick} | real_id={real_id} elem={elem is not None} | controller元素数={len(self._controller._elements)}")
+        key = "start_tick"  # TF 代理移动 → 整体平移
         if elem:
             self._undo_manager.push_property_change(real_id, key, old_tick, new_tick)
             self._controller.element_changed.emit(real_id, "drag", None)
             self._property_panel.load_element(elem)
             self._inspector.refresh(elem)
             self._project_manager.mark_modified()
+        else:
+            log.warning(f"时间线移动: 元素未找到 real_id={real_id}, element_id={element_id}")
 
     def _on_timeline_element_resized(self, element_id: str, new_dur: int, old_dur: int) -> None:
-        log.debug(f"时间线缩放: {element_id} dur={new_dur} old={old_dur}")
         real_id, part = self._resolve_proxy_id(element_id)
+        elem = self._controller.get_element(real_id)
+        log.debug(f"时间线缩放: {element_id} dur={new_dur} old={old_dur} | real_id={real_id} part={part} elem={elem is not None}")
         if part == "fw": key = "fw_duration_ticks"
         elif part == "traj": key = "traj_duration_ticks"
         else: key = "duration_ticks"
-        elem = self._controller.get_element(real_id)
         if elem:
             self._undo_manager.push_property_change(real_id, key, old_dur, new_dur)
             self._controller.element_changed.emit(real_id, "drag", None)
             self._property_panel.load_element(elem)
             self._inspector.refresh(elem)
             self._project_manager.mark_modified()
+        else:
+            log.warning(f"时间线缩放: 元素未找到 real_id={real_id}, element_id={element_id}")
 
     def _resolve_proxy_id(self, element_id: str) -> tuple[str, str]:
         if element_id.endswith("::fw"): return (element_id[:-4], "fw")
-        if element_id.endswith("::traj"): return (element_id[:-7], "traj")
+        if element_id.endswith("::traj"): return (element_id[:-6], "traj")  # ::traj 是 6 个字符
         return (element_id, "")
 
-    # ═══════════════════════════════════════════════════
     # 槽：属性变更
-    # ═══════════════════════════════════════════════════
 
-    def _on_property_changed(self, element_id: str, key: str, value: object) -> None:
+    def _on_property_changed(self, element_id: str, key: str, value: object, old_value: object = None) -> None:
+        log.debug(f"属性变更: id={element_id}, {key}={value} (old={old_value})")
         elem = self._controller.get_element(element_id)
         if elem is None:
             return
-        old_value = getattr(elem, key, None)
         if key in ("position", "extra", "end_position", "traj_type", "fw_type",
                     "traj_gradient", "inner_gradient", "outer_gradient",
                     "traj_color_start", "traj_color_end",
@@ -702,19 +722,18 @@ class MainWin(QMainWindow):
         self._inspector.refresh(elem)
         self._project_manager.mark_modified()
 
-    # ═══════════════════════════════════════════════════
     # 槽：位置选择
-    # ═══════════════════════════════════════════════════
 
     def _on_position_select_requested(self, which: str) -> None:
+        log.debug(f"位置选择请求: target={which}")
         self._pending_position_target = which
         self._pos_selector.showNormal()
 
     def _on_position_chosen(self, point: MinecraftPosition) -> None:
+        log.debug(f"位置已选择: ({point.x}, {point.y}, {point.z}), target={getattr(self, '_pending_position_target', 'firework')}")
         elem = self._controller.selected_element
         if elem is None:
             return
-        from dyn.models.elements import Position
         pos = Position(x=point.x, y=point.y, z=point.z)
         which = getattr(self, '_pending_position_target', 'firework')
         if which == "end":
@@ -733,11 +752,10 @@ class MainWin(QMainWindow):
         self._inspector.refresh(elem)
         self._project_manager.mark_modified()
 
-    # ═══════════════════════════════════════════════════
     # 槽：项目操作
-    # ═══════════════════════════════════════════════════
 
     def _on_project_opened(self, project: Project) -> None:
+        log.info(f"项目已打开: name={project.name}, elements={len(project.all_elements)}, bpm={project.bpm:.0f}")
         self._element_browser_model.load_elements(self._controller.all_elements)
         self._tree_view.expandAll()
         self._timeline._on_elements_changed()
@@ -745,17 +763,23 @@ class MainWin(QMainWindow):
         try:
             saved = project.saved_positions
             if saved:
-                pts = [MinecraftPosition(**p) for p in saved]
+                pts = []
+                for p in saved:
+                    c = p.get("color", {})
+                    pts.append(MinecraftPosition(
+                        x=float(p["x"]), y=float(p["y"]), z=float(p["z"]),
+                        label=str(p.get("label", "")),
+                        main_color=QColor(c.get("r", 255), c.get("g", 255), c.get("b", 255)),
+                    ))
                 self._pos_selector._points.clear()
                 self._pos_selector._points.extend(pts)
                 self._pos_selector._fastsearch.clear()
                 self._pos_selector._fastsearch.update((int(pt.x), int(pt.z)) for pt in pts)
                 self._pos_selector.pix_element_list.get_element_list(self._pos_selector._points)
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"恢复位置点失败: {e}")
 
     def _on_project_settings(self) -> None:
-        from dyn.ui.dialogs.project_settings_dialog import ProjectSettingsDialog
         proj = self._project_manager.project
         dlg = ProjectSettingsDialog(proj.name, proj.bpm, proj.mc_version, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
@@ -765,12 +789,11 @@ class MainWin(QMainWindow):
             self._playback.set_bpm(proj.bpm)
             self._transport_bar.set_bpm(proj.bpm)
             self._project_manager.mark_modified()
+            log.info(f"项目设置更新: name={proj.name}, bpm={proj.bpm:.0f}, mc_version={proj.mc_version}")
             self.setWindowTitle(f"DynFirework — {proj.name}")
             self.statusBar().showMessage(f"BPM: {proj.bpm:.0f} | MC {proj.mc_version} | {proj.name}")
 
-    # ═══════════════════════════════════════════════════
     # 窗口状态
-    # ═══════════════════════════════════════════════════
 
     def _restore_window_state(self) -> None:
         settings = QSettings("DynFirework", "dyn-gui")
@@ -789,18 +812,23 @@ class MainWin(QMainWindow):
                 QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
             )
             if reply == QMessageBox.Save:
+                log.info("关闭窗口: 用户选择保存")
                 self._on_save_project()
                 if self._project_manager.is_modified:
+                    log.warning("关闭窗口: 保存失败，取消关闭")
                     event.ignore()
                     return
             elif reply == QMessageBox.Cancel:
+                log.info("关闭窗口: 用户取消")
                 event.ignore()
                 return
+            else:
+                log.info("关闭窗口: 用户选择不保存")
 
         settings = QSettings("DynFirework", "dyn-gui")
         settings.setValue("mainwin/geometry", self.saveGeometry())
         settings.setValue("mainwin/state", self.saveState())
-        log.info("关闭窗口"); super().closeEvent(event)
+        log.info("应用程序关闭"); super().closeEvent(event)
 
 
 if __name__ == "__main__":

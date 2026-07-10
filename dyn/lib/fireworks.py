@@ -1,14 +1,18 @@
 # basic_fireworks.py
 # pylint: skip-file
 # flake8: noqa
+import logging
 import math
 import random
 from . import shared_functions
 from .global_storage import g
 
+log = logging.getLogger("dyn.lib.fireworks")
+
 
 def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step,
                                 vertical_angle_step, duration, lifetime):
+    log.debug(f"单层烟花: tick={tick}, pos=({x:.1f},{y:.1f},{z:.1f}), speed={speed}, duration={duration:.2f}s")
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
     VELOCITY_SCALE = 0.05  # 速度缩放系数
@@ -73,6 +77,7 @@ def calculate_inner_angle_steps(outer_horizontal_angle_step, outer_vertical_angl
 def basic_double_layer_firework(tick, x, y, z, inner_start_color, inner_end_color, outer_start_color, outer_end_color,
                                 inner_speed, outer_speed, outer_horizontal_angle_step, outer_vertical_angle_step,
                                 duration, lifetime):
+    log.debug(f"双层烟花: tick={tick}, pos=({x:.1f},{y:.1f},{z:.1f}), inner_speed={inner_speed}, outer_speed={outer_speed}")
     # 计算内层的角度步长
     inner_horizontal_angle_step, inner_vertical_angle_step = calculate_inner_angle_steps(outer_horizontal_angle_step,
                                                                                          outer_vertical_angle_step,
@@ -86,9 +91,10 @@ def basic_double_layer_firework(tick, x, y, z, inner_start_color, inner_end_colo
                                 outer_horizontal_angle_step, outer_vertical_angle_step, duration, lifetime)
 
 
-def directional_firework(tick, x, y, z, start_color, end_color, speed, 
-                         direction_horizontal_angle, direction_vertical_angle, spread_angle, track_count, 
+def directional_firework(tick, x, y, z, start_color, end_color, speed,
+                         direction_horizontal_angle, direction_vertical_angle, spread_angle, track_count,
                          duration, lifetime):
+    log.debug(f"定向烟花: tick={tick}, tracks={track_count}, spread={spread_angle}°")
     t_step = 1.0 / 20  # 一秒20个tick
     initial_tick = tick  # 存储起始tick
     VELOCITY_SCALE = 0.05  # 速度缩放系数

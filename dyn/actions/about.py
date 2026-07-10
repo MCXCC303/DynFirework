@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from PySide6 import QtWidgets
@@ -10,7 +11,9 @@ from PySide6.QtCore import Qt
 from dyn.ui.dyn_help_ui import Ui_Dialog as DYNHelpUI
 from dyn.ui.df_about_ui import Ui_Dialog as DFAboutUI
 
-# ── 帮助目录结构 ─────────────────────────────────────
+log = logging.getLogger("dyn.actions.about")
+
+# 帮助目录结构
 # 树形结构: (显示名称, 文件名, 子节点列表)
 _HELP_TREE = [
     ("概述", "01-overview.md", []),
@@ -50,6 +53,7 @@ class DYNAboutWindow(QtWidgets.QDialog):
 
     def __init__(self) -> None:
         super().__init__()
+        log.info("打开关于对话框")
         self.ui = DFAboutUI()
         self.ui.setupUi(self)
 
@@ -61,6 +65,7 @@ class DYNHelpWindow(QtWidgets.QDialog):
 
     def __init__(self) -> None:
         super().__init__()
+        log.info("打开帮助对话框")
         self.ui = DYNHelpUI()
         self.ui.setupUi(self)
 
@@ -134,6 +139,7 @@ class DYNHelpWindow(QtWidgets.QDialog):
             if filepath.exists():
                 self._detail.setMarkdown(filepath.read_text(encoding="utf-8"))
             else:
+                log.warning(f"帮助文档未找到: {filename}")
                 self._detail.setPlainText("文档未找到。")
         else:
             self._detail.setPlainText("")

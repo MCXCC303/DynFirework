@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -18,9 +19,11 @@ from dyn.models.elements import (
 )
 from dyn.service.element_controller import ElementController
 
+log = logging.getLogger("dyn.components.timeline")
+
 HEADER_HEIGHT = 28
 TRACK_LABEL_WIDTH = 120
-WAVEFORM_HEIGHT = 60
+WAVEFORM_HEIGHT = 40
 TRACK_HEIGHT = 28
 BLOCK_MIN_WIDTH = 4
 PIXELS_PER_TICK_DEFAULT = 3.0
@@ -87,6 +90,8 @@ class _TrackArea(QWidget):
     element_moved = Signal(str, int, int)
     element_resized = Signal(str, int, int)
     drag_update = Signal()
+    drag_undo_begin = Signal()   # 拖拽开始 → undo 宏开始
+    drag_undo_end = Signal()     # 拖拽结束 → undo 宏提交
 
     def __init__(self, label: str, parent=None) -> None:
         super().__init__(parent)
@@ -114,7 +119,7 @@ class _TrackArea(QWidget):
         self.setMouseTracking(True)
         self.setMinimumHeight(60)
 
-    # ── 公共接口 ──────────────────────────────────────
+    # 公共接口
 
     def set_data(self, elements: list[Element], ppt: float, scroll: float) -> None:
         self._elements = elements
@@ -150,7 +155,7 @@ class _TrackArea(QWidget):
     def content_height(self) -> int:
         return self._content_height
 
-    # ── 布局 ──────────────────────────────────────────
+    # 布局
 
     def _tick_to_x(self, tick: int) -> float:
         return TRACK_LABEL_WIDTH + tick * self._pixels_per_tick - self._scroll_offset
@@ -193,7 +198,7 @@ class _TrackArea(QWidget):
                 row_ends.append(elem.end_tick)
         return result
 
-    # ── 绘制 ──────────────────────────────────────────
+    # 绘制
 
     def paintEvent(self, event) -> None:
         p = QPainter(self)
@@ -323,7 +328,7 @@ class _TrackArea(QWidget):
                     "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(elem.traj_type, "→")
         return "?"
 
-    # ── 交互 ──────────────────────────────────────────
+    # 交互
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() != Qt.LeftButton: return
@@ -336,8 +341,17 @@ class _TrackArea(QWidget):
                 self._drag_start_duration = blk.element.duration_ticks
                 if isinstance(blk.element, _TFProxy):
                     self._drag_parent_start = blk.element._parent.start_tick
+                    log.debug(
+                        f"时间线拖拽开始: id={blk.element.id}, part={blk.element._part}, "
+                        f"tick={blk.element.start_tick}, dur={blk.element.duration_ticks}, "
+                        f"parent_start={blk.element._parent.start_tick}"
+                    )
                 else:
                     self._drag_parent_start = blk.element.start_tick
+                    log.debug(
+                        f"时间线拖拽开始: id={blk.element.id}, type={blk.element.element_type.name}, "
+                        f"tick={blk.element.start_tick}, dur={blk.element.duration_ticks}"
+                    )
                 margin = 6
                 if x <= blk.rect.left() + margin and blk.rect.width() > BLOCK_MIN_WIDTH * 2:
                     self._dragging_edge = "left"
@@ -345,6 +359,7 @@ class _TrackArea(QWidget):
                     self._dragging_edge = "right"
                 else:
                     self._dragging_edge = "move"
+                log.debug(f"  边缘={self._dragging_edge}")
                 self._selected_id = blk.element.id
                 self.element_selected.emit(blk.element.id)
                 self.update()
@@ -384,22 +399,44 @@ class _TrackArea(QWidget):
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if self._dragging:
+            self.drag_undo_begin.emit()  # 开始宏 — 一次拖拽的多个属性变更合并为一个撤销步骤
             elem = self._dragging.element
+            # ── element_moved（start_tick 变更）
             if self._dragging_edge == "move" and isinstance(elem, _TFProxy):
+                # 所有 TF 代理的 middle-drag 均移动整个元素 → parent.start_tick 变更
                 parent = elem._parent
                 if parent.start_tick != self._drag_parent_start:
                     self.element_moved.emit(elem.id, parent.start_tick, self._drag_parent_start)
-            elif not (isinstance(elem, _TFProxy) and elem._part == "fw" and self._dragging_edge != "move"):
+            elif not isinstance(elem, _TFProxy) or elem._part == "traj":
+                # 非代理元素（start_tick 直接可写）或 traj 代理边缘拖拽（start_tick ≡ parent.start_tick）
+                # fw 代理的边缘拖拽在此被排除 — 其 start_tick 为派生值，实际变更为 traj_duration
                 if elem.start_tick != self._drag_start_tick:
                     self.element_moved.emit(elem.id, elem.start_tick, self._drag_start_tick)
+            # ── element_resized（duration_ticks 变更，所有元素类型）
             if elem.duration_ticks != self._drag_start_duration:
                 self.element_resized.emit(elem.id, elem.duration_ticks, self._drag_start_duration)
-            # fw 左边缘拖拽同时改变了 traj_duration，需额外记录
+            # ── fw 代理左边缘拖拽改变了 traj_duration + fw_duration，需额外记录
+            # fw 代理的 start_tick 为派生值 (parent.start_tick + traj_duration_ticks)，
+            # 其变更实际对应 parent.traj_duration_ticks 变更，不可用 element_moved 追踪
             if isinstance(elem, _TFProxy) and elem._part == "fw" and self._dragging_edge == "left":
                 parent = elem._parent
                 old_traj_dur = self._drag_start_tick - self._drag_parent_start
                 if parent.traj_duration_ticks != old_traj_dur:
                     self.element_resized.emit(parent.id + "::traj", parent.traj_duration_ticks, old_traj_dur)
+            self.drag_undo_end.emit()  # 结束宏
+            # 输出拖拽后元素的最终 tick 状态
+            if isinstance(elem, _TFProxy):
+                p = elem._parent
+                log.debug(
+                    f"拖拽结束: id={p.id[:8]}, part={elem._part}, "
+                    f"start={p.start_tick}, traj_dur={p.traj_duration_ticks}, fw_dur={p.fw_duration_ticks}, "
+                    f"traj_end={p.start_tick + p.traj_duration_ticks}, fw_end={p.start_tick + p.traj_duration_ticks + p.fw_duration_ticks}"
+                )
+            else:
+                log.debug(
+                    f"拖拽结束: id={elem.id[:8]}, name={elem.name}, "
+                    f"start={elem.start_tick}, dur={elem.duration_ticks}, end={elem.end_tick}"
+                )
         self._dragging = None; self._dragging_edge = ""; self._drag_start_pos = None
 
     def wheelEvent(self, event: QWheelEvent) -> None:
@@ -503,7 +540,7 @@ class TimelineWidget(QWidget):
         self.setFocusPolicy(Qt.StrongFocus)
         self.setMinimumHeight(120)
 
-    # ── 公共接口 ──────────────────────────────────────
+    # 公共接口
 
     def set_controller(self, controller: ElementController) -> None:
         self._controller = controller
@@ -534,6 +571,8 @@ class TimelineWidget(QWidget):
         self.update()
 
     def set_waveform_data(self, samples: list[float] | None, sample_rate: int = 44100, bpm: float = 120.0) -> None:
+        if samples:
+            log.debug(f"波形数据加载: {len(samples)} samples, sr={sample_rate}, bpm={bpm:.0f}")
         self._waveform_samples = samples
         self._waveform.set_samples(samples, sample_rate, bpm)
         self._layout_children()
@@ -546,7 +585,7 @@ class TimelineWidget(QWidget):
     def pixels_per_tick(self) -> float:
         return self._pixels_per_tick
 
-    # ── 坐标 ──────────────────────────────────────────
+    # 坐标
 
     def _tick_to_x(self, tick: int) -> float:
         return TRACK_LABEL_WIDTH + tick * self._pixels_per_tick - self._scroll_offset
@@ -569,7 +608,7 @@ class TimelineWidget(QWidget):
         self._traj_track.set_data(traj, self._pixels_per_tick, self._scroll_offset)
         self._waveform.set_view(self._pixels_per_tick, self._scroll_offset)
 
-    # ── 布局 ──────────────────────────────────────────
+    # 布局
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         self._layout_children()
@@ -579,12 +618,12 @@ class TimelineWidget(QWidget):
         w = self.width()
         y = 0
         self._header.setGeometry(0, y, w, HEADER_HEIGHT); y += HEADER_HEIGHT
-        # 三等分剩余高度：波形 / 烟花 / 轨迹
-        remaining = max(self.height() - y, 180)
-        third = remaining // 3
-        self._waveform.setGeometry(0, y, w, third); y += third
-        self._fw_track.setGeometry(0, y, w, third); y += third
-        self._traj_track.setGeometry(0, y, w, remaining - 2 * third)
+        # 波形固定高度，剩余空间平分给烟花和轨迹轨道
+        self._waveform.setGeometry(0, y, w, WAVEFORM_HEIGHT); y += WAVEFORM_HEIGHT
+        remaining = max(self.height() - y, 80)
+        half = remaining // 2
+        self._fw_track.setGeometry(0, y, w, half); y += half
+        self._traj_track.setGeometry(0, y, w, remaining - half)
         
         
         self._overlay_cursor.setGeometry(0, 0, w, self.height())
@@ -628,7 +667,7 @@ class TimelineWidget(QWidget):
             path.closeSubpath()
             p.fillPath(path, QBrush(self._cursor_color))
 
-    # ── 交互 ──────────────────────────────────────────
+    # 交互
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MiddleButton:
@@ -729,13 +768,15 @@ class TimelineWidget(QWidget):
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key_Delete and self._selected_id and self._controller:
+            log.debug(f"时间线按键删除: id={self._selected_id}")
             self._controller.remove_element(self._selected_id)
         super().keyPressEvent(event)
 
-    # ── 信号连接 ──────────────────────────────────────
+    # 信号连接
 
     def _on_elements_changed(self, *args) -> None:
         if self._controller: self._elements = list(self._controller.all_elements)
+        log.debug(f"时间线元素更新: {len(self._elements)} 个元素")
         self._refresh_tracks()
 
     def _on_element_updated(self, element_id: str, key: str, value: Any) -> None:

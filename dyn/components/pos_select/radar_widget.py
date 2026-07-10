@@ -17,13 +17,18 @@ from PySide6.QtGui import (
     QUndoStack,
 )
 from PySide6.QtWidgets import (
-    QWidget,
-    QSizePolicy,
+    QApplication,
     QDialog,
     QMenu,
+    QSizePolicy,
+    QWidget,
 )
 
 from dyn.lib.units import MinecraftPosition
+from dyn.components.pos_select.pos_select_widgets import NewPointEditorDialog
+from dyn.logging_config import get_logger
+log = get_logger(__name__)
+
 from dyn.components.pos_select.pos_undo_commands import (
     AddPointCommand,
     RemovePointCommand,
@@ -140,27 +145,32 @@ class RadarWidget(QWidget):
             p.drawLine(cx, cy, ex, ey)
 
     def _paint_axes(self, p: QPainter) -> None:
-        """绘制主轴箭头和 X/Z 标签."""
+        """绘制 X/Z 轴箭头和标签，与网格图风格一致."""
+        w, h = self.width(), self.height()
         cx, cy = int(self._gx(0, 0)), int(self._gy(0, 0))
-        max_r = max(self.width(), self.height()) * 1.5
-        font = p.font(); font.setPixelSize(self.pix_size); p.setFont(font)
-        arrow_len = self.pix_size
+        if cx < 0 or cy < 0 or cx > w or cy > h:
+            return
+        ps = max(self.pix_size, 8)
+        ax_color = QColor(140, 140, 155)
 
-        for angle, label in [(0, "X"), (90, "Z"), (180, "-X"), (270, "-Z")]:
-            rad = math.radians(angle)
-            ex = int(cx + math.cos(rad) * max_r * 0.92)
-            ey = int(cy + math.sin(rad) * max_r * 0.92)
-            # 轴线 (主轴已有加粗线, 这里画箭头)
-            p.setPen(QPen(self.axis_color, 2))
-            a1 = math.radians(math.degrees(rad) + 150)
-            a2 = math.radians(math.degrees(rad) - 150)
-            p.drawLine(ex, ey, int(ex + math.cos(a1) * arrow_len), int(ey + math.sin(a1) * arrow_len))
-            p.drawLine(ex, ey, int(ex + math.cos(a2) * arrow_len), int(ey + math.sin(a2) * arrow_len))
-            # 标签
-            p.setPen(QPen(QColor(100, 100, 110), 1))
-            tx = int(cx + math.cos(rad) * max_r * 0.97)
-            ty = int(cy + math.sin(rad) * max_r * 0.97)
-            p.drawText(tx, ty, label)
+        # X 轴 → 右边缘箭头
+        p.setPen(QPen(ax_color, 2))
+        p.drawLine(cx, cy, w, cy)
+        p.drawLine(w, cy, w - ps, cy - ps // 2)
+        p.drawLine(w, cy, w - ps, cy + ps // 2)
+
+        # Z 轴 → 底部箭头
+        p.drawLine(cx, cy, cx, h)
+        p.drawLine(cx, h, cx - ps // 2, h - ps)
+        p.drawLine(cx, h, cx + ps // 2, h - ps)
+
+        # 标签 (与网格图位置一致)
+        font = p.font()
+        font.setPixelSize(ps)
+        p.setFont(font)
+        p.setPen(QPen(QColor(100, 100, 110), 1))
+        p.drawText(w - ps, cy - ps, "X")
+        p.drawText(cx + ps, h - ps, "Z")
 
     def _paint_stored_points(self, p: QPainter) -> None:
         for pt in self.stored_pix_list:
@@ -215,15 +225,17 @@ class RadarWidget(QWidget):
         if a0.button() == Qt.LeftButton: self._handle_left_click(gx, gz)
 
     def _handle_left_click(self, gx: int, gz: int) -> None:
+        log.debug(f"雷达图点击: grid=({gx}, {gz})")
         if (gx, gz) in self.stored_pix_fastsearch:
             for pt in self.stored_pix_list:
                 if int(pt.x) == gx and int(pt.z) == gz:
+                    log.debug(f"雷达图选中点: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f}), label={pt.label}, color=({pt.pix_color.red()},{pt.pix_color.green()},{pt.pix_color.blue()})")
                     self.selected_point = pt; self.selection_changed.emit(pt); self.update(); return
         else:
-            from dyn.components.pos_select.pos_select_widgets import NewPointEditorDialog
             dlg = NewPointEditorDialog((gx, gz))
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 pt = MinecraftPosition(dlg.x, dlg.y, dlg.z, label=dlg.name, main_color=dlg.color)
+                log.debug(f"雷达图新建点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
                 self._undo_stack.push(AddPointCommand(self.stored_pix_list, self.stored_pix_fastsearch, pt))
                 self.point_renewed_sign.emit(self.stored_pix_list); self.update()
 
@@ -242,7 +254,7 @@ class RadarWidget(QWidget):
         menu.exec(self.mapToGlobal(pos))
 
     def _edit_point(self, pt: MinecraftPosition) -> None:
-        from dyn.components.pos_select.pos_select_widgets import NewPointEditorDialog
+        log.debug(f"雷达图编辑位置点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
         dlg = NewPointEditorDialog((int(pt.x), int(pt.z)))
         dlg.ui.doubleSpinBox_X.setValue(pt.x); dlg.ui.doubleSpinBox_Z.setValue(pt.z); dlg.ui.doubleSpinBox_Y.setValue(pt.y)
         dlg.ui.lineEdit_Name.setText(pt.label)
@@ -255,12 +267,13 @@ class RadarWidget(QWidget):
             self.point_renewed_sign.emit(self.stored_pix_list); self.selection_changed.emit(pt); self.update()
 
     def _delete_point(self, pt: MinecraftPosition) -> None:
+        log.debug(f"雷达图删除位置点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
         self._undo_stack.push(RemovePointCommand(self.stored_pix_list, self.stored_pix_fastsearch, pt))
         if self.selected_point is pt: self.selected_point = None
         self.point_renewed_sign.emit(self.stored_pix_list); self.update()
 
     def _copy_coords(self, pt: MinecraftPosition) -> None:
-        from PySide6.QtWidgets import QApplication
+        log.debug(f"复制坐标: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f})")
         QApplication.clipboard().setText(f"{pt.x}, {pt.y}, {pt.z}")
 
     def _reset_view(self) -> None:

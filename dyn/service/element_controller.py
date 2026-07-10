@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 import logging
+from uuid import uuid4
 
 from PySide6.QtCore import QObject, Signal
 
@@ -34,7 +36,7 @@ class ElementController(QObject):
         self._elements: dict[str, Element] = {}
         self._selected_id: str = ""
 
-    # ── 查询 ──────────────────────────────────────────
+    # ── 查询
 
     @property
     def selected_element(self) -> Element | None:
@@ -63,7 +65,7 @@ class ElementController(QObject):
     def get_element(self, element_id: str) -> Element | None:
         return self._elements.get(element_id)
 
-    # ── 选择 ──────────────────────────────────────────
+    # ── 选择
 
     def select_element(self, element_id: str) -> None:
         self._selected_id = element_id
@@ -73,7 +75,7 @@ class ElementController(QObject):
         self._selected_id = ""
         self.selection_changed.emit("")
 
-    # ── 创建 / 添加 ──────────────────────────────────
+    # ── 创建 / 添加
 
     def add_element(self, elem: Element) -> None:
         if elem.id in self._elements:
@@ -97,7 +99,7 @@ class ElementController(QObject):
         self.add_element(elem)
         return elem
 
-    # ── 删除 ──────────────────────────────────────────
+    # ── 删除
 
     def remove_element(self, element_id: str) -> Element | None:
         removed = self._elements.pop(element_id, None)
@@ -116,21 +118,25 @@ class ElementController(QObject):
             return None
         return self.remove_element(self._selected_id)
 
-    # ── 属性修改 ──────────────────────────────────────
+    # ── 属性修改
 
     def set_property(self, element_id: str, key: str, value: object) -> bool:
         elem = self._elements.get(element_id)
-        if elem is None or not hasattr(elem, key):
+        if elem is None:
+            log.warning(f"set_property 失败: 元素不存在 id={element_id}, key={key}")
             return False
+        if not hasattr(elem, key):
+            log.warning(f"set_property 失败: 元素无此属性 id={element_id}, key={key}, type={type(elem).__name__}")
+            return False
+        old_val = getattr(elem, key, None)
         setattr(elem, key, value)
+        log.debug(f"set_property: id={element_id}, name={elem.name}, {key}: {old_val} → {value}")
         self.element_changed.emit(element_id, key, value)
         return True
 
-    # ── 克隆 ──────────────────────────────────────────
+    # ── 克隆
 
     def clone_element(self, element_id: str) -> Element | None:
-        import copy
-        from uuid import uuid4
         elem = self._elements.get(element_id)
         if elem is None:
             return None
@@ -140,7 +146,7 @@ class ElementController(QObject):
         self.add_element(cloned)
         return cloned
 
-    # ── 项目同步 ──────────────────────────────────────
+    # ── 项目同步
 
     def load_from_project(self, project) -> None:
         self._elements.clear()

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import atexit
+import glob
 import logging
+import tempfile
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
@@ -26,6 +29,7 @@ class ProjectManager(QObject):
         self._project: Project = Project()
         self._file_path: str = ""
         self._is_modified: bool = False
+        self._music_temp_path: Path | None = None
 
     @property
     def project(self) -> Project:
@@ -48,7 +52,8 @@ class ProjectManager(QObject):
         self.project_modified.emit()
 
     def new_project(self) -> Project:
-        log.info("创建新项目")
+        log.debug("创建新项目")
+        self._cleanup_music_temp()
         self._project = Project()
         self._file_path = ""
         self._is_modified = False
@@ -56,13 +61,11 @@ class ProjectManager(QObject):
         return self._project
 
     def open_project(self, path: str | Path) -> Project:
-        log.info(f"打开项目: {path}")
+        log.debug(f"打开项目: {path}")
+        self._cleanup_music_temp()
         self._project = Project.from_file(path)
         self._file_path = str(path)
         self._is_modified = False
-        if self._project.music_path and not Path(self._project.music_path).exists():
-            log.warning(f"音乐文件不存在: {self._project.music_path}")
-            self._project.music_path = ""
         self.project_opened.emit(self._project)
         return self._project
 
@@ -73,19 +76,100 @@ class ProjectManager(QObject):
             log.warning("保存失败: 无文件路径")
             return False
         log.info(f"保存项目: {self._file_path}")
-        self._project.to_file(self._file_path)
+        try:
+            self._project.to_file(self._file_path)
+        except Exception as e:
+            log.error(f"保存项目失败: {e}", exc_info=True)
+            return False
         self._is_modified = False
         self.project_saved.emit(self._file_path)
         return True
 
-    def set_music_path(self, path: str) -> None:
-        log.debug(f"设置音乐路径: {path}")
-        self._project.music_path = path
-        self.mark_modified()
+    def set_music(self, filepath: str | Path) -> bool:
+        """导入音乐文件 — 读取内容嵌入项目.
+
+        Args:
+            filepath: 音乐文件路径
+
+        Returns:
+            True 表示成功
+        """
+        filepath = Path(filepath)
+        if not filepath.is_file():
+            log.warning(f"音乐文件不存在: {filepath}")
+            return False
+        try:
+            self._project.music_data = filepath.read_bytes()
+            self._project.music_original_name = filepath.name
+            log.debug(
+                f"导入音乐: {filepath.name} ({len(self._project.music_data)} 字节)"
+            )
+            self.mark_modified()
+            return True
+        except OSError as e:
+            log.error(f"读取音乐文件失败: {e}")
+            return False
+
+    def get_music_temp_path(self) -> str | None:
+        """将嵌入的音乐数据写入临时文件，返回路径供播放器使用.
+
+        临时文件在项目关闭或进程退出时自动清理.
+        """
+        if not self._project.has_music:
+            return None
+
+        # 如果已有临时文件且未过期，直接返回
+        if self._music_temp_path and self._music_temp_path.exists():
+            return str(self._music_temp_path)
+
+        # 写入新临时文件
+        suffix = ""
+        if self._project.music_original_name:
+            suffix = Path(self._project.music_original_name).suffix
+        if not suffix:
+            suffix = ".mp3"
+
+        try:
+            tmp = tempfile.NamedTemporaryFile(
+                suffix=suffix, delete=False, prefix="dyn_music_"
+            )
+            tmp.write(self._project.music_data)
+            tmp.flush()
+            self._music_temp_path = Path(tmp.name)
+            tmp.close()
+            log.debug(f"音乐临时文件: {self._music_temp_path}")
+            return str(self._music_temp_path)
+        except OSError as e:
+            log.error(f"创建音乐临时文件失败: {e}")
+            return None
 
     def close_project(self) -> None:
-        log.info("关闭项目")
+        log.debug("关闭项目")
+        self._cleanup_music_temp()
         self._project = Project()
         self._file_path = ""
         self._is_modified = False
         self.project_closed.emit()
+
+    def _cleanup_music_temp(self) -> None:
+        """清理音乐临时文件."""
+        if self._music_temp_path and self._music_temp_path.exists():
+            try:
+                self._music_temp_path.unlink()
+                log.debug(f"已清理音乐临时文件: {self._music_temp_path}")
+            except OSError as e:
+                log.warning(f"清理音乐临时文件失败: {self._music_temp_path}, {e}")
+        self._music_temp_path = None
+
+
+def _cleanup_all_temp() -> None:
+    """进程退出时清理所有残留临时文件."""
+    tmp_dir = Path(tempfile.gettempdir())
+    for f in tmp_dir.glob("dyn_music_*"):
+        try:
+            f.unlink()
+        except OSError:
+            pass
+
+
+atexit.register(_cleanup_all_temp)

@@ -1,15 +1,18 @@
 """后端注册表 — 管理DynFirework的命令生成后端.
 
-提供模块级全局后端切换，支持不同Minecraft版本对应的命令格式.
+全局后端切换，支持不同Minecraft版本对应的命令格式.
 
 Backend types:
-    DFP         — DynFirework Particles Mod (/dfp 命令), MC 1.20.1+
+    DFP         — DynFirework Particles Mod (/dfp 命令), MC 1.20.1
     PARTICLEEX  — ParticleEx / Colorblock Mod (/particleex 命令), MC 1.12.2/1.16.5
 """
 from __future__ import annotations
 
+import logging
 from enum import Enum
 from typing import NamedTuple
+
+log = logging.getLogger("dyn.lib.backend_registry")
 
 
 class BackendType(Enum):
@@ -24,7 +27,8 @@ class _McVersionInfo(NamedTuple):
     display_name: str
 
 
-#: Minecraft 版本 → (后端类型, pack_format, 显示名称)
+#: Minecraft 版本
+# @TianKong-y: 如果你看到这里说明你该去更新适配你的 DynFireworkParticles 了
 MC_VERSION_MAP: dict[str, _McVersionInfo] = {
     "1.12.2": _McVersionInfo(BackendType.PARTICLEEX, 4, "Minecraft 1.12.2 (ParticleEx)"),
     "1.16.5": _McVersionInfo(BackendType.PARTICLEEX, 6, "Minecraft 1.16.5 (ParticleEx)"),
@@ -52,6 +56,8 @@ def set_backend(backend: BackendType) -> None:
        此操作影响全局状态。应在导出前调用，不应在导出过程中切换。
     """
     global _current_backend
+    if _current_backend != backend:
+        log.info(f"后端切换: {_current_backend.value} → {backend.value}")
     _current_backend = backend
 
 
@@ -72,7 +78,11 @@ def resolve_mc_version(mc_version: str) -> _McVersionInfo:
     Raises:
         KeyError: 不支持的MC版本
     """
-    return MC_VERSION_MAP[mc_version]
+    try:
+        return MC_VERSION_MAP[mc_version]
+    except KeyError:
+        log.warning(f"不支持的MC版本: {mc_version}, 可用版本: {SUPPORTED_MC_VERSIONS}")
+        raise
 
 
 def get_pack_format(mc_version: str) -> int:

@@ -16,6 +16,7 @@ from PySide6.QtCore import Signal, QItemSelectionModel, QObject
 from PySide6.QtGui import QKeySequence, QAction, QColor, QUndoStack
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QGridLayout, QAbstractItemView, QFileDialog,
+    QMessageBox,
 )
 
 from dyn.ui.pos_select.pos_select_graph_ui import Ui_MainWindow as PosSelectMainUI
@@ -131,6 +132,7 @@ class PosSelectMainWindow(QMainWindow):
         edit_menu.addAction(act_redo)
 
     def switch_mode(self, mode: str) -> None:
+        log.debug(f"switch_mode {mode}")
         if mode == self._mode:
             return
 
@@ -162,6 +164,7 @@ class PosSelectMainWindow(QMainWindow):
 
     def _on_undo(self) -> None:
         if self._shared_undo_stack.canUndo():
+            log.debug(f"位置选择器撤销: {self._shared_undo_stack.undoText()}")
             self._shared_undo_stack.undo()
             self.pix_element_list.get_element_list(self._points)
             if self._active_graph:
@@ -169,10 +172,16 @@ class PosSelectMainWindow(QMainWindow):
 
     def _on_redo(self) -> None:
         if self._shared_undo_stack.canRedo():
+            log.debug(f"位置选择器重做: {self._shared_undo_stack.redoText()}")
             self._shared_undo_stack.redo()
             self.pix_element_list.get_element_list(self._points)
             if self._active_graph:
                 self._active_graph.update()
+
+    def showEvent(self, event) -> None:
+        """窗口显示时记录日志."""
+        log.debug(f"位置选择器显示: mode={self._mode}, points={len(self._points)}")
+        super().showEvent(event)
 
     def signal_connect(self):
         # 仅连接活跃 graph 的信号（避免两套信号造成重复条目）
@@ -203,11 +212,15 @@ class PosSelectMainWindow(QMainWindow):
     def _on_del_button(self) -> None:
         if self._active_graph and self._active_graph.selected_point:
             pt = self._active_graph.selected_point
+            log.debug(f"删除位置点: ({pt.x}, {pt.y}, {pt.z})")
+            pt = self._active_graph.selected_point
             if hasattr(self._active_graph, '_delete_point'):
                 self._active_graph._delete_point(pt)
 
     def _on_edit_button(self) -> None:
         if self._active_graph and self._active_graph.selected_point:
+            pt = self._active_graph.selected_point
+            log.debug(f"编辑位置点: ({pt.x}, {pt.y}, {pt.z})")
             pt = self._active_graph.selected_point
             if hasattr(self._active_graph, '_edit_point'):
                 self._active_graph._edit_point(pt)
@@ -223,6 +236,8 @@ class PosSelectMainWindow(QMainWindow):
 
     def confirm_selection(self):
         if self.chosen_point:
+            pt = self.chosen_point
+            log.info(f"确认位置选择: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f}), label={pt.label}, color=({pt.pix_color.red()},{pt.pix_color.green()},{pt.pix_color.blue()})")
             self.send_chosen_point.emit(self.chosen_point)
         self.close()
 
@@ -236,6 +251,7 @@ class PosSelectMainWindow(QMainWindow):
             self._active_graph.get_list_selected_pix(self.chosen_point)
 
     def get_chosen_point(self, point: MinecraftPosition):
+        log.debug(f"位置选中: ({point.x:.2f}, {point.y:.2f}, {point.z:.2f}), label={point.label}")
         self.chosen_point = point
         self.handle_chosen_point()
 
@@ -259,7 +275,7 @@ class PosSelectMainWindow(QMainWindow):
         )
         if not path:
             return
-        log.info(f"导入位置点: {path}")
+        log.debug(f"导入位置点: {path}")
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -278,7 +294,7 @@ class PosSelectMainWindow(QMainWindow):
             if self._active_graph:
                 self._active_graph.update()
         except Exception as e:
-            from PySide6.QtWidgets import QMessageBox
+            log.error(f"导入位置点失败: {e}", exc_info=True)
             QMessageBox.warning(self, "导入失败", str(e))
 
     def export_data(self):
@@ -287,7 +303,7 @@ class PosSelectMainWindow(QMainWindow):
         )
         if not path:
             return
-        log.info(f"导出位置点: {path}, 共 {len(self._points)} 个点")
+        log.debug(f"导出位置点: {path}, 共 {len(self._points)} 个点")
         try:
             data = [{"x": p.x, "y": p.y, "z": p.z, "label": p.label,
                      "color": {"r": p.pix_color.red(), "g": p.pix_color.green(), "b": p.pix_color.blue()}}
@@ -295,7 +311,7 @@ class PosSelectMainWindow(QMainWindow):
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            from PySide6.QtWidgets import QMessageBox
+            log.error(f"导出位置点失败: {e}", exc_info=True)
             QMessageBox.warning(self, "导出失败", str(e))
 
 

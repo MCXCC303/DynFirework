@@ -18,6 +18,10 @@ MyFireworkPack/
 
 其中，`pack.mcmeta` 是声明格式版本和描述信息的 JSON 文件；命名空间用于区分不同数据包的内容，防止名称冲突；`functions/` 目录存放所有 `.mcfunction` 文件。
 
+## 项目文件格式
+
+DynFirework 项目文件（`.dyn`）使用 tar.gz 压缩归档格式。文件内部包含项目元数据（manifest.json）、元素 JSON 文件、嵌入的音乐资源和 SHA-256 完整性校验和。项目可以安全地跨设备移动，音乐不会丢失。
+
 ## 安装
 
 1. 将数据包文件夹复制到存档的 `datapacks/` 目录下。

@@ -21,7 +21,10 @@ from dyn.models.elements import (
     ColorRGB,
     Position,
 )
+from dyn.logging_config import get_logger
 from dyn.service.element_controller import ElementController
+
+log = get_logger(__name__)
 
 
 class ColorPicker(QWidget):
@@ -87,7 +90,7 @@ class ColorPicker(QWidget):
 class PropertyPanel(QScrollArea):
     """动态参数面板."""
 
-    property_changed = Signal(str, str, object)
+    property_changed = Signal(str, str, object, object)  # id, key, new_value, old_value
     position_select_requested = Signal(str)
     element_name_changed = Signal(str, str)
 
@@ -147,7 +150,7 @@ class PropertyPanel(QScrollArea):
         self._hide_all()
         self.setEnabled(False)
 
-    # ── 控件存储：{param_name: (label_widget, input_widget, reset_btn, default_val)} ──
+    #  控件存储：{param_name: (label_widget, input_widget, reset_btn, default_val)} 
     _w: dict[str, tuple[QWidget, QWidget, QPushButton | None, object]] = {}
     _DEFAULTS: dict[str, object] = {}
 
@@ -195,7 +198,7 @@ class PropertyPanel(QScrollArea):
                 continue
             btn.setVisible(show)
 
-    # ── 基本信息 ──────────────────────────────────────
+    #  基本信息
 
     def _setup_common_section(self) -> None:
         grp = QGroupBox("基本信息")
@@ -218,7 +221,7 @@ class PropertyPanel(QScrollArea):
 
         self._group_common = grp; self._layout.addWidget(grp)
 
-    # ── 位置 (轨迹始末 + 烟花中心) ─────────────────────
+    #  位置 (轨迹始末 + 烟花中心)
 
     def _setup_position_section(self) -> None:
         self._group_pos = QGroupBox("位置")
@@ -276,7 +279,7 @@ class PropertyPanel(QScrollArea):
             e.end_position = Position(x=self._spin_end_x.value(), y=self._spin_end_y.value(), z=self._spin_end_z.value())
             self._emit_change("end_position", None)
 
-    # ── 轨迹颜色 ──────────────────────────────────────
+    #  轨迹颜色
 
     def _setup_traj_color_section(self) -> None:
         self._group_traj_color = QGroupBox("轨迹颜色")
@@ -302,6 +305,8 @@ class PropertyPanel(QScrollArea):
     def _on_traj_type_changed(self, idx: int) -> None:
         if not self._loading and isinstance(self._current_element, (TrajectoryElement, TrajFireworkElement)):
             new_type = self._combo_traj_type.itemData(idx)
+            log.debug(f"轨迹类型变更: {new_type}, element={self._current_element.name}")
+            new_type = self._combo_traj_type.itemData(idx)
             self._current_element.traj_type = new_type
             self._hide_traj_extras()
             extras = self._TRAJ_EXTRA_PARAMS.get(new_type, [])
@@ -313,7 +318,7 @@ class PropertyPanel(QScrollArea):
                     self._w[k][0].show(); self._w[k][1].show()
             self._emit_change("traj_type", new_type)
 
-    # ── 轨迹额外参数 ──────────────────────────────────
+    #  轨迹额外参数
 
     def _setup_traj_extra_section(self) -> None:
         self._group_traj_extra = QGroupBox("轨迹物理参数")
@@ -347,7 +352,7 @@ class PropertyPanel(QScrollArea):
                   self._spin_range_y, self._spin_range_z, self._spin_speed_factor):
             w.valueChanged.connect(self._on_traj_extra_changed)
 
-    # ── 烟花内层颜色 ──────────────────────────────────
+    #  烟花内层颜色
 
     def _setup_fw_color_inner(self) -> None:
         self._group_fw_inner = QGroupBox("烟花颜色")
@@ -371,6 +376,7 @@ class PropertyPanel(QScrollArea):
     def _on_fw_type_changed(self, idx: int) -> None:
         if not self._loading and isinstance(self._current_element, (FireworkElement, TrajFireworkElement)):
             new_type = self._combo_fw_type.itemData(idx)
+            log.debug(f"烟花类型变更: {new_type}, element={self._current_element.name}")
             self._current_element.fw_type = new_type
             # 更新颜色层显示
             layers = self._FW_COLOR_LAYERS.get(new_type, ["inner"])
@@ -384,7 +390,7 @@ class PropertyPanel(QScrollArea):
             self._group_fw_angle.setVisible("horizontal_angle" in params or "vertical_angle" in params)
             self._emit_change("fw_type", new_type)
 
-    # ── 烟花外层颜色 ──────────────────────────────────
+    #  烟花外层颜色
 
     def _setup_fw_color_outer(self) -> None:
         self._group_fw_outer = QGroupBox("外层颜色")
@@ -397,7 +403,7 @@ class PropertyPanel(QScrollArea):
         self._color_outer_end.color_changed.connect(lambda c: self._emit_change("outer_color_end", c))
         self._layout.addWidget(self._group_fw_outer)
 
-    # ── 角度 (Dial + SpinBox) ─────────────────────────
+    #  角度 (Dial + SpinBox)
 
     def _setup_fw_angle_section(self) -> None:
         self._group_fw_angle = QGroupBox("爆炸角度")
@@ -440,7 +446,7 @@ class PropertyPanel(QScrollArea):
         layout.addLayout(row)
         self._layout.addWidget(self._group_fw_angle)
 
-    # ── 烟花额外参数 ──────────────────────────────────
+    #  烟花额外参数
 
     def _setup_fw_extra_section(self) -> None:
         self._group_fw_extra = QGroupBox("烟花参数")
@@ -466,15 +472,13 @@ class PropertyPanel(QScrollArea):
                   self._spin_spread, self._spin_track_count, self._spin_radius, self._spin_radial_speed):
             w.valueChanged.connect(self._on_fw_extra_changed)
 
-    # ── 类型选择 (动态创建，在 traj/fw section 显示) ──
+    #  类型选择 (动态创建，在 traj/fw section 显示) 
 
     def _setup_type_selector(self) -> None:
         """在加载时动态添加到 group 上方."""
         pass  # 类型选择器在 _load_* 中通过 setVisible 控制
 
-    # ═══════════════════════════════════════════════════
     # 显示/隐藏
-    # ═══════════════════════════════════════════════════
 
     def _show_w(self, key: str) -> None:
         if key in self._w:
@@ -520,9 +524,7 @@ class PropertyPanel(QScrollArea):
             if k in self._w:
                 self._w[k][0].hide(); self._w[k][1].hide()
 
-    # ═══════════════════════════════════════════════════
     # 加载元素
-    # ═══════════════════════════════════════════════════
 
     def load_element(self, elem: Element | None, part: str = "") -> None:
         if self._loading:
@@ -738,14 +740,14 @@ class PropertyPanel(QScrollArea):
             if k in self._w:
                 self._w[k][0].show(); self._w[k][1].show()
 
-    # ═══════════════════════════════════════════════════
     # 信号
-    # ═══════════════════════════════════════════════════
 
     def _emit_change(self, key: str, value: Any) -> None:
         if not self._current_element or self._loading:
             return
         e = self._current_element
+        # 捕获旧值（必须在修改前读取）
+        old_value = getattr(e, key, None)
         # 立即更新元素属性
         if key in ("name", "start_tick", "duration_ticks"):
             setattr(e, key, value)
@@ -761,20 +763,26 @@ class PropertyPanel(QScrollArea):
             e.outer_color.use_gradient = value
             self._color_outer_end.setEnabled(value)
         elif key == "traj_color_start" and hasattr(e, "traj_color"):
+            old_value = e.traj_color.start
             e.traj_color.start = value
         elif key == "traj_color_end" and hasattr(e, "traj_color"):
+            old_value = e.traj_color.end
             e.traj_color.end = value
         elif key == "inner_color_start" and hasattr(e, "fw_type"):
+            old_value = e.inner_color.start
             e.inner_color.start = value
         elif key == "inner_color_end" and hasattr(e, "fw_type"):
+            old_value = e.inner_color.end
             e.inner_color.end = value
         elif key == "outer_color_start" and hasattr(e, "fw_type"):
+            old_value = e.outer_color.start
             e.outer_color.start = value
         elif key == "outer_color_end" and hasattr(e, "fw_type"):
+            old_value = e.outer_color.end
             e.outer_color.end = value
         elif key == "position":
             pass  # 位置已在 _on_*_pos_changed 中更新
-        self.property_changed.emit(e.id, key, value)
+        self.property_changed.emit(e.id, key, value, old_value)
 
     def _on_traj_extra_changed(self) -> None:
         if isinstance(self._current_element, TrajectoryElement) and not self._loading:
