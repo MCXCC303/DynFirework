@@ -63,12 +63,14 @@ class EditPointCommand(QUndoCommand):
         point: MinecraftPosition,
         old_vals: dict,
         new_vals: dict,
+        fastsearch: set | None = None,
         parent: QUndoCommand | None = None,
     ) -> None:
         super().__init__("编辑位置点", parent)
         self._point = point
         self._old_vals = old_vals
         self._new_vals = new_vals
+        self._fastsearch = fastsearch
 
     def undo(self) -> None:
         self._apply(self._old_vals)
@@ -77,6 +79,8 @@ class EditPointCommand(QUndoCommand):
         self._apply(self._new_vals)
 
     def _apply(self, vals: dict) -> None:
+        if self._fastsearch is not None:
+            self._fastsearch.discard((int(self._point.x), int(self._point.z)))
         if "x" in vals:
             self._point.x = vals["x"]
         if "y" in vals:
@@ -87,3 +91,5 @@ class EditPointCommand(QUndoCommand):
             self._point.label = vals["label"]
         if "color" in vals:
             self._point._main_color = vals["color"]
+        if self._fastsearch is not None:
+            self._fastsearch.add((int(self._point.x), int(self._point.z)))

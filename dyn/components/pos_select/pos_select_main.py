@@ -13,7 +13,7 @@ log = get_logger(__name__)
 
 from PySide6 import QtWidgets
 from PySide6.QtCore import Signal, QItemSelectionModel, QObject
-from PySide6.QtGui import QKeySequence, QAction, QColor
+from PySide6.QtGui import QKeySequence, QAction, QColor, QUndoStack
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QGridLayout, QAbstractItemView, QFileDialog,
 )
@@ -37,6 +37,7 @@ class PosSelectMainWindow(QMainWindow):
         # 共享数据源（所有位置点）—— 单例
         self._points: list[MinecraftPosition] = []
         self._fastsearch: set[tuple[int, int]] = set()
+        self._shared_undo_stack = QUndoStack(self)
 
         self.ui = PosSelectMainUI()
         self.ui.setupUi(self)
@@ -74,6 +75,7 @@ class PosSelectMainWindow(QMainWindow):
         """将共享数据注入图形组件."""
         graph.stored_pix_list = self._points
         graph.stored_pix_fastsearch = self._fastsearch
+        graph._undo_stack = self._shared_undo_stack
 
     @property
     def chosen_point(self) -> MinecraftPosition | None:
@@ -159,14 +161,18 @@ class PosSelectMainWindow(QMainWindow):
         self._active_graph.update()
 
     def _on_undo(self) -> None:
-        if self._active_graph and self._active_graph.undo_stack.canUndo():
-            self._active_graph.undo_stack.undo()
+        if self._shared_undo_stack.canUndo():
+            self._shared_undo_stack.undo()
             self.pix_element_list.get_element_list(self._points)
+            if self._active_graph:
+                self._active_graph.update()
 
     def _on_redo(self) -> None:
-        if self._active_graph and self._active_graph.undo_stack.canRedo():
-            self._active_graph.undo_stack.redo()
+        if self._shared_undo_stack.canRedo():
+            self._shared_undo_stack.redo()
             self.pix_element_list.get_element_list(self._points)
+            if self._active_graph:
+                self._active_graph.update()
 
     def signal_connect(self):
         # 仅连接活跃 graph 的信号（避免两套信号造成重复条目）
@@ -199,14 +205,12 @@ class PosSelectMainWindow(QMainWindow):
             pt = self._active_graph.selected_point
             if hasattr(self._active_graph, '_delete_point'):
                 self._active_graph._delete_point(pt)
-                self.pix_element_list.get_element_list(self._points)
 
     def _on_edit_button(self) -> None:
         if self._active_graph and self._active_graph.selected_point:
             pt = self._active_graph.selected_point
             if hasattr(self._active_graph, '_edit_point'):
                 self._active_graph._edit_point(pt)
-                self.pix_element_list.get_element_list(self._points)
 
     def _on_min_size(self):
         if self._active_graph: self._active_graph.set_min_pix_size()

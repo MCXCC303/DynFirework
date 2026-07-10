@@ -251,7 +251,7 @@ class RadarWidget(QWidget):
             old_vals = {"x": pt.x, "y": pt.y, "z": pt.z, "label": pt.label, "color": pt.pix_color}
             pt.x = dlg.x; pt.y = dlg.y; pt.z = dlg.z; pt.label = dlg.name; pt._main_color = dlg.color
             new_vals = {"x": pt.x, "y": pt.y, "z": pt.z, "label": pt.label, "color": pt.pix_color}
-            self._undo_stack.push(EditPointCommand(pt, old_vals, new_vals))
+            self._undo_stack.push(EditPointCommand(pt, old_vals, new_vals, self.stored_pix_fastsearch))
             self.point_renewed_sign.emit(self.stored_pix_list); self.selection_changed.emit(pt); self.update()
 
     def _delete_point(self, pt: MinecraftPosition) -> None:
