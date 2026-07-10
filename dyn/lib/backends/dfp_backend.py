@@ -1,19 +1,17 @@
 # pylint: disable=all
 # flake8: noqa
 # mypy: ignore-errors
-# DFP Backend — DynFirework Particles Mod, MC 1.20.1
+# DFP Backend   DynFirework Particles Mod, MC 1.20.1
 # 命令格式: /dfp x y z r1 g1 b1 r2 g2 b2 vx vy vz lifetime
 import random
 
 from dyn.lib import global_storage
-
 
 def color_expression(start_color, end_color, lifetime):
 	r1, g1, b1 = start_color
 	r2, g2, b2 = end_color
 	# 返回dust格式的颜色数组，RGB值除以255转换为0-1范围
 	return [r1 / 255.0, g1 / 255.0, b1 / 255.0], [r2 / 255.0, g2 / 255.0, b2 / 255.0]
-
 
 def add_firework_command(tick, x, y, z, lifetime, color_expr, vx=0, vy=0, vz=0):
 	from_color, to_color = color_expr
@@ -26,7 +24,6 @@ def add_firework_command(tick, x, y, z, lifetime, color_expr, vx=0, vy=0, vz=0):
 	command = f'dfp {round(x, 4)} {round(y, 4)} {round(z, 4)} {r1} {g1} {b1} {r2} {g2} {b2} 0 0 0 {int(lifetime)}'
 	global_storage.add_command(tick, command)
 
-
 def add_spark_command(tick, x, y, z, vx, vy, vz, lifetime):
 	# 火花粒子使用暖白色到金黄色的渐变
 	r1, g1, b1 = 255, 255, 200
@@ -36,7 +33,6 @@ def add_spark_command(tick, x, y, z, vx, vy, vz, lifetime):
 	# 使用传入的速度参数（vx, vy, vz），支持静止（0,0,0）和运动粒子
 	command = f'dfp {round(x, 4)} {round(y, 4)} {round(z, 4)} {r1} {g1} {b1} {r2} {g2} {b2} {round(vx, 4)} {round(vy, 4)} {round(vz, 4)} {int(lifetime)}'
 	global_storage.add_command(tick, command)
-
 
 def add_thick_spark_command(tick, x, y, z, vx, vy, vz, lifetime, range_x, range_y, range_z, particle_count):
 	# 粗火花粒子，在指定范围内生成多个粒子
@@ -62,7 +58,6 @@ def add_thick_spark_command(tick, x, y, z, vx, vy, vz, lifetime, range_x, range_
 		command = f'dfp {round(x_offset, 4)} {round(y_offset, 4)} {round(z_offset, 4)} {r1} {g1} {b1} {r2} {g2} {b2} {round(vx_offset, 4)} {round(vy_offset, 4)} {round(vz_offset, 4)} {int(lifetime)}'
 		global_storage.add_command(tick, command)
 
-
 def add_velocity_firework_command(tick, x, y, z, start_color, end_color, vx, vy, vz, lifetime):
 	"""
 	生成带初速度的烟花粒子
@@ -83,7 +78,6 @@ def add_velocity_firework_command(tick, x, y, z, start_color, end_color, vx, vy,
 	# 使用真实速度，让Mod物理引擎处理运动
 	command = f'dfp {round(x, 4)} {round(y, 4)} {round(z, 4)} {r1} {g1} {b1} {r2} {g2} {b2} {round(vx, 4)} {round(vy, 4)} {round(vz, 4)} {int(lifetime)}'
 	global_storage.add_command(tick, command)
-
 
 def lerp_color(color1, color2, factor):
 	"""Linearly interpolate between two colors."""

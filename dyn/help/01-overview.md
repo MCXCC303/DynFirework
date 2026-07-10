@@ -27,11 +27,11 @@ DynFirework 是一款为 Minecraft 设计的烟花粒子秀编辑工具。
 ## 项目文件
 
 DynFirework 使用 `.dyn` 后缀的压缩归档文件（tar.gz 格式）保存项目。文件内部包含：
-- `manifest.json` — 项目元数据、文件清单和 SHA-256 校验和
-- `elements/` — 每个元素独立存储为 JSON 文件
-- `positions.json` — 保存的位置坐标
-- `timeline_state.json` — 时间线 UI 状态
-- `assets/` — 嵌入的音乐等资源文件
+- `manifest.json` - 项目元数据、文件清单和 SHA-256 校验和
+- `elements/` - 每个元素独立存储为 JSON 文件
+- `positions.json` - 保存的位置坐标
+- `timeline_state.json` - 时间线 UI 状态
+- `assets/` - 嵌入的音乐等资源文件
 
 音乐文件嵌入在归档中，移动项目文件不会丢失音乐。
 

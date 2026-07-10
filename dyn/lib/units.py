@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from PySide6.QtGui import QColor
 
-
 class MinecraftVelocity:
 	def __init__(self, vx: float, vy: float, vz: float):
 		self._vx = vx
@@ -36,7 +35,6 @@ class MinecraftVelocity:
 	def vector(self, value):
 		pass
 
-
 @dataclass
 class Position:
 	x: float
@@ -45,15 +43,14 @@ class Position:
 	label: str
 	main_color: tuple
 
-
 class MinecraftPosition:
 	def __init__(
-		self,
-		x: float,
-		y: float,
-		z: float,
-		label: str,
-		main_color: QColor,
+			self,
+			x: float,
+			y: float,
+			z: float,
+			label: str,
+			main_color: QColor,
 	):
 		self._x = round(x, 2)
 		self._y = round(y, 2)  # 纵轴
@@ -125,7 +122,6 @@ class MinecraftPosition:
 	@property
 	def export_obj(self):
 		return Position(self.x, self.y, self.z, self.label, self.pix_color.getRgb())
-
 
 @dataclass
 class MinecraftTick:

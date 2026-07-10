@@ -4,6 +4,7 @@
 # global_storage.py
 import logging
 from pathlib import Path
+
 from . import global_storage
 
 log = logging.getLogger("dyn.lib.global_storage")
@@ -21,24 +22,21 @@ vertical_angle_step_default = 30
 
 project_dir = str(Path(__file__).parent.parent.parent)
 
-
 def update_max_tick(tick):
-    global MAX_TICK
-    if tick > MAX_TICK:
-        MAX_TICK = tick
-
+	global MAX_TICK
+	if tick > MAX_TICK:
+		MAX_TICK = tick
 
 def add_command(tick, command):
-    update_max_tick(tick)
-    if tick not in commands_by_tick:
-        commands_by_tick[tick] = []
-    commands_by_tick[tick].append(command)
-
+	update_max_tick(tick)
+	if tick not in commands_by_tick:
+		commands_by_tick[tick] = []
+	commands_by_tick[tick].append(command)
 
 def reset_storage():
-    """清空全局命令存储."""
-    global commands_by_tick, MAX_TICK
-    count = sum(len(v) for v in commands_by_tick.values())
-    log.debug(f"清空命令存储: {count} 条命令, MAX_TICK={MAX_TICK}")
-    commands_by_tick = {}
-    MAX_TICK = 0
+	"""清空全局命令存储."""
+	global commands_by_tick, MAX_TICK
+	count = sum(len(v) for v in commands_by_tick.values())
+	log.debug(f"清空命令存储: {count} 条命令, MAX_TICK={MAX_TICK}")
+	commands_by_tick = {}
+	MAX_TICK = 0

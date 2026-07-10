@@ -1,9 +1,8 @@
-# ParticleEx Backend — ParticleEx / Colorblock Mod, MC 1.12.2 / 1.16.5
+# ParticleEx Backend   ParticleEx / Colorblock Mod, MC 1.12.2 / 1.16.5
 # 命令格式:
 #   /particleex rgbatickparameter minecraft:end_rod ... "color_expr" ...
 #   /particleex normal minecraft:end_rod ...
 from dyn.lib import global_storage
-
 
 def color_expression(start_color, end_color, lifetime):
 	"""生成Colorblock模组的rgbatickparameter颜色表达式.
@@ -18,7 +17,6 @@ def color_expression(start_color, end_color, lifetime):
 		f"cg=({g1}+({g2}-{g1})*(t/{lifetime}))/255.0;"
 		f"cb=({b1}+({b2}-{b1})*(t/{lifetime}))/255.0"
 	)
-
 
 def add_firework_command(tick, x, y, z, lifetime, color_expr, vx=0, vy=0, vz=0):
 	"""生成带颜色渐变的粒子.
@@ -35,9 +33,8 @@ def add_firework_command(tick, x, y, z, lifetime, color_expr, vx=0, vy=0, vz=0):
 	)
 	global_storage.add_command(tick, _command)
 
-
 def add_spark_command(tick, x, y, z, vx, vy, vz, lifetime):
-	"""生成火花粒子 — 使用白色粒子+速度运动."""
+	"""生成火花粒子   使用白色粒子+速度运动."""
 	_command = (
 		f"particleex normal minecraft:end_rod "
 		f"{round(x, 4)} {round(y, 4)} {round(z, 4)} "
@@ -47,9 +44,8 @@ def add_spark_command(tick, x, y, z, vx, vy, vz, lifetime):
 	)
 	global_storage.add_command(tick, _command)
 
-
 def add_thick_spark_command(tick, x, y, z, vx, vy, vz, lifetime, range_x, range_y, range_z, particle_count):
-	"""生成粗火花粒子 — 使用particleex normal的范围参数随机散布."""
+	"""生成粗火花粒子   使用particleex normal的范围参数随机散布."""
 	_command = (
 		f"particleex normal minecraft:end_rod "
 		f"{round(x, 4)} {round(y, 4)} {round(z, 4)} "
@@ -59,7 +55,6 @@ def add_thick_spark_command(tick, x, y, z, vx, vy, vz, lifetime, range_x, range_
 		f"{particle_count} {int(lifetime)}"
 	)
 	global_storage.add_command(tick, _command)
-
 
 def add_velocity_firework_command(tick, x, y, z, start_color, end_color, vx, vy, vz, lifetime):
 	"""生成带初速度的烟花粒子.
@@ -76,7 +71,6 @@ def add_velocity_firework_command(tick, x, y, z, start_color, end_color, vx, vy,
 		f"0 0 0 1 {int(lifetime)}"
 	)
 	global_storage.add_command(tick, _command)
-
 
 def lerp_color(color1, color2, factor):
 	"""Linear interpolate between two RGB colors."""
