@@ -389,10 +389,17 @@ class _TrackArea(QWidget):
                 parent = elem._parent
                 if parent.start_tick != self._drag_parent_start:
                     self.element_moved.emit(elem.id, parent.start_tick, self._drag_parent_start)
-            elif elem.start_tick != self._drag_start_tick:
-                self.element_moved.emit(elem.id, elem.start_tick, self._drag_start_tick)
+            elif not (isinstance(elem, _TFProxy) and elem._part == "fw" and self._dragging_edge != "move"):
+                if elem.start_tick != self._drag_start_tick:
+                    self.element_moved.emit(elem.id, elem.start_tick, self._drag_start_tick)
             if elem.duration_ticks != self._drag_start_duration:
                 self.element_resized.emit(elem.id, elem.duration_ticks, self._drag_start_duration)
+            # fw 左边缘拖拽同时改变了 traj_duration，需额外记录
+            if isinstance(elem, _TFProxy) and elem._part == "fw" and self._dragging_edge == "left":
+                parent = elem._parent
+                old_traj_dur = self._drag_start_tick - self._drag_parent_start
+                if parent.traj_duration_ticks != old_traj_dur:
+                    self.element_resized.emit(parent.id + "::traj", parent.traj_duration_ticks, old_traj_dur)
         self._dragging = None; self._dragging_edge = ""; self._drag_start_pos = None
 
     def wheelEvent(self, event: QWheelEvent) -> None:
@@ -664,17 +671,61 @@ class TimelineWidget(QWidget):
         pass  # 子 track 处理
 
     def wheelEvent(self, event: QWheelEvent) -> None:
-        delta = event.angleDelta().y()
+        pixel = event.pixelDelta()
+        angle = event.angleDelta()
+
+        # 水平滚动：优先 pixelDelta（触控板），回退 angleDelta（鼠标横滚轮/X11 合成）
+        h_delta = 0
+        if not pixel.isNull() and pixel.x() != 0:
+            h_delta = pixel.x()
+        elif angle.x() != 0:
+            h_delta = angle.x()
+
+        # 垂直滚动增量
+        v_delta = 0
+        if not pixel.isNull() and pixel.y() != 0:
+            v_delta = pixel.y()
+        elif angle.y() != 0:
+            v_delta = angle.y()
+
+        # 水平滚动 → 平移时间线（触控板左右滑动 / 鼠标横滚轮）
+        if h_delta != 0:
+            self._scroll_offset = max(0, self._scroll_offset - h_delta)
+            self._refresh_tracks()
+            self.view_changed.emit()
+            self.update()
+
+        # Shift + 垂直滚动 → 快速水平平移
         if event.modifiers() & Qt.ShiftModifier:
-            self._scroll_offset = max(0, self._scroll_offset - delta)
-            self._refresh_tracks(); self.view_changed.emit(); self.update(); return
-        old = self._pixels_per_tick
-        if delta > 0: self.set_pixels_per_tick(old * 1.15)
-        else: self.set_pixels_per_tick(old / 1.15)
-        anchor_x = event.position().x() - TRACK_LABEL_WIDTH
-        if anchor_x > 0:
-            self._scroll_offset = max(0, self._x_to_tick(int(event.position().x())) * self._pixels_per_tick - anchor_x)
-        self._refresh_tracks(); self.view_changed.emit(); self.update()
+            if v_delta != 0:
+                self._scroll_offset = max(0, self._scroll_offset - v_delta)
+                self._refresh_tracks()
+                self.view_changed.emit()
+                self.update()
+            event.accept()
+            return
+
+        # 垂直滚动 → 缩放（鼠标滚轮/触控板双指上下）
+        if v_delta != 0:
+            old = self._pixels_per_tick
+            # 触控板像素增量使用渐进缩放，鼠标滚轮使用固定倍率
+            if not pixel.isNull():
+                factor = 1.0 + abs(v_delta) / 600.0
+                factor = max(0.9, min(1.12, factor))
+            else:
+                factor = 1.15
+            if v_delta > 0:
+                self.set_pixels_per_tick(old * factor)
+            else:
+                self.set_pixels_per_tick(old / factor)
+            anchor_x = event.position().x() - TRACK_LABEL_WIDTH
+            if anchor_x > 0:
+                self._scroll_offset = max(0, self._x_to_tick(int(event.position().x())) * self._pixels_per_tick - anchor_x)
+            self._refresh_tracks()
+            self.view_changed.emit()
+            self.update()
+
+        event.accept()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key_Delete and self._selected_id and self._controller:

@@ -345,8 +345,6 @@ class PixGraphWidget(QWidget):
             dlg = NewPointEditorDialog((gx, gz))
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 pt = MinecraftPosition(dlg.x, dlg.y, dlg.z, label=dlg.name, main_color=dlg.color)
-                self.stored_pix_list.append(pt)
-                self.stored_pix_fastsearch.add((int(pt.x), int(pt.z)))
                 self._undo_stack.push(
                     AddPointCommand(self.stored_pix_list, self.stored_pix_fastsearch, pt)
                 )
@@ -412,8 +410,6 @@ class PixGraphWidget(QWidget):
         self._undo_stack.push(
             RemovePointCommand(self.stored_pix_list, self.stored_pix_fastsearch, pt)
         )
-        self.stored_pix_list.remove(pt)
-        self.stored_pix_fastsearch.discard((int(pt.x), int(pt.z)))
         if self.selected_point is pt:
             self.selected_point = None
         self.point_renewed_sign.emit(self.stored_pix_list)

@@ -692,6 +692,7 @@ class MainWin(QMainWindow):
     # ═══════════════════════════════════════════════════
 
     def _on_position_select_requested(self, which: str) -> None:
+        self._pending_position_target = which
         self._pos_selector.showNormal()
 
     def _on_position_chosen(self, point: MinecraftPosition) -> None:
@@ -700,9 +701,22 @@ class MainWin(QMainWindow):
             return
         from dyn.models.elements import Position
         pos = Position(x=point.x, y=point.y, z=point.z)
-        if isinstance(elem, TrajectoryElement):
-            pass  # 由 PropertyPanel 内部处理
+        which = getattr(self, '_pending_position_target', 'firework')
+        if which == "end":
+            if isinstance(elem, TrajFireworkElement):
+                elem.mid_position = pos
+            elif isinstance(elem, TrajectoryElement):
+                elem.end_position = pos
+        else:
+            if isinstance(elem, TrajFireworkElement):
+                elem.start_position = pos
+            elif isinstance(elem, TrajectoryElement):
+                elem.start_position = pos
+            elif isinstance(elem, FireworkElement):
+                elem.position = pos
         self._property_panel.load_element(elem)
+        self._inspector.refresh(elem)
+        self._project_manager.mark_modified()
 
     # ═══════════════════════════════════════════════════
     # 槽：项目操作
