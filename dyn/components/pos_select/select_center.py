@@ -18,8 +18,10 @@ from PySide6.QtWidgets import (
 
 from dyn.ui.pos_select.pos_select_graph_ui import Ui_MainWindow as PosSelectMainUI
 from dyn.lib.units import MinecraftPosition
-from dyn.components.pos_select.pos_select_widgets import PixGraphWidget, PixElementList
-from dyn.components.pos_select.radar_widget import RadarWidget
+from dyn.components.pos_select.grid_select import (
+	_BaseGraphWidget, PixGraphWidget, PixElementList,
+)
+from dyn.components.pos_select.radar_select import RadarWidget
 
 class PosSelectMainWindow(QMainWindow):
 	"""位置选择器 网格图和雷达图共享同一数据源."""
@@ -67,7 +69,7 @@ class PosSelectMainWindow(QMainWindow):
 		self.signal_connect()
 		self.connect_menu_toggles()
 
-	def _inject_shared_data(self, graph: PixGraphWidget | RadarWidget) -> None:
+	def _inject_shared_data(self, graph: _BaseGraphWidget) -> None:
 		"""将共享数据注入图形组件."""
 		graph.stored_pix_list = self._points
 		graph.stored_pix_fastsearch = self._fastsearch
@@ -186,7 +188,7 @@ class PosSelectMainWindow(QMainWindow):
 			self.pix_element_list.get_list_selection
 		)
 
-	def _connect_graph(self, graph: PixGraphWidget | RadarWidget) -> None:
+	def _connect_graph(self, graph: _BaseGraphWidget) -> None:
 		graph.point_renewed_sign.connect(self.pix_element_list.get_element_list)
 		graph.selection_changed.connect(self.pix_element_list.get_graph_selection)
 		graph.selection_changed.connect(self.get_chosen_point)
@@ -205,20 +207,16 @@ class PosSelectMainWindow(QMainWindow):
 		self.ui.action_export.triggered.connect(self.export_data)
 
 	def _on_del_button(self) -> None:
-		if self._active_graph and self._active_graph.selected_point:
+		if self._active_graph is not None and self._active_graph.selected_point is not None:
 			pt = self._active_graph.selected_point
 			log.debug(f"删除位置点: ({pt.x}, {pt.y}, {pt.z})")
-			pt = self._active_graph.selected_point
-			if hasattr(self._active_graph, '_delete_point'):
-				self._active_graph._delete_point(pt)
+			self._active_graph._delete_point(pt)
 
 	def _on_edit_button(self) -> None:
-		if self._active_graph and self._active_graph.selected_point:
+		if self._active_graph is not None and self._active_graph.selected_point is not None:
 			pt = self._active_graph.selected_point
 			log.debug(f"编辑位置点: ({pt.x}, {pt.y}, {pt.z})")
-			pt = self._active_graph.selected_point
-			if hasattr(self._active_graph, '_edit_point'):
-				self._active_graph._edit_point(pt)
+			self._active_graph._edit_point(pt)
 
 	def _on_min_size(self):
 		if self._active_graph: self._active_graph.set_min_pix_size()
