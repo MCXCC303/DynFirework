@@ -84,7 +84,7 @@ class _ExportTask(QRunnable):
         global_storage.MAX_TICK = 0
 
         total = len(self._elements)
-        log.info(f"开始导出 {total} 个元素, namespace={self._namespace}, mc_version={self._mc_version}")
+        log.debug(f"开始导出 {total} 个元素, namespace={self._namespace}, mc_version={self._mc_version}")
         for i, elem in enumerate(self._elements):
             if not elem.enabled:
                 log.debug(f"跳过禁用元素: id={elem.id}, name={elem.name}")
@@ -105,7 +105,7 @@ class _ExportTask(QRunnable):
 
         # 创建完整数据包结构
         cmd_count = sum(len(v) for v in global_storage.commands_by_tick.values())
-        log.info(f"命令生成完成: {cmd_count} 条命令, MAX_TICK={global_storage.MAX_TICK}")
+        log.debug(f"命令生成完成: {cmd_count} 条命令, MAX_TICK={global_storage.MAX_TICK}")
         pack_dir = Path(self._output_dir) / self._datapack_name
         func_dir = pack_dir / "data" / self._namespace / "functions"
         func_dir.mkdir(parents=True, exist_ok=True)

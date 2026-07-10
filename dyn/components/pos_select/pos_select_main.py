@@ -237,7 +237,7 @@ class PosSelectMainWindow(QMainWindow):
     def confirm_selection(self):
         if self.chosen_point:
             pt = self.chosen_point
-            log.info(f"确认位置选择: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f}), label={pt.label}, color=({pt.pix_color.red()},{pt.pix_color.green()},{pt.pix_color.blue()})")
+            log.debug(f"确认位置选择: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f}), label={pt.label}, color=({pt.pix_color.red()},{pt.pix_color.green()},{pt.pix_color.blue()})")
             self.send_chosen_point.emit(self.chosen_point)
         self.close()
 

@@ -1,7 +1,14 @@
 .idea/
 .vscode/
+.claude/
+.deepseek/
+*venv/
+
 *__pycache__*
 test/
 tests/
 logs/
+
 *.dyn
+*.function
+*.mcmeta

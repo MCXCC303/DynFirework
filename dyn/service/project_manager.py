@@ -75,7 +75,7 @@ class ProjectManager(QObject):
         if not self._file_path:
             log.warning("保存失败: 无文件路径")
             return False
-        log.info(f"保存项目: {self._file_path}")
+        log.debug(f"保存项目: {self._file_path}")
         try:
             self._project.to_file(self._file_path)
         except Exception as e:

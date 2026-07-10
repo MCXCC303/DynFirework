@@ -53,7 +53,7 @@ class DYNAboutWindow(QtWidgets.QDialog):
 
     def __init__(self) -> None:
         super().__init__()
-        log.info("打开关于对话框")
+        log.debug("打开关于对话框")
         self.ui = DFAboutUI()
         self.ui.setupUi(self)
 
@@ -65,7 +65,7 @@ class DYNHelpWindow(QtWidgets.QDialog):
 
     def __init__(self) -> None:
         super().__init__()
-        log.info("打开帮助对话框")
+        log.debug("打开帮助对话框")
         self.ui = DYNHelpUI()
         self.ui.setupUi(self)
 

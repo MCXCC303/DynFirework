@@ -356,7 +356,7 @@ class MainWin(QMainWindow):
     # 槽：文件操作
 
     def _on_new_project(self) -> None:
-        log.info("新建项目")
+        log.debug("新建项目")
         if self._project_manager.is_modified:
             reply = QMessageBox.question(
                 self, "新建项目", "当前项目未保存，是否继续？",
@@ -411,7 +411,7 @@ class MainWin(QMainWindow):
         if not self._project_manager.has_file:
             self._on_save_as_project()
             return
-        log.info(f"保存项目: {self._project_manager.file_path}")
+        log.debug(f"保存项目: {self._project_manager.file_path}")
         if self._project_manager.save_project():
             self.statusBar().showMessage(f"已保存: {self._project_manager.file_path}")
         else:
@@ -423,7 +423,7 @@ class MainWin(QMainWindow):
         )
         if not path:
             return
-        log.info(f"另存为: {path}")
+        log.debug(f"另存为: {path}")
         self._controller.to_project(self._project_manager.project)
         self._sync_positions_to_project()
         if self._project_manager.save_project(path):
@@ -461,7 +461,7 @@ class MainWin(QMainWindow):
 
     def _on_export_datapack(self) -> None:
         elements = self._controller.all_elements
-        log.info(f"导出数据包: {len(elements)} 个元素, MC版本={self._project_manager.project.mc_version}")
+        log.debug(f"导出数据包: {len(elements)} 个元素, MC版本={self._project_manager.project.mc_version}")
         if not elements:
             QMessageBox.warning(self, "无元素", "请先创建至少一个轨迹或烟花元素。")
             return
@@ -501,7 +501,7 @@ class MainWin(QMainWindow):
 
     def _on_export_finished(self, success: bool, message: str) -> None:
         if success:
-            log.info(f"导出成功: {message}")
+            log.debug(f"导出成功: {message}")
             QMessageBox.information(self, "导出完成", message)
         else:
             log.error(f"导出失败: {message}")
@@ -524,7 +524,7 @@ class MainWin(QMainWindow):
             elem = TrajFireworkElement(
                 name=f"轨迹烟花 {self._controller.traj_firework_count}", start_tick=cursor_tick
             )
-        log.info(f"创建元素: type={elem_type}, name={elem.name}, id={elem.id}, tick={cursor_tick}")
+        log.debug(f"创建元素: type={elem_type}, name={elem.name}, id={elem.id}, tick={cursor_tick}")
         self._undo_manager.push_add_element(elem)
         self._tree_view.expandAll()
         self._controller.select_element(elem.id)
@@ -536,7 +536,7 @@ class MainWin(QMainWindow):
             return
         cloned = self._controller.clone_element(eid)
         if cloned:
-            log.info(f"复制元素: src={eid} → new={cloned.id}, name={cloned.name}")
+            log.debug(f"复制元素: src={eid} → new={cloned.id}, name={cloned.name}")
         if cloned:
             self._tree_view.expandAll()
             self.statusBar().showMessage(f"已复制: {cloned.name}")
@@ -546,7 +546,7 @@ class MainWin(QMainWindow):
         if not eid:
             return
         elem = self._controller.get_element(eid)
-        log.info(f"删除元素: id={eid}, name={elem.name if elem else '?'}")
+        log.debug(f"删除元素: id={eid}, name={elem.name if elem else '?'}")
         if elem:
             self._undo_manager.push_remove_element(elem)
         self._tree_view.expandAll()
@@ -755,7 +755,7 @@ class MainWin(QMainWindow):
     # 槽：项目操作
 
     def _on_project_opened(self, project: Project) -> None:
-        log.info(f"项目已打开: name={project.name}, elements={len(project.all_elements)}, bpm={project.bpm:.0f}")
+        log.debug(f"项目已打开: name={project.name}, elements={len(project.all_elements)}, bpm={project.bpm:.0f}")
         self._element_browser_model.load_elements(self._controller.all_elements)
         self._tree_view.expandAll()
         self._timeline._on_elements_changed()
@@ -789,7 +789,7 @@ class MainWin(QMainWindow):
             self._playback.set_bpm(proj.bpm)
             self._transport_bar.set_bpm(proj.bpm)
             self._project_manager.mark_modified()
-            log.info(f"项目设置更新: name={proj.name}, bpm={proj.bpm:.0f}, mc_version={proj.mc_version}")
+            log.debug(f"项目设置更新: name={proj.name}, bpm={proj.bpm:.0f}, mc_version={proj.mc_version}")
             self.setWindowTitle(f"DynFirework — {proj.name}")
             self.statusBar().showMessage(f"BPM: {proj.bpm:.0f} | MC {proj.mc_version} | {proj.name}")
 
@@ -812,28 +812,28 @@ class MainWin(QMainWindow):
                 QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
             )
             if reply == QMessageBox.Save:
-                log.info("关闭窗口: 用户选择保存")
+                log.debug("关闭窗口: 用户选择保存")
                 self._on_save_project()
                 if self._project_manager.is_modified:
                     log.warning("关闭窗口: 保存失败，取消关闭")
                     event.ignore()
                     return
             elif reply == QMessageBox.Cancel:
-                log.info("关闭窗口: 用户取消")
+                log.debug("关闭窗口: 用户取消")
                 event.ignore()
                 return
             else:
-                log.info("关闭窗口: 用户选择不保存")
+                log.debug("关闭窗口: 用户选择不保存")
 
         settings = QSettings("DynFirework", "dyn-gui")
         settings.setValue("mainwin/geometry", self.saveGeometry())
         settings.setValue("mainwin/state", self.saveState())
-        log.info("应用程序关闭"); super().closeEvent(event)
+        log.debug("应用程序关闭"); super().closeEvent(event)
 
 
 if __name__ == "__main__":
     setup_logging()
-    log.info("===== DynFirework 启动 =====")
+    log.debug("===== DynFirework 启动 =====")
     app = QApplication(sys.argv)
     app.setApplicationName("DynFirework")
     app.setOrganizationName("DynFirework")

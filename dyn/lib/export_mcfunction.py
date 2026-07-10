@@ -11,7 +11,7 @@ def export_mcfunction(output_dir, namespace):
     if not os.path.exists(output_dir):
         try:
             os.makedirs(output_dir)
-            log.info(f"创建输出目录: {output_dir}")
+            log.debug(f"创建输出目录: {output_dir}")
         except Exception as e:
             log.error(f"创建输出目录失败: {e}")
             return False
@@ -34,7 +34,7 @@ def export_mcfunction(output_dir, namespace):
                     f.write(f'{cmd}\n')
             total_commands += len(commands)
             total_files += 1
-        log.info(f"导出完成: {total_files} 个 .mcfunction 文件, {total_commands} 条命令 → {output_dir}")
+        log.debug(f"导出完成: {total_files} 个 .mcfunction 文件, {total_commands} 条命令 → {output_dir}")
         return True
     except Exception as e:
         log.error(f"导出命令文件失败: {e}", exc_info=True)
@@ -70,7 +70,7 @@ def generate_data_pack(datapack_name, datapack_namespace, datapack_desc):
         with open(os.path.join(datapack_dir, 'pack.mcmeta'), 'w', encoding='utf-8', newline='\n') as f:
             f.writelines(f'{{"pack":{{"pack_format": 6,\"description\":\"{datapack_desc}\"}}}}')
 
-        log.info(f"创建数据包结构: {datapack_dir}")
+        log.debug(f"创建数据包结构: {datapack_dir}")
         return True, output_dir
     except Exception as e:
         log.error(f"生成数据包失败: {e}", exc_info=True)

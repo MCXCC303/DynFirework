@@ -38,7 +38,7 @@ def _load_project(path: str):
     project_root = Path(__file__).parent.parent
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-    log.info(f"CLI 加载项目: {path}")
+    log.debug(f"CLI 加载项目: {path}")
     return Project.from_file(path)
 
 
@@ -458,7 +458,7 @@ def main(argv: list[str] | None = None) -> int:
     if handler is None:
         parser.print_help()
         return 1
-    log.info(f"CLI 命令: {args.command}, project={args.project}")
+    log.debug(f"CLI 命令: {args.command}, project={args.project}")
     return handler(args)
 
 
