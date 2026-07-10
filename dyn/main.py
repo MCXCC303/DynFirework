@@ -153,23 +153,23 @@ class MainWin(QMainWindow):
 
         edit_menu.addSeparator()
 
-        act = QAction("撤销(&U)", self)
-        act.setShortcut(QKeySequence.Undo)
-        act.triggered.connect(self._undo_manager.undo)
-        self._undo_manager.can_undo_changed.connect(act.setEnabled)
+        undo_act = QAction("撤销(&U)", self)
+        undo_act.setShortcut(QKeySequence.Undo)
+        undo_act.triggered.connect(self._undo_manager.undo)
+        self._undo_manager.can_undo_changed.connect(undo_act.setEnabled)
         self._undo_manager.undo_text_changed.connect(
-            lambda t: act.setText(f"撤销 {t}" if t else "撤销(&U)")
+            lambda t, a=undo_act: a.setText(f"撤销 {t}" if t else "撤销(&U)")
         )
-        edit_menu.addAction(act)
+        edit_menu.addAction(undo_act)
 
-        act = QAction("重做(&R)", self)
-        act.setShortcut(QKeySequence("Ctrl+Shift+Z"))
-        act.triggered.connect(self._undo_manager.redo)
-        self._undo_manager.can_redo_changed.connect(act.setEnabled)
+        redo_act = QAction("重做(&R)", self)
+        redo_act.setShortcut(QKeySequence("Ctrl+Shift+Z"))
+        redo_act.triggered.connect(self._undo_manager.redo)
+        self._undo_manager.can_redo_changed.connect(redo_act.setEnabled)
         self._undo_manager.redo_text_changed.connect(
-            lambda t: act.setText(f"重做 {t}" if t else "重做(&R)")
+            lambda t, a=redo_act: a.setText(f"重做 {t}" if t else "重做(&R)")
         )
-        edit_menu.addAction(act)
+        edit_menu.addAction(redo_act)
 
         edit_menu.addSeparator()
 
@@ -451,8 +451,23 @@ class MainWin(QMainWindow):
             QMessageBox.warning(self, "无元素", "请先创建至少一个轨迹或烟花元素。")
             return
 
+        from dyn.lib.backend_registry import MC_VERSION_MAP, resolve_mc_version
+        proj = self._project_manager.project
+        mc_ver = proj.mc_version
+
+        # 推导默认pack_format和后端信息
+        try:
+            info = resolve_mc_version(mc_ver)
+            default_fmt = info.pack_format
+            backend_label = info.display_name
+        except KeyError:
+            default_fmt = 15
+            backend_label = f"Minecraft {mc_ver} (未知版本)"
+
         from dyn.ui.dialogs.export_dialog import ExportDialog
-        dlg = ExportDialog(self._project_manager.project.name, self)
+        dlg = ExportDialog(proj.name, self)
+        dlg.set_pack_format(default_fmt)
+        dlg.set_backend_info(backend_label)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
@@ -465,10 +480,10 @@ class MainWin(QMainWindow):
         if not output_dir:
             return
 
-        log.info(f"导出数据包: namespace={ns}"); self._export_service.export_to_datapack(
+        log.info(f"导出数据包: namespace={ns}, mc_version={mc_ver}"); self._export_service.export_to_datapack(
             elements, output_dir, ns,
             datapack_name=dlg.pack_name, description=dlg.description,
-            pack_format=dlg.pack_format,
+            pack_format=dlg.pack_format, mc_version=mc_ver,
         )
 
     def _on_export_finished(self, success: bool, message: str) -> None:
@@ -742,15 +757,16 @@ class MainWin(QMainWindow):
     def _on_project_settings(self) -> None:
         from dyn.ui.dialogs.project_settings_dialog import ProjectSettingsDialog
         proj = self._project_manager.project
-        dlg = ProjectSettingsDialog(proj.name, proj.bpm, self)
+        dlg = ProjectSettingsDialog(proj.name, proj.bpm, proj.mc_version, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             proj.bpm = dlg.bpm
             proj.name = dlg.project_name
+            proj.mc_version = dlg.mc_version
             self._playback.set_bpm(proj.bpm)
             self._transport_bar.set_bpm(proj.bpm)
             self._project_manager.mark_modified()
             self.setWindowTitle(f"DynFirework — {proj.name}")
-            self.statusBar().showMessage(f"BPM: {proj.bpm:.0f} | {proj.name}")
+            self.statusBar().showMessage(f"BPM: {proj.bpm:.0f} | MC {proj.mc_version} | {proj.name}")
 
     # ═══════════════════════════════════════════════════
     # 窗口状态

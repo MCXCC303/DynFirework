@@ -31,6 +31,8 @@ class TestGlobalStorage:
 
 class TestSharedFunctions:
     def test_color_expression(self):
+        from dyn.lib.backend_registry import set_backend, BackendType
+        set_backend(BackendType.DFP)
         from dyn.lib.shared_functions import color_expression
         result = color_expression((255, 0, 0), (0, 0, 255), 20)
         assert len(result) == 2
@@ -38,6 +40,8 @@ class TestSharedFunctions:
         assert result[1] == [0.0, 0.0, 1.0]
 
     def test_add_firework_command(self):
+        from dyn.lib.backend_registry import set_backend, BackendType
+        set_backend(BackendType.DFP)
         from dyn.lib import shared_functions, global_storage
         global_storage.commands_by_tick.clear()
 

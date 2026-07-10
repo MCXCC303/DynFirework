@@ -31,6 +31,7 @@ class Project:
     bpm: float = 120.0
     time_signature: tuple[int, int] = (4, 4)
     ticks_per_beat: int = 20
+    mc_version: str = "1.20.1"
 
     trajectories: list[TrajectoryElement] = field(default_factory=list)
     fireworks: list[FireworkElement] = field(default_factory=list)
@@ -79,6 +80,7 @@ class Project:
                 "bpm": self.bpm,
                 "time_signature": list(self.time_signature),
                 "ticks_per_beat": self.ticks_per_beat,
+                "mc_version": self.mc_version,
             },
             "trajectories": [t.to_json() for t in self.trajectories],
             "fireworks": [f.to_json() for f in self.fireworks],
@@ -102,6 +104,7 @@ class Project:
             bpm=proj.get("bpm", 120.0),
             time_signature=tuple(proj.get("time_signature", [4, 4])),
             ticks_per_beat=proj.get("ticks_per_beat", 20),
+            mc_version=proj.get("mc_version", "1.20.1"),
             trajectories=[TrajectoryElement.from_json(t) for t in data.get("trajectories", [])],
             fireworks=[FireworkElement.from_json(f) for f in data.get("fireworks", [])],
             traj_fireworks=[TrajFireworkElement.from_json(tf) for tf in data.get("traj_fireworks", [])],

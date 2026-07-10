@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 class TestFullExportFlow:
     def test_export_single_layer_firework(self):
         """测试单层烟花从模型到命令的完整流程."""
+        from dyn.lib.backend_registry import set_backend, BackendType
+        set_backend(BackendType.DFP)
         from dyn.lib import global_storage, export_mcfunction
         from dyn.lib.fireworks import basic_single_layer_firework
 
@@ -65,6 +67,8 @@ class TestFullExportFlow:
 
     def test_export_to_files(self):
         """测试导出到 mcfunction 文件."""
+        from dyn.lib.backend_registry import set_backend, BackendType
+        set_backend(BackendType.DFP)
         from dyn.lib import global_storage, export_mcfunction
         from dyn.lib.fireworks import basic_single_layer_firework
 

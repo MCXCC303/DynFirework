@@ -2,9 +2,14 @@
 
 ## 导出的数据包在游戏中不工作
 
-确认已安装 DynFirework Mod。`dfp` 命令是该 Mod 提供的自定义命令，原版 Minecraft 不识别。
+DynFirework 生成的命令依赖特定的 Minecraft 模组。请根据项目设置中选择的 Minecraft 版本安装对应模组：
 
-检查 `pack.mcmeta` 中的 `pack_format` 版本号是否与 Minecraft 版本匹配。不匹配时游戏可能拒绝加载。手动修改 `pack.mcmeta` 中的版本号可适配不同版本。
+- **Minecraft 1.20.1 / 1.20.4 / 1.21**：需要安装 **DynFirework Particles Mod**。导出使用 `/dfp` 命令格式。
+- **Minecraft 1.12.2 / 1.16.5**：需要安装 **Colorblock Mod**。导出使用 `/particleex` 命令格式。
+
+`dfp` 和 `particleex` 都是模组提供的自定义命令，原版 Minecraft 无法识别。
+
+检查 `pack.mcmeta` 中的 `pack_format` 版本号是否与 Minecraft 版本匹配。不匹配时游戏可能拒绝加载。导出对话框会根据项目设置自动填入正确的版本号，也可手动修改。
 
 版本对照参考第2.2章：Minecraft 数据包。
 

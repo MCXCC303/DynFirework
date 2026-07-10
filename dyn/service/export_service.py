@@ -48,7 +48,7 @@ class _ExportTask(QRunnable):
 
     def __init__(self, elements: list[Element], output_dir: str, namespace: str,
                  datapack_name: str = "DynFirework", description: str = "",
-                 pack_format: int = 6) -> None:
+                 pack_format: int = 6, mc_version: str = "1.20.1") -> None:
         super().__init__()
         self._elements = elements
         self._output_dir = output_dir
@@ -56,6 +56,7 @@ class _ExportTask(QRunnable):
         self._datapack_name = datapack_name
         self._description = description
         self._pack_format = pack_format
+        self._mc_version = mc_version
         self.signals = _TaskSignals()
 
     def run(self) -> None:
@@ -73,6 +74,16 @@ class _ExportTask(QRunnable):
         from dyn.lib import fireworks as fw
         from dyn.lib import trajectories as traj
         from dyn.lib import global_storage, export_mcfunction
+        from dyn.lib.backend_registry import set_backend, resolve_mc_version, BackendType
+
+        # 根据MC版本设置后端
+        try:
+            info = resolve_mc_version(self._mc_version)
+            set_backend(info.backend)
+            log.info(f"导出后端: {info.backend.value}, MC版本: {self._mc_version}, pack_format: {info.pack_format}")
+        except KeyError:
+            log.warning(f"未知MC版本: {self._mc_version}, 使用默认DFP后端")
+            set_backend(BackendType.DFP)
 
         # 清空全局存储
         global_storage.commands_by_tick.clear()
@@ -295,9 +306,10 @@ class ExportService(QObject):
         datapack_name: str = "DynFirework",
         description: str = "",
         pack_format: int = 6,
+        mc_version: str = "1.20.1",
     ) -> None:
         task = _ExportTask(elements, output_dir, namespace,
-                           datapack_name, description, pack_format)
+                           datapack_name, description, pack_format, mc_version)
         task.signals.finished.connect(self.export_finished)
         task.signals.progress.connect(self.export_progress)
         QThreadPool.globalInstance().start(task)
