@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from PyQt5.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from dyn.lib.units import MinecraftPosition, MinecraftVelocity, MinecraftTick
 

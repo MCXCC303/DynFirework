@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from dyn.lib.base_class import AbstractFirework, AbstractTrajectory
 from dyn.lib.units import MinecraftPosition, MinecraftTick

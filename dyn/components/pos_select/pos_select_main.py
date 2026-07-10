@@ -1,104 +1,302 @@
-import sys
+"""位置选择器主窗口 — 网格/雷达双模式."""
+
+from __future__ import annotations
+
 import json
+import logging
+import sys
 from dataclasses import asdict
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal, QItemSelectionModel
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QAbstractItemView
+from dyn.logging_config import get_logger
+
+log = get_logger(__name__)
+
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal, QItemSelectionModel, QObject
+from PySide6.QtGui import QKeySequence, QAction, QColor
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QGridLayout, QAbstractItemView, QFileDialog,
+)
 
 from dyn.ui.pos_select.pos_select_graph_ui import Ui_MainWindow as PosSelectMainUI
 from dyn.lib.units import MinecraftPosition
 from dyn.components.pos_select.pos_select_widgets import PixGraphWidget, PixElementList
+from dyn.components.pos_select.radar_widget import RadarWidget
 
 
 class PosSelectMainWindow(QMainWindow):
-	send_chosen_point: pyqtSignal = pyqtSignal(MinecraftPosition)
+    """位置选择器 — 网格图和雷达图共享同一数据源."""
 
-	def __init__(self):
-		super().__init__()
-		self._chosen_point: MinecraftPosition | None = None
-		self.ui = PosSelectMainUI()
-		self.ui.setupUi(self)
+    send_chosen_point = Signal(MinecraftPosition)
 
-		self.pix_graph = PixGraphWidget()
-		self.pixGraphLayout = QGridLayout(self.ui.widget)
-		self.pixGraphLayout.setSpacing(0)
-		self.pixGraphLayout.setContentsMargins(0, 0, 0, 0)
-		self.pixGraphLayout.addWidget(self.pix_graph, 0, 0)
+    def __init__(self) -> None:
+        super().__init__()
+        self._chosen_point: MinecraftPosition | None = None
+        self._mode: str = "grid"
 
-		self.pix_element_list = PixElementList()
-		self.ui.listView_element.setModel(self.pix_element_list)
-		self.ui.listView_element.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        # 共享数据源（所有位置点）—— 单例
+        self._points: list[MinecraftPosition] = []
+        self._fastsearch: set[tuple[int, int]] = set()
 
-		self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(self.chosen_point is not None)
+        self.ui = PosSelectMainUI()
+        self.ui.setupUi(self)
 
-		self.signal_connect()
-		self.connect_menu_toggles()
+        # 创建两种图形组件，共享同一数据引用
+        self.pix_graph = PixGraphWidget()
+        self.radar_graph = RadarWidget()
 
-	@property
-	def chosen_point(self) -> MinecraftPosition:
-		return self._chosen_point
+        # 注入共享数据
+        self._inject_shared_data(self.pix_graph)
+        self._inject_shared_data(self.radar_graph)
 
-	@chosen_point.setter
-	def chosen_point(self, point: MinecraftPosition):
-		self._chosen_point = point
-		self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(self.chosen_point is not None)
+        # 两组件放入同一布局同一位置，显示网格、隐藏雷达
+        self.pixGraphLayout = QGridLayout(self.ui.widget)
+        self.pixGraphLayout.setSpacing(0)
+        self.pixGraphLayout.setContentsMargins(0, 0, 0, 0)
+        self.pixGraphLayout.addWidget(self.pix_graph, 0, 0)
+        self.pixGraphLayout.addWidget(self.radar_graph, 0, 0)
+        self.radar_graph.hide()
 
-	def connect_menu_toggles(self):
-		self.ui.action_exit.setChecked(True)
-		self.ui.action_exit.triggered.connect(lambda: self.close())
-		self.ui.buttonBox.rejected.connect(lambda: self.close())
-		self.ui.buttonBox.accepted.connect(self.confirm_selection)
-		self.ui.action_pixsize_min.triggered.connect(self.pix_graph.set_min_pix_size)
-		self.ui.action_pixsize_max.triggered.connect(self.pix_graph.set_max_pix_size)
-		self.ui.action_pixsize_proper.triggered.connect(self.pix_graph.set_proper_pix_size)
+        self._active_graph = self.pix_graph
 
-	def confirm_selection(self):
-		self.send_chosen_point.emit(self.chosen_point)
-		print(self.chosen_point.position_text)
-		self.close()
+        # 列表模型
+        self.pix_element_list = PixElementList()
+        self.ui.listView_element.setModel(self.pix_element_list)
+        self.ui.listView_element.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
-	def selection_text_change(self):
-		self.ui.label_selection.setText(
-			f"已选中 ({self.chosen_point.x}, {self.chosen_point.y}, {self.chosen_point.z})")
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
 
-	def selection_point_border_change(self):
-		self.pix_graph.get_list_selected_pix(self.chosen_point)
+        self._setup_menus()
+        self.signal_connect()
+        self.connect_menu_toggles()
 
-	def get_chosen_point(self, point: MinecraftPosition):
-		self.chosen_point = point
-		self.handle_chosen_point()
+    def _inject_shared_data(self, graph: PixGraphWidget | RadarWidget) -> None:
+        """将共享数据注入图形组件."""
+        graph.stored_pix_list = self._points
+        graph.stored_pix_fastsearch = self._fastsearch
 
-	def handle_chosen_point(self):
-		self.selection_text_change()
-		self.selection_point_border_change()
-		self.update_list_selection()
+    @property
+    def chosen_point(self) -> MinecraftPosition | None:
+        return self._chosen_point
 
-	def update_list_selection(self):
-		index = self.pix_element_list.stored_pix_list.index(self.chosen_point)
-		model_index = self.pix_element_list.index(index)
-		self.ui.listView_element.selectionModel().select(model_index, QItemSelectionModel.ClearAndSelect)
+    @chosen_point.setter
+    def chosen_point(self, point: MinecraftPosition | None) -> None:
+        self._chosen_point = point
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(point is not None)
 
-	def signal_connect(self):
-		self.pix_graph.point_renewed_sign.connect(self.pix_element_list.get_element_list)
-		self.pix_graph.selection_changed.connect(self.pix_element_list.get_graph_selection)
-		self.pix_graph.selection_changed.connect(self.get_chosen_point)
+    @property
+    def mode(self) -> str:
+        return self._mode
 
-		self.pix_element_list.selection_changed.connect(self.get_chosen_point)
-		self.ui.listView_element.selectionModel().selectionChanged.connect(
-			self.pix_element_list.get_list_selection)
+    def _setup_menus(self) -> None:
+        mb = self.menuBar()
 
-	def export_data(self):
-		try:
-			with open("../../../learn1/radar_practice/data.json", "w") as jsonfile:
-				json.dump([asdict(s.export_obj) for s in self.pix_element_list.stored_pix_list],
-				          jsonfile, indent=2)
-		except Exception as e:
-			print(f"导出数据时出错: {e}")
+        view_menu = None
+        for child in mb.findChildren(QtWidgets.QMenu):
+            if child.title() == "视图":
+                view_menu = child
+                break
+        if view_menu is None:
+            view_menu = mb.addMenu("视图")
+
+        self._act_grid_mode = QAction("网格图模式", self)
+        self._act_grid_mode.setCheckable(True)
+        self._act_grid_mode.setChecked(True)
+        self._act_grid_mode.triggered.connect(lambda: self.switch_mode("grid"))
+        view_menu.addAction(self._act_grid_mode)
+
+        self._act_radar_mode = QAction("雷达图模式", self)
+        self._act_radar_mode.setCheckable(True)
+        self._act_radar_mode.triggered.connect(lambda: self.switch_mode("radar"))
+        view_menu.addAction(self._act_radar_mode)
+
+        edit_menu = None
+        for child in mb.findChildren(QtWidgets.QMenu):
+            if child.title() == "编辑":
+                edit_menu = child
+                break
+        if edit_menu is None:
+            edit_menu = mb.addMenu("编辑")
+
+        act_undo = QAction("撤销(&U)", self)
+        act_undo.setShortcut(QKeySequence.Undo)
+        act_undo.triggered.connect(self._on_undo)
+        edit_menu.addAction(act_undo)
+
+        act_redo = QAction("重做(&R)", self)
+        act_redo.setShortcut(QKeySequence("Ctrl+Shift+Z"))
+        act_redo.triggered.connect(self._on_redo)
+        edit_menu.addAction(act_redo)
+
+    def switch_mode(self, mode: str) -> None:
+        if mode == self._mode:
+            return
+
+        # 断开旧 graph 信号
+        try:
+            self._active_graph.point_renewed_sign.disconnect(self.pix_element_list.get_element_list)
+            self._active_graph.selection_changed.disconnect(self.pix_element_list.get_graph_selection)
+            self._active_graph.selection_changed.disconnect(self.get_chosen_point)
+        except (RuntimeError, TypeError):
+            pass
+
+        self._mode = mode
+        if mode == "grid":
+            self.radar_graph.hide()
+            self.pix_graph.show()
+            self._active_graph = self.pix_graph
+            self._act_grid_mode.setChecked(True)
+            self._act_radar_mode.setChecked(False)
+        else:
+            self.pix_graph.hide()
+            self.radar_graph.show()
+            self._active_graph = self.radar_graph
+            self._act_grid_mode.setChecked(False)
+            self._act_radar_mode.setChecked(True)
+
+        # 重连新 graph 信号
+        self._connect_graph(self._active_graph)
+        self._active_graph.update()
+
+    def _on_undo(self) -> None:
+        if self._active_graph and self._active_graph.undo_stack.canUndo():
+            self._active_graph.undo_stack.undo()
+            self.pix_element_list.get_element_list(self._points)
+
+    def _on_redo(self) -> None:
+        if self._active_graph and self._active_graph.undo_stack.canRedo():
+            self._active_graph.undo_stack.redo()
+            self.pix_element_list.get_element_list(self._points)
+
+    def signal_connect(self):
+        # 仅连接活跃 graph 的信号（避免两套信号造成重复条目）
+        self._connect_graph(self.pix_graph)
+        self.pix_element_list.selection_changed.connect(self.get_chosen_point)
+        self.ui.listView_element.selectionModel().selectionChanged.connect(
+            self.pix_element_list.get_list_selection
+        )
+
+    def _connect_graph(self, graph: PixGraphWidget | RadarWidget) -> None:
+        graph.point_renewed_sign.connect(self.pix_element_list.get_element_list)
+        graph.selection_changed.connect(self.pix_element_list.get_graph_selection)
+        graph.selection_changed.connect(self.get_chosen_point)
+
+    def connect_menu_toggles(self):
+        self.ui.action_exit.triggered.connect(self.close)
+        self.ui.buttonBox.rejected.connect(self.close)
+        self.ui.buttonBox.accepted.connect(self.confirm_selection)
+        self.ui.action_pixsize_min.triggered.connect(self._on_min_size)
+        self.ui.action_pixsize_max.triggered.connect(self._on_max_size)
+        self.ui.action_pixsize_proper.triggered.connect(self._on_proper_size)
+        self.ui.pushButton_delpoint.clicked.connect(self._on_del_button)
+        self.ui.pushButton_editpoint.clicked.connect(self._on_edit_button)
+        # 导入/导出菜单
+        self.ui.action_import.triggered.connect(self.import_data)
+        self.ui.action_export.triggered.connect(self.export_data)
+
+    def _on_del_button(self) -> None:
+        if self._active_graph and self._active_graph.selected_point:
+            pt = self._active_graph.selected_point
+            if hasattr(self._active_graph, '_delete_point'):
+                self._active_graph._delete_point(pt)
+                self.pix_element_list.get_element_list(self._points)
+
+    def _on_edit_button(self) -> None:
+        if self._active_graph and self._active_graph.selected_point:
+            pt = self._active_graph.selected_point
+            if hasattr(self._active_graph, '_edit_point'):
+                self._active_graph._edit_point(pt)
+                self.pix_element_list.get_element_list(self._points)
+
+    def _on_min_size(self):
+        if self._active_graph: self._active_graph.set_min_pix_size()
+
+    def _on_max_size(self):
+        if self._active_graph: self._active_graph.set_max_pix_size()
+
+    def _on_proper_size(self):
+        if self._active_graph: self._active_graph.set_proper_pix_size()
+
+    def confirm_selection(self):
+        if self.chosen_point:
+            self.send_chosen_point.emit(self.chosen_point)
+        self.close()
+
+    def selection_text_change(self):
+        pt = self.chosen_point
+        if pt:
+            self.ui.label_selection.setText(f"已选中 ({pt.x}, {pt.y}, {pt.z})")
+
+    def selection_point_border_change(self):
+        if self._active_graph and self.chosen_point:
+            self._active_graph.get_list_selected_pix(self.chosen_point)
+
+    def get_chosen_point(self, point: MinecraftPosition):
+        self.chosen_point = point
+        self.handle_chosen_point()
+
+    def handle_chosen_point(self):
+        self.selection_text_change()
+        self.selection_point_border_change()
+        self.update_list_selection()
+
+    def update_list_selection(self):
+        if self.chosen_point not in self._points:
+            return
+        index = self._points.index(self.chosen_point)
+        model_index = self.pix_element_list.index(index)
+        sel_model = self.ui.listView_element.selectionModel()
+        if sel_model:
+            sel_model.select(model_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+
+    def import_data(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "导入位置点", "", "JSON 文件 (*.json);;所有文件 (*.*)"
+        )
+        if not path:
+            return
+        log.info(f"导入位置点: {path}")
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self._points.clear()
+            self._fastsearch.clear()
+            for item in data:
+                c = item.get("color", {})
+                pt = MinecraftPosition(
+                    x=item["x"], y=item["y"], z=item["z"],
+                    label=item.get("label", ""),
+                    main_color=QColor(c.get("r", 255), c.get("g", 255), c.get("b", 255)),
+                )
+                self._points.append(pt)
+                self._fastsearch.add((int(pt.x), int(pt.z)))
+            self.pix_element_list.get_element_list(self._points)
+            if self._active_graph:
+                self._active_graph.update()
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "导入失败", str(e))
+
+    def export_data(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "导出位置点", "positions.json", "JSON 文件 (*.json)"
+        )
+        if not path:
+            return
+        log.info(f"导出位置点: {path}, 共 {len(self._points)} 个点")
+        try:
+            data = [{"x": p.x, "y": p.y, "z": p.z, "label": p.label,
+                     "color": {"r": p.pix_color.red(), "g": p.pix_color.green(), "b": p.pix_color.blue()}}
+                    for p in self._points]
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "导出失败", str(e))
 
 
 if __name__ == "__main__":
-	app = QApplication(sys.argv)
-	win = PosSelectMainWindow()
-	win.showNormal()
-	sys.exit(app.exec_())
+    app = QApplication(sys.argv)
+    win = PosSelectMainWindow()
+    win.showNormal()
+    sys.exit(app.exec())

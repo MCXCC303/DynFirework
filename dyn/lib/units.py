@@ -1,7 +1,7 @@
 import math
 from dataclasses import dataclass
 
-from PyQt5.QtGui import QColor
+from PySide6.QtGui import QColor
 
 
 class MinecraftVelocity:
