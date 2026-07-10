@@ -33,7 +33,7 @@ from dyn.components.inspector import Inspector
 from dyn.components.property_panel import PropertyPanel
 from dyn.components.timeline.timeline_widget import TimelineWidget
 from dyn.components.transport_bar import TransportBar
-from dyn.components.pos_select.pos_select_main import PosSelectMainWindow
+from dyn.components.pos_select.select_center import PosSelectMainWindow
 
 from dyn.actions.about import DYNAboutWindow, DYNHelpWindow
 from dyn.ui.dialogs.export_dialog import ExportDialog
