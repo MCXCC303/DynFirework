@@ -155,13 +155,13 @@ class RadarWidget(QWidget):
 		ps = max(self.pix_size, 8)
 		ax_color = QColor(140, 140, 155)
 
-		# X 轴 → 右边缘箭头
+		# X 轴 -> 右边缘箭头
 		p.setPen(QPen(ax_color, 2))
 		p.drawLine(cx, cy, w, cy)
 		p.drawLine(w, cy, w - ps, cy - ps // 2)
 		p.drawLine(w, cy, w - ps, cy + ps // 2)
 
-		# Z 轴 → 底部箭头
+		# Z 轴 -> 底部箭头
 		p.drawLine(cx, cy, cx, h)
 		p.drawLine(cx, h, cx - ps // 2, h - ps)
 		p.drawLine(cx, h, cx + ps // 2, h - ps)

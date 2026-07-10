@@ -108,7 +108,7 @@ class UndoManager(QObject):
 
 	def push_property_change(self, element_id: str, key: str,
 	                         old_value: Any, new_value: Any) -> None:
-		log.debug(f"undo push: id={element_id}, {key}: {old_value} → {new_value}")
+		log.debug(f"undo push: id={element_id}, {key}: {old_value} -> {new_value}")
 		self._stack.push(ElementPropertyCommand(
 			self._controller, element_id, key, old_value, new_value,
 			description=f"修改 {key}"))

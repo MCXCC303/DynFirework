@@ -4,6 +4,8 @@
 .deepseek/
 *venv/
 
+CLAUDE.md
+
 *__pycache__*
 test/
 tests/

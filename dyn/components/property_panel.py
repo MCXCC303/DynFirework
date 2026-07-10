@@ -264,7 +264,7 @@ class PropertyPanel(QScrollArea):
 		self._spin_pos_z.setRange(-100000, 100000);
 		self._spin_pos_z.setDecimals(2)
 		self._add_row(form, "pos_z", "Z:", self._spin_pos_z)
-		# 位置坐标变更 → 自动同步元素
+		# 位置坐标变更 -> 自动同步元素
 		self._spin_pos_x.valueChanged.connect(lambda: self._on_pos_xy_changed())
 		self._spin_pos_y.valueChanged.connect(lambda: self._on_pos_xy_changed())
 		self._spin_pos_z.valueChanged.connect(lambda: self._on_pos_xy_changed())

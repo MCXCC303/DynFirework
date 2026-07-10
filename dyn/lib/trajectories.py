@@ -120,12 +120,12 @@ def launch_spark_trajectory(end_tick, x0, y0, z0, x1, y1, z1, duration, k, m0, l
 
 		# 生成火星粒子效果
 		for _ in range(particle_count):  # 每个tick生成particle_count个火星粒子
-			# 基础向后速度（减半：0.05 → 0.025）
+			# 基础向后速度（减半：0.05 -> 0.025）
 			spark_vx = vx * -0.025
 			spark_vy = vy * -0.025
 			spark_vz = vz * -0.025
 
-			# 随机偏移范围（水平方向±1倍，垂直方向±0.5倍）
+			# 随机偏移范围（水平方向+-1倍，垂直方向+-0.5倍）
 			spark_vx += random.uniform(-abs(spark_vx) * 1.0, abs(spark_vx) * 1.0)
 			spark_vy += random.uniform(-abs(spark_vy) * 0.5, abs(spark_vy) * 0.5)
 			spark_vz += random.uniform(-abs(spark_vz) * 1.0, abs(spark_vz) * 1.0)
@@ -230,7 +230,7 @@ def expanding_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k,
 		target_x, target_y, target_z = spiral_trajectory[i]
 
 		# 计算速度向量，直接使用坐标差乘以speed_factor，确保vy=0
-		# 速度缩小为原来的1/5（×0.2）
+		# 速度缩小为原来的1/5（*0.2）
 		vx = (target_x - initial_x) * speed_factor * 0.2
 		vy = 0  # 确保纵坐标不变
 		vz = (target_z - initial_z) * speed_factor * 0.2

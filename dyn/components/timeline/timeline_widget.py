@@ -87,8 +87,8 @@ class _TrackArea(QWidget):
 	element_moved = Signal(str, int, int)
 	element_resized = Signal(str, int, int)
 	drag_update = Signal()
-	drag_undo_begin = Signal()  # 拖拽开始 → undo 宏开始
-	drag_undo_end = Signal()  # 拖拽结束 → undo 宏提交
+	drag_undo_begin = Signal()  # 拖拽开始 -> undo 宏开始
+	drag_undo_end = Signal()  # 拖拽结束 -> undo 宏提交
 
 	def __init__(self, label: str, parent=None) -> None:
 		super().__init__(parent)
@@ -342,7 +342,7 @@ class _TrackArea(QWidget):
 			        "directional": "➳", "clustered": "❈", "expanding_sphere": "◉"}.get(elem.fw_type, "★")
 		if isinstance(elem, TrajectoryElement):
 			return {"launch": "↗", "spark": "✳",
-			        "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(elem.traj_type, "→")
+			        "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(elem.traj_type, "->")
 		return "?"
 
 	# 交互
@@ -423,12 +423,12 @@ class _TrackArea(QWidget):
 			elem = self._dragging.element
 			# element_moved（start_tick 变更）
 			if self._dragging_edge == "move" and isinstance(elem, _TFProxy):
-				# 所有 TF 代理的 middle-drag 均移动整个元素 → parent.start_tick 变更
+				# 所有 TF 代理的 middle-drag 均移动整个元素 -> parent.start_tick 变更
 				parent = elem._parent
 				if parent.start_tick != self._drag_parent_start:
 					self.element_moved.emit(elem.id, parent.start_tick, self._drag_parent_start)
 			elif not isinstance(elem, _TFProxy) or elem._part == "traj":
-				# 非代理元素（start_tick 直接可写）或 traj 代理边缘拖拽（start_tick ≡ parent.start_tick）
+				# 非代理元素（start_tick 直接可写）或 traj 代理边缘拖拽（start_tick == parent.start_tick）
 				# fw 代理的边缘拖拽在此被排除   其 start_tick 为派生值，实际变更为 traj_duration
 				if elem.start_tick != self._drag_start_tick:
 					self.element_moved.emit(elem.id, elem.start_tick, self._drag_start_tick)
@@ -704,7 +704,7 @@ class TimelineWidget(QWidget):
 		if event.button() == Qt.LeftButton:
 			x = event.position().x()
 			if x > TRACK_LABEL_WIDTH:
-				# 点击刻度/波形区域 → 跳转播放头
+				# 点击刻度/波形区域 -> 跳转播放头
 				tick = self._x_to_tick(int(x))
 				self._playback_tick = max(0, tick)
 				self.playback_cursor_changed.emit(self._playback_tick)
@@ -762,14 +762,14 @@ class TimelineWidget(QWidget):
 		elif angle.y() != 0:
 			v_delta = angle.y()
 
-		# 水平滚动 → 平移时间线（触控板左右滑动 / 鼠标横滚轮）
+		# 水平滚动 -> 平移时间线（触控板左右滑动 / 鼠标横滚轮）
 		if h_delta != 0:
 			self._scroll_offset = max(0, self._scroll_offset - h_delta)
 			self._refresh_tracks()
 			self.view_changed.emit()
 			self.update()
 
-		# Shift + 垂直滚动 → 快速水平平移
+		# Shift + 垂直滚动 -> 快速水平平移
 		if event.modifiers() & Qt.ShiftModifier:
 			if v_delta != 0:
 				self._scroll_offset = max(0, self._scroll_offset - v_delta)
@@ -779,10 +779,9 @@ class TimelineWidget(QWidget):
 			event.accept()
 			return
 
-		# 垂直滚动 → 缩放（鼠标滚轮/触控板双指上下）
+		# 垂直滚动 -> 缩放（鼠标滚轮/触控板双指上下），锚点固定为播放头
 		if v_delta != 0:
 			old = self._pixels_per_tick
-			# 触控板像素增量使用渐进缩放，鼠标滚轮使用固定倍率
 			if not pixel.isNull():
 				factor = 1.0 + abs(v_delta) / 600.0
 				factor = max(0.9, min(1.12, factor))
@@ -792,9 +791,7 @@ class TimelineWidget(QWidget):
 				self.set_pixels_per_tick(old * factor)
 			else:
 				self.set_pixels_per_tick(old / factor)
-			anchor_x = event.position().x() - TRACK_LABEL_WIDTH
-			if anchor_x > 0:
-				self._scroll_offset = max(0, self._x_to_tick(int(event.position().x())) * self._pixels_per_tick - anchor_x)
+			self._scroll_offset = max(0, self._playback_tick * (self._pixels_per_tick - old) + self._scroll_offset)
 			self._refresh_tracks()
 			self.view_changed.emit()
 			self.update()
@@ -891,7 +888,7 @@ class _WaveformWidget(QWidget):
 			f = QFont();
 			f.setPointSize(9);
 			p.setFont(f)
-			p.drawText(self.rect(), Qt.AlignCenter, "音频波形   导入音乐后显示")
+			p.drawText(self.rect(), Qt.AlignCenter, "音频波形 - 导入音乐后显示")
 			p.end();
 			return
 		mid = self.height() // 2

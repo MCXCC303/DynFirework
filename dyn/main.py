@@ -278,17 +278,17 @@ class MainWin(QMainWindow):
 	# 信号连接
 
 	def _connect_signals(self) -> None:
-		# 元素列表 TreeView 点击 → 选中
+		# 元素列表 TreeView 点击 -> 选中
 		self._tree_view.selectionModel().selectionChanged.connect(
 			self._on_tree_selection_changed
 		)
 
-		# 元素浏览器模型 → 同步选中
+		# 元素浏览器模型 -> 同步选中
 		self._element_browser_model.selection_changed.connect(
 			self._controller.select_element
 		)
 
-		# 时间线 → 选中同步（主时间线 + 子轨道）
+		# 时间线 -> 选中同步（主时间线 + 子轨道）
 		self._timeline.element_selected.connect(self._on_timeline_select)
 		self._timeline._fw_track.element_selected.connect(self._on_timeline_select)
 		self._timeline._traj_track.element_selected.connect(self._on_timeline_select)
@@ -305,12 +305,12 @@ class MainWin(QMainWindow):
 			lambda: self._undo_manager.begin_macro("拖拽修改"))
 		self._timeline._traj_track.drag_undo_end.connect(self._undo_manager.end_macro)
 
-		# 控制器的选中变更 → 各个面板
+		# 控制器的选中变更 -> 各个面板
 		self._controller.selection_changed.connect(self._on_controller_selection)
 		self._controller.element_added.connect(self._on_element_count_changed)
 		self._controller.element_removed.connect(self._on_element_count_changed)
 
-		# 参数面板 → 元素属性修改 (通过 undo)
+		# 参数面板 -> 元素属性修改 (通过 undo)
 		self._property_panel.property_changed.connect(self._on_property_changed)
 		self._property_panel.element_name_changed.connect(
 			lambda eid, name: self._controller.set_property(eid, "name", name)
@@ -319,11 +319,11 @@ class MainWin(QMainWindow):
 			self._on_position_select_requested
 		)
 
-		# 时间线拖拽 → 元素修改 + 面板刷新
+		# 时间线拖拽 -> 元素修改 + 面板刷新
 		self._timeline.element_moved.connect(self._on_timeline_element_moved)
 		self._timeline.element_resized.connect(self._on_timeline_element_resized)
 
-		# 播放控制 ↔ 时间线双向同步
+		# 播放控制 <-> 时间线双向同步
 		self._playback.position_changed.connect(self._timeline.set_playback_tick)
 		self._timeline.playback_cursor_changed.connect(self._playback.seek_to_tick)
 
@@ -532,7 +532,7 @@ class MainWin(QMainWindow):
 			return
 		cloned = self._controller.clone_element(eid)
 		if cloned:
-			log.debug(f"复制元素: src={eid} → new={cloned.id}, name={cloned.name}")
+			log.debug(f"复制元素: src={eid} -> new={cloned.id}, name={cloned.name}")
 		if cloned:
 			self._tree_view.expandAll()
 			self.statusBar().showMessage(f"已复制: {cloned.name}")
@@ -667,7 +667,7 @@ class MainWin(QMainWindow):
 		real_id, part = self._resolve_proxy_id(element_id)
 		elem = self._controller.get_element(real_id)
 		log.debug(f"时间线移动: {element_id} tick={new_tick} old={old_tick} | real_id={real_id} elem={elem is not None} | controller元素数={len(self._controller._elements)}")
-		key = "start_tick"  # TF 代理移动 → 整体平移
+		key = "start_tick"  # TF 代理移动 -> 整体平移
 		if elem:
 			self._undo_manager.push_property_change(real_id, key, old_tick, new_tick)
 			self._controller.element_changed.emit(real_id, "drag", None)

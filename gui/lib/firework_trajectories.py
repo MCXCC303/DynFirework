@@ -113,7 +113,7 @@ def launch_spark_trajectory(end_tick, x0, y0, z0, x1, y1, z1, duration, k, m0, l
 
         # 生成火星粒子效果
         for _ in range(particle_count):  # 每个tick生成particle_count个火星粒子
-            # 基础向后速度（减半：0.05 → 0.025）
+            # 基础向后速度（减半：0.05 -> 0.025）
             spark_vx = vx * -0.025
             spark_vy = vy * -0.025
             spark_vz = vz * -0.025

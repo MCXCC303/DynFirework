@@ -91,7 +91,7 @@ def basic_double_layer_firework(tick, x, y, z, inner_start_color, inner_end_colo
 def directional_firework(tick, x, y, z, start_color, end_color, speed,
                          direction_horizontal_angle, direction_vertical_angle, spread_angle, track_count,
                          duration, lifetime):
-	log.debug(f"定向烟花: tick={tick}, tracks={track_count}, spread={spread_angle}°")
+	log.debug(f"定向烟花: tick={tick}, tracks={track_count}, spread={spread_angle}")
 	t_step = 1.0 / 20  # 一秒20个tick
 	initial_tick = tick  # 存储起始tick
 	VELOCITY_SCALE = 0.05  # 速度缩放系数

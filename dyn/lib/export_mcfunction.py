@@ -34,7 +34,7 @@ def export_mcfunction(output_dir, namespace):
 					f.write(f'{cmd}\n')
 			total_commands += len(commands)
 			total_files += 1
-		log.debug(f"导出完成: {total_files} 个 .mcfunction 文件, {total_commands} 条命令 → {output_dir}")
+		log.debug(f"导出完成: {total_files} 个 .mcfunction 文件, {total_commands} 条命令 -> {output_dir}")
 		return True
 	except Exception as e:
 		log.error(f"导出命令文件失败: {e}", exc_info=True)

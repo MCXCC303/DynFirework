@@ -53,7 +53,7 @@ def set_backend(backend: BackendType) -> None:
 	"""
 	global _current_backend
 	if _current_backend != backend:
-		log.debug(f"后端切换: {_current_backend.value} → {backend.value}")
+		log.debug(f"后端切换: {_current_backend.value} -> {backend.value}")
 	_current_backend = backend
 
 def get_backend() -> BackendType:

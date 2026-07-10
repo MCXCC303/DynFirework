@@ -48,7 +48,7 @@ def add_thick_spark_command(tick, x, y, z, vx, vy, vz, lifetime, range_x, range_
 		y_offset = y + random.uniform(-range_y, range_y)
 		z_offset = z + random.uniform(-range_z, range_z)
 
-		# 速度随机扰动（±10%）
+		# 速度随机扰动（+-10%）
 		vx_offset = vx + random.uniform(-abs(vx) * 0.1, abs(vx) * 0.1)
 		vy_offset = vy + random.uniform(-abs(vy) * 0.1, abs(vy) * 0.1)
 		vz_offset = vz + random.uniform(-abs(vz) * 0.1, abs(vz) * 0.1)

@@ -126,7 +126,7 @@ class ElementController(QObject):
 			return False
 		old_val = getattr(elem, key, None)
 		setattr(elem, key, value)
-		log.debug(f"set_property: id={element_id}, name={elem.name}, {key}: {old_val} → {value}")
+		log.debug(f"set_property: id={element_id}, name={elem.name}, {key}: {old_val} -> {value}")
 		self.element_changed.emit(element_id, key, value)
 		return True
 
