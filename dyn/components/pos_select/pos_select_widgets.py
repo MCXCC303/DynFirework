@@ -1,5 +1,4 @@
-"""位置选择器核心 Widget   网格图、列表模型和新建点对话框."""
-
+"""位置选择器核心 Widget 网格图、列表模型和新建点对话框."""
 from __future__ import annotations
 
 from dyn.logging_config import get_logger
@@ -35,11 +34,9 @@ from dyn.components.pos_select.pos_undo_commands import (
 	EditPointCommand,
 )
 
-# PixElementList   列表模型
-
+# PixElementList 列表模型
 class PixElementList(QAbstractListModel):
-	"""位置点列表模型   QListView 的数据源."""
-
+	"""位置点列表模型 QListView 的数据源."""
 	point_removed_sign = Signal(list)
 	selection_changed = Signal(MinecraftPosition)
 
@@ -87,8 +84,7 @@ class PixElementList(QAbstractListModel):
 				selected_element = self.stored_pix_list[index.row()]
 				self.selection_changed.emit(selected_element)
 
-# PixGraphWidget   网格图
-
+# PixGraphWidget 网格图
 class PixGraphWidget(QWidget):
 	"""网格图（笛卡尔坐标）位置选择器.
 
@@ -471,8 +467,7 @@ class PixGraphWidget(QWidget):
 		self.selected_point = selected_point
 		self.update()
 
-# NewPointEditorDialog   新建点对话框
-
+# NewPointEditorDialog 新建点对话框
 class NewPointEditorDialog(QDialog):
 	"""新建/编辑位置点对话框."""
 

@@ -1,5 +1,4 @@
-"""元素控制器   管理所有时间线元素的 CRUD 和属性同步."""
-
+"""元素控制器 管理所有时间线元素的 CRUD 和属性同步."""
 from __future__ import annotations
 
 import copy

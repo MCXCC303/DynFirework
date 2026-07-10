@@ -1,4 +1,4 @@
-"""文件完整性校验工具   SHA-256 哈希计算与验证."""
+"""文件完整性校验工具 SHA-256 哈希计算与验证."""
 from __future__ import annotations
 
 import hashlib

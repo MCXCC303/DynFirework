@@ -122,8 +122,7 @@ class Element:
 
 @dataclass
 class TrajectoryElement(Element):
-	"""轨迹元素   对应 firework_trajectories.py 中的函数参数."""
-
+	"""轨迹元素 对应 firework_trajectories.py 中的函数参数."""
 	# 位置
 	start_position: Position = field(default_factory=Position)
 	end_position: Position = field(default_factory=lambda: Position(x=10, y=64, z=10))
@@ -203,8 +202,7 @@ class TrajectoryElement(Element):
 
 @dataclass
 class FireworkElement(Element):
-	"""烟花元素   对应 basic_fireworks.py 中的函数参数."""
-
+	"""烟花元素 对应 basic_fireworks.py 中的函数参数."""
 	# 类型
 	fw_type: str = "single_layer"
 
@@ -295,8 +293,7 @@ class FireworkElement(Element):
 
 @dataclass
 class TrajFireworkElement(Element):
-	"""轨迹烟花组合   轨迹末端自动对齐烟花爆炸中心."""
-
+	"""轨迹烟花组合 轨迹末端自动对齐烟花爆炸中心."""
 	# 位置（共享：轨迹终点 = 烟花爆炸中心）
 	start_position: Position = field(default_factory=Position)
 	mid_position: Position = field(default_factory=lambda: Position(x=10, y=80, z=10))

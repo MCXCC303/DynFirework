@@ -1,5 +1,4 @@
-"""音频服务   波形加载."""
-
+"""音频服务 波形加载."""
 from __future__ import annotations
 
 import tempfile

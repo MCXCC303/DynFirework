@@ -1,5 +1,4 @@
-"""基础参数面板   根据元素类型动态显示/隐藏参数."""
-
+"""基础参数面板 根据元素类型动态显示/隐藏参数."""
 from __future__ import annotations
 
 from typing import Any
@@ -170,7 +169,7 @@ class PropertyPanel(QScrollArea):
 		self._hide_all()
 		self.setEnabled(False)
 
-	#  控件存储：{param_name: (label_widget, input_widget, reset_btn, default_val)}
+	# 控件存储：{param_name: (label_widget, input_widget, reset_btn, default_val)}
 	_w: dict[str, tuple[QWidget, QWidget, QPushButton | None, object]] = {}
 	_DEFAULTS: dict[str, object] = {}
 
@@ -219,8 +218,7 @@ class PropertyPanel(QScrollArea):
 				continue
 			btn.setVisible(show)
 
-	#  基本信息
-
+	# 基本信息
 	def _setup_common_section(self) -> None:
 		grp = QGroupBox("基本信息")
 		form = QFormLayout(grp)
@@ -247,8 +245,7 @@ class PropertyPanel(QScrollArea):
 		self._group_common = grp;
 		self._layout.addWidget(grp)
 
-	#  位置 (轨迹始末 + 烟花中心)
-
+	# 位置 (轨迹始末 + 烟花中心)
 	def _setup_position_section(self) -> None:
 		self._group_pos = QGroupBox("位置")
 		form = QFormLayout(self._group_pos)
@@ -317,8 +314,7 @@ class PropertyPanel(QScrollArea):
 			e.end_position = Position(x=self._spin_end_x.value(), y=self._spin_end_y.value(), z=self._spin_end_z.value())
 			self._emit_change("end_position", None)
 
-	#  轨迹颜色
-
+	# 轨迹颜色
 	def _setup_traj_color_section(self) -> None:
 		self._group_traj_color = QGroupBox("轨迹颜色")
 		layout = QVBoxLayout(self._group_traj_color)
@@ -360,8 +356,7 @@ class PropertyPanel(QScrollArea):
 					self._w[k][1].show()
 			self._emit_change("traj_type", new_type)
 
-	#  轨迹额外参数
-
+	# 轨迹额外参数
 	def _setup_traj_extra_section(self) -> None:
 		self._group_traj_extra = QGroupBox("轨迹物理参数")
 		form = QFormLayout(self._group_traj_extra)
@@ -417,8 +412,7 @@ class PropertyPanel(QScrollArea):
 		          self._spin_range_y, self._spin_range_z, self._spin_speed_factor):
 			w.valueChanged.connect(self._on_traj_extra_changed)
 
-	#  烟花内层颜色
-
+	# 烟花内层颜色
 	def _setup_fw_color_inner(self) -> None:
 		self._group_fw_inner = QGroupBox("烟花颜色")
 		layout = QVBoxLayout(self._group_fw_inner)
@@ -459,8 +453,7 @@ class PropertyPanel(QScrollArea):
 			self._group_fw_angle.setVisible("horizontal_angle" in params or "vertical_angle" in params)
 			self._emit_change("fw_type", new_type)
 
-	#  烟花外层颜色
-
+	# 烟花外层颜色
 	def _setup_fw_color_outer(self) -> None:
 		self._group_fw_outer = QGroupBox("外层颜色")
 		layout = QVBoxLayout(self._group_fw_outer)
@@ -475,8 +468,7 @@ class PropertyPanel(QScrollArea):
 		self._color_outer_end.color_changed.connect(lambda c: self._emit_change("outer_color_end", c))
 		self._layout.addWidget(self._group_fw_outer)
 
-	#  角度 (Dial + SpinBox)
-
+	# 角度 (Dial + SpinBox)
 	def _setup_fw_angle_section(self) -> None:
 		self._group_fw_angle = QGroupBox("爆炸角度")
 		layout = QVBoxLayout(self._group_fw_angle)
@@ -534,8 +526,7 @@ class PropertyPanel(QScrollArea):
 		layout.addLayout(row)
 		self._layout.addWidget(self._group_fw_angle)
 
-	#  烟花额外参数
-
+	# 烟花额外参数
 	def _setup_fw_extra_section(self) -> None:
 		self._group_fw_extra = QGroupBox("烟花参数")
 		form = QFormLayout(self._group_fw_extra)
@@ -576,8 +567,7 @@ class PropertyPanel(QScrollArea):
 		          self._spin_spread, self._spin_track_count, self._spin_radius, self._spin_radial_speed):
 			w.valueChanged.connect(self._on_fw_extra_changed)
 
-	#  类型选择 (动态创建，在 traj/fw section 显示)
-
+	# 类型选择 (动态创建，在 traj/fw section 显示)
 	def _setup_type_selector(self) -> None:
 		"""在加载时动态添加到 group 上方."""
 		pass  # 类型选择器在 _load_* 中通过 setVisible 控制
@@ -776,7 +766,7 @@ class PropertyPanel(QScrollArea):
 		self._show_traj_extras_by_type(e.traj_type)
 
 	def _load_tf_fw_only(self, e) -> None:
-		"""仅烟花部分   位置只读."""
+		"""仅烟花部分 位置只读."""
 		self._hide_all()
 		self._group_common.show()
 		self._group_pos.show();

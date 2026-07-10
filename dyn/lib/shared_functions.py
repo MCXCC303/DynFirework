@@ -1,12 +1,12 @@
 # pylint: disable=all
 # flake8: noqa
 # mypy: ignore-errors
-# shared_functions.py   动态后端调度器
+# shared_functions.py 动态后端调度器
 #
 # 所有命令生成函数通过此模块路由到当前活动的后端。
 # 切换后端: backend_registry.set_backend(BackendType.DFP) 或 set_backend(BackendType.PARTICLEEX)
 #
-# 此模块保持与原有调用方100%兼容的接口   fireworks.py / trajectories.py /
+# 此模块保持与原有调用方100%兼容的接口 fireworks.py / trajectories.py /
 # special_effects.py 无需任何修改。
 import logging
 

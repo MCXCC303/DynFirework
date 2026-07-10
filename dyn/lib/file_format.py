@@ -1,5 +1,4 @@
-""".dyn 项目文件格式   tar.gz 归档读写、格式检测与元数据校验.
-
+""".dyn 项目文件格式 tar.gz 归档读写、格式检测与元数据校验.
 project.dyn  (gzip-compressed tar)
 ├── manifest.json          # 项目元数据 + 文件清单 + 校验和
 ├── elements/

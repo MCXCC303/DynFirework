@@ -1,5 +1,4 @@
-"""全局撤销/重做管理器   基于 QUndoStack."""
-
+"""全局撤销/重做管理器 基于 QUndoStack."""
 from __future__ import annotations
 
 from typing import Any
@@ -120,12 +119,12 @@ class UndoManager(QObject):
 		self._stack.push(RemoveElementCommand(self._controller, element))
 
 	def begin_macro(self, name: str) -> None:
-		"""开始宏   后续 push 操作合并为一个撤销步骤."""
+		"""开始宏 后续 push 操作合并为一个撤销步骤."""
 		log.debug(f"undo 宏开始: '{name}' (栈深度: {self._stack.count()})")
 		self._stack.beginMacro(name)
 
 	def end_macro(self) -> None:
-		"""结束宏   提交合并的撤销步骤."""
+		"""结束宏 提交合并的撤销步骤."""
 		self._stack.endMacro()
 		# 宏提交后输出当前所有元素的 tick 状态，便于对比撤销前后的值
 		states = [_elem_tick_state(self._controller.get_element(eid))

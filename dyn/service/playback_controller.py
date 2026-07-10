@@ -1,5 +1,4 @@
-"""播放控制器   封装 QMediaPlayer 用于音乐回放."""
-
+"""播放控制器 封装 QMediaPlayer 用于音乐回放."""
 from __future__ import annotations
 
 from pathlib import Path

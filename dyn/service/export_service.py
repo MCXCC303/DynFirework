@@ -1,5 +1,4 @@
-"""导出服务   将项目元素生成为 Minecraft 数据包."""
-
+"""导出服务 将项目元素生成为 Minecraft 数据包."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -41,7 +40,7 @@ class _TaskSignals(QObject):
 	progress = Signal(int)
 
 class _ExportTask(QRunnable):
-	"""后台导出任务   不阻塞 UI."""
+	"""后台导出任务 不阻塞 UI."""
 
 	def __init__(self, elements: list[Element], output_dir: str, namespace: str,
 	             datapack_name: str = "DynFirework", description: str = "",
@@ -94,7 +93,7 @@ class _ExportTask(QRunnable):
 				log.debug(f"导出烟花 [{i + 1}/{total}]: id={elem.id}, name={elem.name}, type={elem.fw_type}")
 				self._export_firework(elem, fw)
 			elif hasattr(elem, 'traj_type') and hasattr(elem, 'fw_type'):
-				# TrajFireworkElement   导出轨迹 + 烟花
+				# TrajFireworkElement 导出轨迹 + 烟花
 				log.debug(f"导出轨迹烟花 [{i + 1}/{total}]: id={elem.id}, name={elem.name}")
 				self._export_tf(elem, traj, fw)
 
@@ -118,7 +117,7 @@ class _ExportTask(QRunnable):
 		export_mcfunction.generate_auto_exec_file(str(func_dir), self._namespace)
 
 	def _export_tf(self, elem, traj, fw) -> None:
-		"""导出 TrajFireworkElement   分别导出轨迹和烟花部分."""
+		"""导出 TrajFireworkElement 分别导出轨迹和烟花部分."""
 		# 轨迹部分
 		pos = elem.start_position or Position()
 		end = elem.mid_position or Position()

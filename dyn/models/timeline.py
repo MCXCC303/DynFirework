@@ -39,7 +39,7 @@ class Project:
 	timeline_scroll_offset: int = 0
 	playback_cursor_tick: int = 0
 
-	# 音乐嵌入   不参与 JSON 序列化
+	# 音乐嵌入 不参与 JSON 序列化
 	music_data: bytes | None = field(default=None, repr=False, compare=False)
 	music_original_name: str = field(default="", repr=False, compare=False)
 
@@ -131,8 +131,7 @@ class Project:
 			playback_cursor_tick=ts_data.get("playback_cursor_tick", 0),
 		)
 
-	# 文件 I/O   tar.gz 归档格式
-
+	# 文件 I/O tar.gz 归档格式
 	@classmethod
 	def from_file(cls, path: str | Path) -> Project:
 		"""从 .dyn 文件读取项目."""

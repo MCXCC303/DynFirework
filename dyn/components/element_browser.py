@@ -1,5 +1,4 @@
-"""元素浏览器   QAbstractItemModel 树形模型，展示轨迹和烟花元素."""
-
+"""元素浏览器 QAbstractItemModel 树形模型，展示轨迹和烟花元素."""
 from __future__ import annotations
 
 import logging
@@ -24,7 +23,7 @@ from dyn.service.element_controller import ElementController
 log = logging.getLogger("dyn.components.element_browser")
 
 class _TreeNode:
-	"""树节点   内部数据结构."""
+	"""树节点 内部数据结构."""
 
 	def __init__(
 			self,

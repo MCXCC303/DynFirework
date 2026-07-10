@@ -1,5 +1,4 @@
-"""位置选择器主窗口   网格/雷达双模式."""
-
+"""位置选择器主窗口 网格/雷达双模式."""
 from __future__ import annotations
 
 import json
@@ -23,8 +22,7 @@ from dyn.components.pos_select.pos_select_widgets import PixGraphWidget, PixElem
 from dyn.components.pos_select.radar_widget import RadarWidget
 
 class PosSelectMainWindow(QMainWindow):
-	"""位置选择器   网格图和雷达图共享同一数据源."""
-
+	"""位置选择器 网格图和雷达图共享同一数据源."""
 	send_chosen_point = Signal(MinecraftPosition)
 
 	def __init__(self) -> None:
@@ -32,7 +30,7 @@ class PosSelectMainWindow(QMainWindow):
 		self._chosen_point: MinecraftPosition | None = None
 		self._mode: str = "grid"
 
-		# 共享数据源（所有位置点）   单例
+		# 共享数据源（所有位置点） 单例
 		self._points: list[MinecraftPosition] = []
 		self._fastsearch: set[tuple[int, int]] = set()
 		self._shared_undo_stack = QUndoStack(self)

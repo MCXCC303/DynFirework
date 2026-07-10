@@ -56,8 +56,7 @@ class DYNAboutWindow(QtWidgets.QDialog):
 		self.ui.setupUi(self)
 
 class DYNHelpWindow(QtWidgets.QDialog):
-	"""帮助对话框   左侧多层树形目录，右侧 Markdown 渲染."""
-
+	"""帮助对话框 左侧多层树形目录，右侧 Markdown 渲染."""
 	_HELP_DIR = Path(__file__).parent.parent / "help"
 
 	def __init__(self) -> None:

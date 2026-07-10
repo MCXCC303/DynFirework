@@ -1,5 +1,4 @@
-"""项目管理器   .dyn 文件读写和项目生命周期管理."""
-
+"""项目管理器 .dyn 文件读写和项目生命周期管理."""
 from __future__ import annotations
 
 import atexit
@@ -83,8 +82,7 @@ class ProjectManager(QObject):
 		return True
 
 	def set_music(self, filepath: str | Path) -> bool:
-		"""导入音乐文件   读取内容嵌入项目.
-
+		"""导入音乐文件 读取内容嵌入项目.
 		Args:
 			filepath: 音乐文件路径
 

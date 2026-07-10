@@ -297,7 +297,7 @@ class MainWin(QMainWindow):
 		self._timeline._fw_track.element_resized.connect(self._on_timeline_element_resized)
 		self._timeline._traj_track.element_moved.connect(self._on_timeline_element_moved)
 		self._timeline._traj_track.element_resized.connect(self._on_timeline_element_resized)
-		# 拖拽撤销宏   一次拖拽的多个属性变更合并为一个撤销步骤
+		# 拖拽撤销宏 一次拖拽的多个属性变更合并为一个撤销步骤
 		self._timeline._fw_track.drag_undo_begin.connect(
 			lambda: self._undo_manager.begin_macro("拖拽修改"))
 		self._timeline._fw_track.drag_undo_end.connect(self._undo_manager.end_macro)
@@ -644,7 +644,7 @@ class MainWin(QMainWindow):
 	# 槽：时间线拖拽
 
 	def _on_timeline_select(self, element_id: str) -> None:
-		"""时间线选中   代理元素只高亮自身，面板加载父元素."""
+		"""时间线选中 代理元素只高亮自身，面板加载父元素."""
 		log.debug(f"时间线选中: id={element_id}")
 		if not element_id:
 			self._controller.clear_selection()

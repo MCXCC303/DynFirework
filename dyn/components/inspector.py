@@ -1,5 +1,4 @@
-"""检查器面板   以只读 JSON 显示当前选中元素."""
-
+"""检查器面板 以只读 JSON 显示当前选中元素."""
 from __future__ import annotations
 
 import json

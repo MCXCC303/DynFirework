@@ -1,8 +1,7 @@
 # pylint: disable=all
 # flake8: noqa
 # mypy: ignore-errors
-# DFP Backend   DynFirework Particles Mod, MC 1.20.1
-# 命令格式: /dfp x y z r1 g1 b1 r2 g2 b2 vx vy vz lifetime
+# DFP Backend DynFirework Particles Mod, MC 1.20.1# 命令格式: /dfp x y z r1 g1 b1 r2 g2 b2 vx vy vz lifetime
 import random
 
 from dyn.lib import global_storage

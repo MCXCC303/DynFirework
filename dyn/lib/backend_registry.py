@@ -1,5 +1,4 @@
-"""后端注册表   管理DynFirework的命令生成后端.
-
+"""后端注册表 管理DynFirework的命令生成后端.
 全局后端切换，支持不同Minecraft版本对应的命令格式.
 
 Backend types:

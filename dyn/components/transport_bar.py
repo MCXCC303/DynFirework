@@ -1,5 +1,4 @@
-"""播放控制栏   音乐播放/暂停/停止和时间显示."""
-
+"""播放控制栏 音乐播放/暂停/停止和时间显示."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Slot
