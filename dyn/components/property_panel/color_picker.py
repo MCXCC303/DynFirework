@@ -1,4 +1,4 @@
-"""颜色选择组件."""
+"""颜色选择组件 与模型解耦 适用于 df 和 particleex."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
@@ -7,15 +7,34 @@ from PySide6.QtWidgets import (
 	QWidget, QHBoxLayout, QLabel, QSpinBox, QPushButton, QColorDialog,
 )
 
-from dyn.models.elements import ColorRGB
+class _ColorVal:
+	"""与 V1/V2 ColorRGB 接口兼容的颜色值 支持 .r/.g/.b/.to_json()/.as_tuple()."""
+	__slots__ = ('r', 'g', 'b')
+
+	def __init__(self, r: int, g: int, b: int) -> None:
+		self.r, self.g, self.b = r, g, b
+
+	def as_tuple(self) -> tuple[int, int, int]:
+		return self.r, self.g, self.b
+
+	def to_json(self) -> dict:
+		return {"r": self.r, "g": self.g, "b": self.b}
+
+	@classmethod
+	def from_json(cls, data: dict) -> _ColorVal:
+		return cls(r=data["r"], g=data["g"], b=data["b"])
+
+	def __iter__(self):
+		return iter((self.r, self.g, self.b))
 
 class ColorPicker(QWidget):
-	"""颜色选择组件."""
-	color_changed = Signal(ColorRGB)
+	"""颜色选择组件 color_changed 发射 _ColorVal (兼容 V1/V2 ColorRGB)."""
+
+	color_changed = Signal(_ColorVal)
 
 	def __init__(self, label: str = "", parent: QWidget | None = None) -> None:
 		super().__init__(parent)
-		self._color = ColorRGB()
+		self._r, self._g, self._b = 255, 165, 0
 		self._setup_ui(label)
 
 	def _setup_ui(self, label: str) -> None:
@@ -52,30 +71,42 @@ class ColorPicker(QWidget):
 		self._update_button()
 
 	def _on_pick_color(self) -> None:
-		init = QColor(self._color.r, self._color.g, self._color.b)
-		qcolor = QColorDialog.getColor(init, self, "选择颜色")
+		qcolor = QColorDialog.getColor(QColor(self._r, self._g, self._b), self, "选择颜色")
 		if qcolor.isValid():
-			self._color = ColorRGB(r=qcolor.red(), g=qcolor.green(), b=qcolor.blue())
-			self._spin_r.setValue(qcolor.red())
-			self._spin_g.setValue(qcolor.green())
-			self._spin_b.setValue(qcolor.blue())
+			self._r, self._g, self._b = qcolor.red(), qcolor.green(), qcolor.blue()
+			self._spin_r.setValue(self._r)
+			self._spin_g.setValue(self._g)
+			self._spin_b.setValue(self._b)
 
 	def _on_spin_changed(self) -> None:
-		self._color = ColorRGB(r=self._spin_r.value(), g=self._spin_g.value(), b=self._spin_b.value())
+		self._r = self._spin_r.value()
+		self._g = self._spin_g.value()
+		self._b = self._spin_b.value()
 		self._update_button()
-		self.color_changed.emit(self._color)
+		self.color_changed.emit(_ColorVal(self._r, self._g, self._b))
 
 	def _update_button(self) -> None:
-		c = self._color
-		self._btn.setStyleSheet(f"QPushButton {{ background-color: rgb({c.r},{c.g},{c.b}); border: 1px solid #888; border-radius: 3px; }}")
+		self._btn.setStyleSheet(
+			f"QPushButton {{ background-color: rgb({self._r},{self._g},{self._b}); "
+			f"border: 1px solid #888; border-radius: 3px; }}"
+		)
 
-	def set_color(self, color: ColorRGB) -> None:
-		self._color = color
-		self._spin_r.setValue(color.r)
-		self._spin_g.setValue(color.g)
-		self._spin_b.setValue(color.b)
+	def set_color(self, r: int, g: int = None, b: int = None) -> None:
+		"""设置颜色 r/g/b 或传入任意有 .r/.g/.b 属性的对象."""
+		if g is None:
+			obj = r
+			self._r, self._g, self._b = obj.r, obj.g, obj.b
+		else:
+			self._r, self._g, self._b = r, g, b
+		self._spin_r.setValue(self._r)
+		self._spin_g.setValue(self._g)
+		self._spin_b.setValue(self._b)
 		self._update_button()
 
 	@property
-	def color(self) -> ColorRGB:
-		return self._color
+	def rgb(self) -> tuple[int, int, int]:
+		return self._r, self._g, self._b
+
+	@property
+	def color(self) -> _ColorVal:
+		return _ColorVal(self._r, self._g, self._b)

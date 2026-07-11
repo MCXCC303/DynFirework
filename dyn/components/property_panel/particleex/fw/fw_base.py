@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 
 from dyn.components.property_panel._base import _FormBase
 from dyn.components.property_panel.color_picker import ColorPicker
-from dyn.models.elements import Element, FireworkElement, TrajFireworkElement, Position
+from dyn.models.elements import Element, FireworkElement, TrajFireworkElement, Position, ColorRGB
 
 class FwBase(_FormBase):
 	"""烟花表单共享基类 子类只需实现 _setup_type_sections 和 _load_type_sections."""
@@ -81,8 +81,8 @@ class FwBase(_FormBase):
 		layout.addWidget(self._color_inner_start)
 		self._color_inner_end = ColorPicker("结束:")
 		layout.addWidget(self._color_inner_end)
-		self._color_inner_start.color_changed.connect(lambda c: self._emit("inner_color_start", c))
-		self._color_inner_end.color_changed.connect(lambda c: self._emit("inner_color_end", c))
+		self._color_inner_start.color_changed.connect(lambda c: self._emit("inner_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_inner_end.color_changed.connect(lambda c: self._emit("inner_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
 		self.layout().addWidget(self._group_inner)
 
 	def _setup_outer_color(self) -> None:
@@ -95,8 +95,8 @@ class FwBase(_FormBase):
 		layout.addWidget(self._color_outer_start)
 		self._color_outer_end = ColorPicker("结束:")
 		layout.addWidget(self._color_outer_end)
-		self._color_outer_start.color_changed.connect(lambda c: self._emit("outer_color_start", c))
-		self._color_outer_end.color_changed.connect(lambda c: self._emit("outer_color_end", c))
+		self._color_outer_start.color_changed.connect(lambda c: self._emit("outer_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_outer_end.color_changed.connect(lambda c: self._emit("outer_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
 		self.layout().addWidget(self._group_outer)
 
 	def _setup_angle(self) -> None:

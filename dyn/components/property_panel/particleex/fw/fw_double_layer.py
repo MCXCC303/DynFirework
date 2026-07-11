@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 	QFormLayout, QDoubleSpinBox, QGroupBox,
 )
 
-from dyn.components.property_panel.fw.fw_base import FwBase
+from dyn.components.property_panel.particleex.fw.fw_base import FwBase
 from dyn.models.elements import Element, FireworkElement, TrajFireworkElement
 
 class DoubleLayerForm(FwBase):

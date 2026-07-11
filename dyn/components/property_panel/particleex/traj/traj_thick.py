@@ -1,15 +1,15 @@
-"""膨胀轨迹（偏移）表单."""
+"""粗轨迹（偏移）表单."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
 	QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox,
 )
 
-from dyn.components.property_panel.traj.traj_base import TrajBase
+from dyn.components.property_panel.particleex.traj.traj_base import TrajBase
 from dyn.models.elements import Element, TrajectoryElement
 
-class ExpandingForm(TrajBase):
-	"""膨胀轨迹 k, m0, interval_ticks, points_per_tick, particle_count, range_x/y/z, speed_factor."""
+class ThickForm(TrajBase):
+	"""粗轨迹 k, m0, interval_ticks, points_per_tick, particle_count, range_x/y/z."""
 
 	def _setup_type_params(self) -> None:
 		self._group_physics = QGroupBox("轨迹物理参数")
@@ -49,18 +49,12 @@ class ExpandingForm(TrajBase):
 		self._spin_range_z.setRange(0, 100)
 		self._spin_range_z.setSingleStep(0.1)
 		self._add_row(form, "range_z", "扩散 Z:", self._spin_range_z, 0.0)
-		self._spin_speed_factor = QDoubleSpinBox()
-		self._spin_speed_factor.setRange(0.1, 10.0)
-		self._spin_speed_factor.setValue(1.0)
-		self._spin_speed_factor.setSingleStep(0.1)
-		self._add_row(form, "speed_factor", "速度因子:", self._spin_speed_factor, 1.0)
 
 		self.layout().addWidget(self._group_physics)
 		self._sub_groups = [self._group_physics]
 
 		for w in (self._spin_k, self._spin_m0, self._spin_interval, self._spin_pts_per_tick,
-		          self._spin_particle_count, self._spin_range_x, self._spin_range_y, self._spin_range_z,
-		          self._spin_speed_factor):
+		          self._spin_particle_count, self._spin_range_x, self._spin_range_y, self._spin_range_z):
 			w.valueChanged.connect(self._on_extra_changed)
 
 	def _load_type_params(self, e: Element) -> None:
@@ -74,7 +68,6 @@ class ExpandingForm(TrajBase):
 			self._spin_range_x.setValue(e.range_x)
 			self._spin_range_y.setValue(e.range_y)
 			self._spin_range_z.setValue(e.range_z)
-			self._spin_speed_factor.setValue(e.speed_factor)
 
 	def _on_extra_changed(self) -> None:
 		if self._loading or self._element is None:
@@ -90,5 +83,4 @@ class ExpandingForm(TrajBase):
 		e.range_x = self._spin_range_x.value()
 		e.range_y = self._spin_range_y.value()
 		e.range_z = self._spin_range_z.value()
-		e.speed_factor = self._spin_speed_factor.value()
 		self._emit("extra", None)

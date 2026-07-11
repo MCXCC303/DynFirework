@@ -1,17 +1,19 @@
-"""定向烟花表单."""
+"""集束烟花表单."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
 	QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox,
 )
 
-from dyn.components.property_panel.fw.fw_base import FwBase
+from dyn.components.property_panel.particleex.fw.fw_base import FwBase
 from dyn.models.elements import Element, FireworkElement, TrajFireworkElement
 
-class DirectionalForm(FwBase):
-	"""定向烟花 speed, spread, track_count."""
+class ClusteredForm(FwBase):
+	"""集束烟花 speed, spread, track_count, horizontal_angle, vertical_angle."""
 
 	def _setup_type_sections(self) -> None:
+		self._group_angle.show()
+
 		self._group_params = QGroupBox("烟花参数")
 		form = QFormLayout(self._group_params)
 		self._spin_speed = QDoubleSpinBox()
@@ -33,7 +35,10 @@ class DirectionalForm(FwBase):
 			w.valueChanged.connect(self._on_extra_changed)
 
 	def _load_type_sections(self, e: Element) -> None:
+		self._group_angle.show()
 		self._group_params.show()
+		self._spin_h_angle.setValue(e.horizontal_angle)
+		self._spin_v_angle.setValue(e.vertical_angle)
 		self._spin_speed.setValue(e.speed)
 		self._spin_spread.setValue(e.spread_angle)
 		self._spin_track_count.setValue(e.track_count)
@@ -47,4 +52,6 @@ class DirectionalForm(FwBase):
 		e.speed = self._spin_speed.value()
 		e.spread_angle = self._spin_spread.value()
 		e.track_count = self._spin_track_count.value()
+		e.horizontal_angle = self._spin_h_angle.value()
+		e.vertical_angle = self._spin_v_angle.value()
 		self._emit("extra", None)

@@ -1,9 +1,10 @@
-"""属性表单共享基类."""
+"""属性表单共享基类 V2 适配秒单位."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
 	QWidget, QHBoxLayout, QLabel, QSpinBox, QDoubleSpinBox,
 	QComboBox, QPushButton, QFormLayout, QDial, QCheckBox, QLineEdit,
+	QGroupBox,
 )
 
 class _FormBase(QWidget):
@@ -35,6 +36,31 @@ class _FormBase(QWidget):
 				widget.valueChanged.connect(lambda v: self._update_reset_buttons())
 		form.addRow(lbl, row)
 		self._w[key] = (lbl, widget, btn, default)
+
+	def _add_pos_group(self, key: str, title: str, with_select_btn: bool = True,
+	                   y_range: tuple = (-64, 320), decimals: int = 2) -> tuple[
+		QGroupBox, QDoubleSpinBox, QDoubleSpinBox, QDoubleSpinBox, QPushButton | None]:
+		"""创建位置 XYZ 组 返回 (group, spin_x, spin_y, spin_z, select_btn)."""
+		group = QGroupBox(title)
+		form = QFormLayout(group)
+		sx = QDoubleSpinBox()
+		sx.setRange(-100000, 100000)
+		sx.setDecimals(decimals)
+		self._add_row(form, f"{key}_x", "X:", sx)
+		sy = QDoubleSpinBox()
+		sy.setRange(*y_range)
+		sy.setDecimals(decimals)
+		self._add_row(form, f"{key}_y", "Y:", sy)
+		sz = QDoubleSpinBox()
+		sz.setRange(-100000, 100000)
+		sz.setDecimals(decimals)
+		self._add_row(form, f"{key}_z", "Z:", sz)
+		btn = None
+		if with_select_btn:
+			btn = QPushButton("在地图上选择...")
+			form.addRow("", btn)
+		self.layout().addWidget(group)
+		return group, sx, sy, sz, btn
 
 	def _reset_value(self, key: str, default: object, widget: QWidget) -> None:
 		if isinstance(widget, (QSpinBox, QDoubleSpinBox)):

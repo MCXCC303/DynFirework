@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 	QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox,
 )
 
-from dyn.components.property_panel.traj.traj_base import TrajBase
+from dyn.components.property_panel.particleex.traj.traj_base import TrajBase
 from dyn.models.elements import Element, TrajectoryElement
 
 class LaunchForm(TrajBase):
