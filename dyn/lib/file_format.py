@@ -27,7 +27,7 @@ from .integrity import bytes_sha256
 
 # 常量
 
-FORMAT_VERSION = "2.0"
+FORMAT_VERSION = "1.0"
 """当前文件格式版本号."""
 
 GZIP_MAGIC = b"\x1f\x8b"
@@ -44,6 +44,7 @@ _MUSIC_MEMBER = "assets/music.dat"
 
 def write_project_archive(
 		filepath: str | Path,
+		backend: str,
 		manifest_data: dict[str, Any],
 		elements: list[dict[str, Any]],
 		positions: list[dict[str, Any]],
@@ -55,6 +56,7 @@ def write_project_archive(
 
 	Args:
 		filepath: 输出文件路径
+		backend: 模组后端标识 ("cb" 或 "df")
 		manifest_data: 项目元数据（project 子对象的内容）
 		elements: 元素序列，每个元素为 (type, id, json_data) 的映射
 		positions: 保存的位置列表
@@ -109,6 +111,7 @@ def write_project_archive(
 	# 构建 manifest（不含 checksums 键）
 	manifest_body: dict[str, Any] = {
 		"format_version": FORMAT_VERSION,
+		"backend": backend,
 		"project": manifest_data,
 		"music": music_info,
 		"elements": element_manifest,

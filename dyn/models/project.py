@@ -1,96 +1,95 @@
-"""项目容器模型 df 单列表 + cb 三列表向后兼容."""
+"""项目容器模型 创建时锁定后端."""
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from dyn.lib.file_format import read_project_archive, write_project_archive
+from dyn.lib.file_format import FORMAT_VERSION, read_project_archive, write_project_archive
 from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
-from .df.base import Element, ElementCategory
-from .df.composites import CompositeElement
-from .df.effects import EffectElement
-from .df.fireworks import FireworkElement
-from .df.trajectories import TrajectoryElement
-from .particleex import (
-	Element as CbElement,
-	TrajectoryElement as CbTrajectoryElement,
-	FireworkElement as CbFireworkElement,
-	TrajFireworkElement as CbTrajFireworkElement,
-)
+class Backend(Enum):
+	CB = "cb"
+	DF = "df"
 
-_DF_ELEMENT_CLASSES: dict[str, type] = {
-	"df_firework": FireworkElement,
-	"df_trajectory": TrajectoryElement,
-	"effect": EffectElement,
-	"composite": CompositeElement,
-}
+# 元素类型标签 -> 类 的反序列化映射 (延迟初始化避免循环导入)
+_CB_ELEMENT_CLASSES: dict[str, type] = {}
+_DF_ELEMENT_CLASSES: dict[str, type] = {}
 
-_CB_ELEMENT_CLASSES: dict[str, type] = {
-	"trajectory": CbTrajectoryElement,
-	"firework": CbFireworkElement,
-	"traj_firework": CbTrajFireworkElement,
-}
+def _init_class_maps() -> None:
+	if _CB_ELEMENT_CLASSES:
+		return
+	from .particleex import (
+		TrajectoryElement as CbTraj,
+		FireworkElement as CbFw,
+		TrajFireworkElement as CbTF,
+	)
+	_CB_ELEMENT_CLASSES.update({
+		"trajectory": CbTraj,
+		"firework": CbFw,
+		"traj_firework": CbTF,
+	})
+	from .df.fireworks import FireworkElement
+	from .df.trajectories import TrajectoryElement
+	from .df.effects import EffectElement
+	from .df.composites import CompositeElement
+	_DF_ELEMENT_CLASSES.update({
+		"df_firework": FireworkElement,
+		"df_trajectory": TrajectoryElement,
+		"df_effect": EffectElement,
+		"df_composite": CompositeElement,
+	})
 
-def _detect_element_version(data: dict) -> str:
-	"""检测元素 JSON 数据的格式版本.
-	cb: 包含 start_tick / duration_ticks
-	df: 包含 start_time / duration
-	"""
-	if "start_tick" in data or "duration_ticks" in data:
-		return "cb"
-	return "df"
+def _get_type_tag(elem, backend: Backend) -> str:
+	"""根据元素实例和后端返回序列化类型标签."""
+	if backend == Backend.CB:
+		from .particleex import (
+			TrajectoryElement as CbTraj,
+			FireworkElement as CbFw,
+			TrajFireworkElement as CbTF,
+		)
+		if isinstance(elem, CbTF):
+			return "traj_firework"
+		if isinstance(elem, CbTraj):
+			return "trajectory"
+		if isinstance(elem, CbFw):
+			return "firework"
+		raise ValueError(f"Unknown cb element type: {type(elem)}")
+	else:
+		cat = elem.category
+		return f"df_{cat.value}"
 
-def _convert_cb_to_df(elem: CbElement) -> Element:
-	"""将 cb 元素对象转换为 df 对象."""
-	from dyn.lib.export_helpers import _ensure_df
-	return _ensure_df(elem)
-
-def _deserialize_df_element(etype: str, data: dict) -> Element:
-	"""从 JSON 反序列化 df 元素."""
-	cls = _DF_ELEMENT_CLASSES.get(etype)
+def _deserialize_element(backend: Backend, type_tag: str, data: dict):
+	"""根据后端和类型标签反序列化元素."""
+	_init_class_maps()
+	class_map = _CB_ELEMENT_CLASSES if backend == Backend.CB else _DF_ELEMENT_CLASSES
+	cls = class_map.get(type_tag)
 	if cls is None:
-		raise ValueError(f"Unknown df element type: {etype}")
-	return cls.from_json(data)
-
-def _deserialize_cb_element(etype: str, data: dict) -> CbElement:
-	"""从 JSON 反序列化 cb 元素."""
-	cls = _CB_ELEMENT_CLASSES.get(etype)
-	if cls is None:
-		raise ValueError(f"Unknown cb element type: {etype}")
+		raise ValueError(f"Unknown element type: {type_tag} for backend {backend.value}")
 	return cls.from_json(data)
 
 @dataclass
 class Project:
-	"""DynFirework 项目的完整数据容器 V2.0."""
+	"""项目容器 创建时锁定后端."""
 
-	version: str = "2.0"
+	backend: Backend = Backend.DF
 	name: str = "Untitled"
+	mc_version: str = "1.21.8"
 	bpm: float = 120.0
-	time_signature: tuple[Any] = (4, 4)
+	time_signature: tuple[Any, ...] = (4, 4)
 	ticks_per_beat: int = 20
-	mc_version: str = "1.20.1"
-	backend: str = "df"
 
-	# df 单列表
-	elements: list[Element] = field(default_factory=list)
-
-	# cb 三列表 向后兼容
-	trajectories: list[CbTrajectoryElement] = field(default_factory=list)
-	fireworks: list[CbFireworkElement] = field(default_factory=list)
-	traj_fireworks: list[CbTrajFireworkElement] = field(default_factory=list)
-
+	elements: list = field(default_factory=list)
 	saved_positions: list[dict] = field(default_factory=list)
 
 	timeline_zoom: float = 1.0
 	timeline_scroll_offset: int = 0
 	playback_cursor_tick: int = 0
 
-	# 音乐嵌入 不参与 JSON 序列化
 	music_data: bytes | None = field(default=None, repr=False, compare=False)
 	music_original_name: str = field(default="", repr=False, compare=False)
 
@@ -108,76 +107,56 @@ class Project:
 
 	@property
 	def all_elements(self) -> list:
-		"""返回所有元素 V2 优先."""
-		if self.elements:
-			return self.elements
-		return self.trajectories + self.fireworks + self.traj_fireworks  # type: ignore[return-type]
+		return self.elements
 
 	@property
 	def total_duration_ticks(self) -> int:
-		"""向后兼容 总时长 (tick)."""
 		return int(self.total_duration * 20)
 
 	@property
 	def total_duration(self) -> float:
-		"""总时长 (秒)."""
-		if self.elements:
-			if not self.elements:
-				return 0.0
-			return max(e.end_time for e in self.elements)
-		all_elems = self.all_elements
-		if not all_elems:
+		if not self.elements:
 			return 0.0
-		first = all_elems[0]
-		if hasattr(first, 'end_time'):
-			return max(e.end_time for e in all_elems)
-		return max(e.end_tick for e in all_elems) / 20.0
+		if self.backend == Backend.DF:
+			return max(e.end_time for e in self.elements)
+		return max(e.end_tick for e in self.elements) / 20.0
 
-	def get_element(self, element_id: str) -> Element | CbElement | None:
+	def get_element(self, element_id: str):
 		for e in self.elements:
 			if e.id == element_id:
 				return e
-		for lst in (self.trajectories, self.fireworks, self.traj_fireworks):  # type: ignore[assignment]
-			for e in lst:
-				if e.id == element_id:
-					return e
 		return None
 
-	def remove_element(self, element_id: str) -> Element | CbElement | None:
+	def remove_element(self, element_id: str):
 		for i, e in enumerate(self.elements):
 			if e.id == element_id:
 				return self.elements.pop(i)
-		for lst in (self.trajectories, self.fireworks, self.traj_fireworks):  # type: ignore[assignment]
-			for i, e in enumerate(lst):
-				if e.id == element_id:
-					return lst.pop(i)
 		return None
 
-	def add_element(self, elem: Element) -> None:
+	def add_element(self, elem) -> None:
 		self.elements.append(elem)
 
 	def to_json(self) -> dict[str, Any]:
-		"""序列化为 JSON 字典 df 格式 (df)."""
-		result: dict[str, Any] = {
-			"version": self.version,
+		elements_payload: list[dict[str, Any]] = []
+		for e in self.elements:
+			elements_payload.append({
+				"type": _get_type_tag(e, self.backend),
+				"id": e.id,
+				"data": e.to_json(),
+			})
+
+		return {
+			"format_version": FORMAT_VERSION,
+			"backend": self.backend.value,
 			"project": {
 				"name": self.name,
 				"bpm": self.bpm,
 				"time_signature": list(self.time_signature),
 				"ticks_per_beat": self.ticks_per_beat,
 				"mc_version": self.mc_version,
-				"backend": self.backend,
 				"music_original_name": self.music_original_name,
 			},
-			"elements": [
-				{
-					"type": f"{e.category.value}_df" if e.category in (ElementCategory.FIREWORK,
-					                                                   ElementCategory.TRAJECTORY) else e.category.value,
-					"id": e.id,
-					"data": e.to_json(),
-				}
-				for e in self.elements
-			],
+			"elements": elements_payload,
 			"saved_positions": self.saved_positions,
 			"timeline_state": {
 				"zoom": self.timeline_zoom,
@@ -185,46 +164,34 @@ class Project:
 				"playback_cursor_tick": self.playback_cursor_tick,
 			},
 		}
-		return result
 
 	@classmethod
 	def from_json(cls, data: dict[str, Any]) -> Project:
-		"""从 JSON 字典反序列化 支持 V1 和 df 格式 (df)."""
-		proj = data.get("project", {})
+		proj_data = data.get("project", {})
 		ts_data = data.get("timeline_state", {})
 
-		elements: list[Element] = []
+		backend_raw = data.get("backend", "df")
+		backend = Backend(backend_raw)
 
-		# df 格式 (df) elements 列表
-		raw_elements = data.get("elements", [])
-		if raw_elements:
-			for entry in raw_elements:
-				etype = entry["type"]
-				elem_data = entry["data"]
-				ver = _detect_element_version(elem_data)
-				if ver == "df":
-					elements.append(_deserialize_df_element(etype, elem_data))
-				else:
-					v1_elem = _deserialize_cb_element(etype, elem_data)
-					elements.append(_convert_cb_to_df(v1_elem))
-		else:
-			# cb 格式 三列表
-			for t in data.get("trajectories", []):
-				elements.append(_convert_cb_to_df(CbTrajectoryElement.from_json(t)))
-			for f in data.get("fireworks", []):
-				elements.append(_convert_cb_to_df(CbFireworkElement.from_json(f)))
-			for tf in data.get("traj_fireworks", []):
-				elements.append(_convert_cb_to_df(CbTrajFireworkElement.from_json(tf)))
+		elements: list = []
+		for entry in data.get("elements", []):
+			type_tag = entry["type"]
+			elem_data = entry["data"]
+			try:
+				elements.append(_deserialize_element(backend, type_tag, elem_data))
+			except (KeyError, ValueError) as e:
+				log.warning(f"元素反序列化失败: {e}, type={type_tag}, id={entry.get('id')}")
+
+		music_name = data.get("music", {}).get("original_name", "") or proj_data.get("music_original_name", "")
 
 		return cls(
-			version=data.get("version", "1.0"),
-			name=proj.get("name", "Untitled"),
-			bpm=proj.get("bpm", 120.0),
-			time_signature=tuple(proj.get("time_signature", [4, 4])),
-			ticks_per_beat=proj.get("ticks_per_beat", 20),
-			mc_version=proj.get("mc_version", "1.20.1"),
-			backend=proj.get("backend", "particleex" if data.get("version", "") == "1.0" else "df"),
-			music_original_name=proj.get("music_original_name", ""),
+			backend=backend,
+			name=proj_data.get("name", "Untitled"),
+			bpm=proj_data.get("bpm", 120.0),
+			time_signature=tuple(proj_data.get("time_signature", [4, 4])),
+			ticks_per_beat=proj_data.get("ticks_per_beat", 20),
+			mc_version=proj_data.get("mc_version", "1.21.8"),
+			music_original_name=music_name,
 			elements=elements,
 			saved_positions=data.get("saved_positions", []),
 			timeline_zoom=ts_data.get("zoom", 1.0),
@@ -232,46 +199,42 @@ class Project:
 			playback_cursor_tick=ts_data.get("playback_cursor_tick", 0),
 		)
 
-	# 文件 I/O
-
 	@classmethod
 	def from_file(cls, path: str | Path) -> Project:
-		"""从 .dyn 文件读取项目 自动检测格式版本并迁移."""
 		path = Path(path)
 		log.debug(f"读取项目文件: {path}")
 		result = read_project_archive(path)
 
-		proj_meta = result.manifest.get("project", {})
-		elements: list[Element] = []
+		manifest = result.manifest
+		proj_data = manifest.get("project", {})
 
+		backend_raw = manifest.get("backend", "df")
+		try:
+			backend = Backend(backend_raw)
+		except ValueError:
+			log.warning(f"未知后端类型: {backend_raw}，回退为 df")
+			backend = Backend.DF
+
+		elements: list = []
 		for elem in result.elements:
-			etype = elem["type"]
+			type_tag = elem["type"]
 			elem_data = elem["data"]
-			ver = _detect_element_version(elem_data)
-			if ver == "df":
-				try:
-					elements.append(_deserialize_df_element(etype, elem_data))
-				except (KeyError, ValueError) as e:
-					log.warning(f"df 元素反序列化失败: {e}, type={etype}, id={elem.get('id')}")
-			else:
-				try:
-					v1_elem = _deserialize_cb_element(etype, elem_data)
-					elements.append(_convert_cb_to_df(v1_elem))
-				except (KeyError, ValueError) as e:
-					log.warning(f"cb 元素反序列化/迁移失败: {e}, type={etype}, id={elem.get('id')}")
+			try:
+				elements.append(_deserialize_element(backend, type_tag, elem_data))
+			except (KeyError, ValueError) as e:
+				log.warning(f"元素反序列化失败: {e}, type={type_tag}, id={elem.get('id')}")
 
 		music_name = ""
-		if result.manifest.get("music"):
-			music_name = result.manifest["music"].get("original_name", "")
+		if manifest.get("music"):
+			music_name = manifest["music"].get("original_name", "")
 
 		proj = cls(
-			version=result.manifest.get("format_version", "2.0"),
-			name=proj_meta.get("name", "Untitled"),
-			bpm=proj_meta.get("bpm", 120.0),
-			time_signature=tuple(proj_meta.get("time_signature", [4, 4])),
-			ticks_per_beat=proj_meta.get("ticks_per_beat", 20),
-			mc_version=proj_meta.get("mc_version", "1.20.1"),
-			backend=proj_meta.get("backend", "particleex" if result.manifest.get("format_version", "") == "1.0" else "df"),
+			backend=backend,
+			name=proj_data.get("name", "Untitled"),
+			bpm=proj_data.get("bpm", 120.0),
+			time_signature=tuple(proj_data.get("time_signature", [4, 4])),
+			ticks_per_beat=proj_data.get("ticks_per_beat", 20),
+			mc_version=proj_data.get("mc_version", "1.21.8"),
 			music_original_name=music_name,
 			elements=elements,
 			saved_positions=result.positions,
@@ -284,15 +247,12 @@ class Project:
 			proj.music_data = result.music_data
 
 		if result.errors:
-			log.warning(
-				f"项目文件存在 {len(result.errors)} 个校验问题: {result.errors}"
-			)
+			log.warning(f"项目文件存在 {len(result.errors)} 个校验问题: {result.errors}")
 
-		log.debug(f"项目加载完成: name={proj.name}, elements={len(elements)}, positions={len(result.positions)}, music={'有' if result.music_data else '无'}")
+		log.debug(f"项目加载完成: name={proj.name}, backend={proj.backend.value}, elements={len(elements)}")
 		return proj
 
 	def to_file(self, path: str | Path) -> None:
-		"""将项目写入 .dyn tar.gz 归档 df 格式 (df)."""
 		path = Path(path)
 		log.debug(f"写入项目归档: {path}")
 
@@ -302,17 +262,15 @@ class Project:
 			"time_signature": list(self.time_signature),
 			"ticks_per_beat": self.ticks_per_beat,
 			"mc_version": self.mc_version,
-			"backend": self.backend,
 		}
 
 		elements_payload: list[dict[str, Any]] = []
 		for e in self.elements:
-			cat = e.category
-			if cat in (ElementCategory.FIREWORK, ElementCategory.TRAJECTORY):
-				etype = f"{cat.value}_df"
-			else:
-				etype = cat.value
-			elements_payload.append({"type": etype, "id": e.id, "data": e.to_json()})
+			elements_payload.append({
+				"type": _get_type_tag(e, self.backend),
+				"id": e.id,
+				"data": e.to_json(),
+			})
 
 		ts = {
 			"zoom": self.timeline_zoom,
@@ -320,9 +278,9 @@ class Project:
 			"playback_cursor_tick": self.playback_cursor_tick,
 		}
 
-		log.debug(f"写入 {len(elements_payload)} 条元素")
 		write_project_archive(
 			filepath=path,
+			backend=self.backend.value,
 			manifest_data=proj_meta,
 			elements=elements_payload,
 			positions=self.saved_positions,

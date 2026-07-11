@@ -1,8 +1,8 @@
 """DynFirework 数据模型.
 
-models/df/     DynFireworkMod v2.0 数据模型 (df 元素类型 + 注册表)
-models/particleex/      particleex 旧数据模型 (particleex 用)
-models/project.py  Project 项目容器
+models/df/          DynFireworkMod v2.0 数据模型 (df 元素类型 + 注册表)
+models/particleex/  ColorBlock 旧数据模型 (cb 用)
+models/project.py   Project 项目容器 + Backend 枚举
 """
 from __future__ import annotations
 
@@ -28,21 +28,25 @@ from .df import (
 from .particleex import (
 	Element,
 	ElementType,
-	TrajectoryElement,
-	FireworkElement,
-	TrajFireworkElement,
-	TrajType,
-	FireworkType,
+	TrajectoryElement as CbTrajectoryElement,
+	FireworkElement as CbFireworkElement,
+	TrajFireworkElement as CbTrajFireworkElement,
+	TrajType as CbTrajType,
+	FireworkType as CbFireworkType,
 	ColorRGB,
 	GradientColor,
 	Position,
 )
-from .project import Project
+# 后端枚举
+from .project import Project, Backend
 
 __all__ = [
+	# Backend
+	"Backend",
 	# cb
-	"Element", "ElementType", "TrajectoryElement", "FireworkElement",
-	"TrajFireworkElement", "TrajType", "FireworkType",
+	"Element", "ElementType",
+	"CbTrajectoryElement", "CbFireworkElement", "CbTrajFireworkElement",
+	"CbTrajType", "CbFireworkType",
 	"ColorRGB", "GradientColor", "Position",
 	# df
 	"ElementCategory",

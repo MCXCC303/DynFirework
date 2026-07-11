@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from dyn.logging_config import get_logger
-from dyn.models import Project
+from dyn.models import Project, Backend
 
 log = get_logger(__name__)
 
@@ -43,14 +43,24 @@ class ProjectManager(QObject):
 	def has_file(self) -> bool:
 		return bool(self._file_path)
 
+	@property
+	def backend(self) -> Backend:
+		return self._project.backend
+
 	def mark_modified(self) -> None:
 		self._is_modified = True
 		self.project_modified.emit()
 
-	def new_project(self) -> Project:
-		log.debug("创建新项目")
+	def new_project(self, name: str = "Untitled", backend: str = "df",
+	                mc_version: str = "1.21.8", bpm: float = 120.0) -> Project:
+		log.debug(f"创建新项目: name={name}, backend={backend}, mc={mc_version}, bpm={bpm}")
 		self._cleanup_music_temp()
-		self._project = Project()
+		self._project = Project(
+			backend=Backend(backend),
+			name=name,
+			mc_version=mc_version,
+			bpm=bpm,
+		)
 		self._file_path = ""
 		self._is_modified = False
 		self.project_opened.emit(self._project)
@@ -113,11 +123,9 @@ class ProjectManager(QObject):
 		if not self._project.has_music:
 			return None
 
-		# 如果已有临时文件且未过期，直接返回
 		if self._music_temp_path and self._music_temp_path.exists():
 			return str(self._music_temp_path)
 
-		# 写入新临时文件
 		suffix = ""
 		if self._project.music_original_name:
 			suffix = Path(self._project.music_original_name).suffix
