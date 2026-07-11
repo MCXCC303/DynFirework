@@ -1,4 +1,4 @@
-"""时间线编辑器 音频波形 + 烟花/轨迹双轨道."""
+"""时间线编辑器 音频波形 + 烟花/轨迹双轨道 (particleex, tick-based)."""
 from __future__ import annotations
 
 import logging
@@ -20,12 +20,12 @@ from .theme import (
 	HEADER_HEIGHT, TRACK_LABEL_WIDTH, WAVEFORM_HEIGHT, PIXELS_PER_TICK_DEFAULT,
 )
 from .track_area import _TFProxy, _TrackArea
-from .waveform import _WaveformWidget
+from ..waveform import _WaveformWidget
 
 log = logging.getLogger("dyn.components.timeline")
 
-class TimelineWidget(QWidget):
-	"""时间线编辑器 音频波形 + 烟花/轨迹双轨道."""
+class ParticleexTimelineWidget(QWidget):
+	"""时间线编辑器 音频波形 + 烟花/轨迹双轨道 (particleex)."""
 	element_selected = Signal(str)
 	element_moved = Signal(str, int, int)
 	element_resized = Signal(str, int, int)
@@ -49,8 +49,8 @@ class TimelineWidget(QWidget):
 		self._waveform = _WaveformWidget(self)
 		self._fw_track = _TrackArea("烟花", self)
 		self._traj_track = _TrackArea("轨迹", self)
-		self._fw_track.drag_update.connect(self._traj_track._compute_and_update)
-		self._traj_track.drag_update.connect(self._fw_track._compute_and_update)
+		self._fw_track.drag_update.connect(self._traj_track.compute_and_update)
+		self._traj_track.drag_update.connect(self._fw_track.compute_and_update)
 		self._overlay_cursor = _CursorOverlayWidget(self)
 		self._overlay_cursor._timeline = self
 
@@ -94,7 +94,7 @@ class TimelineWidget(QWidget):
 	def set_playback_tick(self, tick: int, auto_scroll: bool = True) -> None:
 		self._playback_tick = tick
 		if auto_scroll:
-			cx = self._tick_to_x(tick)
+			cx = self.tick_to_x(tick)
 			visible_w = self.width()
 			margin = 60
 			if cx > visible_w - margin:
@@ -123,10 +123,10 @@ class TimelineWidget(QWidget):
 	def pixels_per_tick(self) -> float:
 		return self._pixels_per_tick
 
-	def _tick_to_x(self, tick: int) -> float:
+	def tick_to_x(self, tick: int) -> float:
 		return TRACK_LABEL_WIDTH + tick * self._pixels_per_tick - self._scroll_offset
 
-	def _x_to_tick(self, x: float) -> int:
+	def x_to_tick(self, x: float) -> int:
 		return max(0, int((x - TRACK_LABEL_WIDTH + self._scroll_offset) / self._pixels_per_tick))
 
 	def _refresh_tracks(self) -> None:
@@ -173,11 +173,11 @@ class TimelineWidget(QWidget):
 	def _paint_tick_marks(self, p: QPainter) -> None:
 		y_top = self._waveform.geometry().bottom() + 2
 		y_bot = self.height()
-		start_tick = max(0, (self._x_to_tick(TRACK_LABEL_WIDTH) // 20) * 20)
-		end_tick = self._x_to_tick(self.width()) + 1
+		start_tick = max(0, (self.x_to_tick(TRACK_LABEL_WIDTH) // 20) * 20)
+		end_tick = self.x_to_tick(self.width()) + 1
 		tick = (start_tick // 5) * 5
 		while tick <= end_tick:
-			x = int(self._tick_to_x(tick))
+			x = int(self.tick_to_x(tick))
 			if tick % 20 == 0:
 				p.setPen(QPen(self._tick_major, 1))
 				p.drawLine(x, y_top, x, y_bot)
@@ -187,7 +187,7 @@ class TimelineWidget(QWidget):
 			tick += 5
 
 	def _paint_cursor(self, p: QPainter) -> None:
-		cx = int(self._tick_to_x(self._playback_tick))
+		cx = int(self.tick_to_x(self._playback_tick))
 		if TRACK_LABEL_WIDTH <= cx <= self.width():
 			p.setPen(QPen(self._cursor_color, 3))
 			p.drawLine(cx, 0, cx, self.height())
@@ -207,7 +207,7 @@ class TimelineWidget(QWidget):
 		if event.button() == Qt.LeftButton:
 			x = event.position().x()
 			if x > TRACK_LABEL_WIDTH:
-				tick = self._x_to_tick(int(x))
+				tick = self.x_to_tick(int(x))
 				self._playback_tick = max(0, tick)
 				self.playback_cursor_changed.emit(self._playback_tick)
 				self._dragging_cursor = True
@@ -224,7 +224,7 @@ class TimelineWidget(QWidget):
 			self.update()
 			return
 		if self._dragging_cursor:
-			tick = self._x_to_tick(int(event.position().x()))
+			tick = self.x_to_tick(int(event.position().x()))
 			self._playback_tick = max(0, tick)
 			x = event.position().x()
 			margin = 40

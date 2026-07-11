@@ -88,6 +88,14 @@ class PosSelectMainWindow(QMainWindow):
 	def mode(self) -> str:
 		return self._mode
 
+	@property
+	def points(self) -> list[MinecraftPosition]:
+		return self._points
+
+	@property
+	def fastsearch(self) -> set[tuple[int, int]]:
+		return self._fastsearch
+
 	def _setup_menus(self) -> None:
 		mb = self.menuBar()
 

@@ -1,4 +1,4 @@
-"""元素浏览器 QAbstractItemModel 树形模型，展示轨迹和烟花元素."""
+"""元素浏览器 注册表驱动的动态树形模型，展示爆炸/轨迹/效果/复合四类元素."""
 from __future__ import annotations
 
 import logging
@@ -13,6 +13,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QFont, QColor
 
+from dyn.models.df.base import ElementCategory, Element as DfElement
 from dyn.models.elements import (
 	Element,
 	ElementType,
@@ -21,6 +22,26 @@ from dyn.models.elements import (
 from dyn.service.element_controller import ElementController
 
 log = logging.getLogger("dyn.components.element_browser")
+
+CATEGORY_DISPLAY: dict[ElementCategory, str] = {
+	ElementCategory.FIREWORK: "爆炸",
+	ElementCategory.TRAJECTORY: "轨迹",
+	ElementCategory.EFFECT: "效果",
+	ElementCategory.COMPOSITE: "复合",
+}
+
+V1_TO_CATEGORY = {
+	ElementType.TRAJECTORY: ElementCategory.TRAJECTORY,
+	ElementType.FIREWORK: ElementCategory.FIREWORK,
+	ElementType.TRAJ_FIREWORK: ElementCategory.COMPOSITE,
+}
+
+def _format_time_sec(tick: int) -> str:
+	"""V1 tick 转换为秒显示格式."""
+	return f"{tick / 20.0:.2f}s"
+
+def _format_duration_sec(tick: int) -> str:
+	return f"{tick / 20.0:.2f}s"
 
 class _TreeNode:
 	"""树节点 内部数据结构."""
@@ -32,13 +53,13 @@ class _TreeNode:
 			parent: _TreeNode | None = None,
 	) -> None:
 		self.label = label
-		self.data = data  # Element | None (None = 分组节点)
+		self.data = data
 		self.parent = parent
 		self.children: list[_TreeNode] = []
 
 	@property
 	def is_group(self) -> bool:
-		return self.data is None
+		return self.data is None or isinstance(self.data, ElementCategory)
 
 	@property
 	def row(self) -> int:
@@ -47,30 +68,37 @@ class _TreeNode:
 		return 0
 
 class ElementBrowserModel(QAbstractItemModel):
-	"""元素浏览器树形模型.
+	"""元素浏览器树形模型 注册表驱动.
 
 	结构:
-		├── 轨迹 (分组)
+		├── 爆炸 (FIREWORK)
+		│   ├── Single F1
+		│   └── Double F2
+		├── 轨迹 (TRAJECTORY)
 		│   ├── Launch T1
 		│   └── Spark T2
-		└── 烟花 (分组)
-			├── Single F1
-			└── Double F2
+		├── 效果 (EFFECT)
+		└── 复合 (COMPOSITE)
+			└── TF-1
+				├── 轨迹
+				└── 烟花
 	"""
 
-	selection_changed = Signal(str)  # element_id (空 = 取消选中)
+	selection_changed = Signal(str)
 
 	def __init__(self, parent=None) -> None:
 		super().__init__(parent)
+		self._controller: ElementController | None = None
 		self._root = _TreeNode("root")
-		self._traj_group = _TreeNode("轨迹", parent=self._root)
-		self._fw_group = _TreeNode("烟花", parent=self._root)
-		self._tf_group = _TreeNode("轨迹烟花", parent=self._root)
-		self._root.children = [self._traj_group, self._fw_group, self._tf_group]
+		self._groups: dict[ElementCategory, _TreeNode] = {}
+		self._root.children = []
+		for cat in ElementCategory:
+			display = CATEGORY_DISPLAY.get(cat, cat.value)
+			node = _TreeNode(display, data=cat, parent=self._root)
+			self._groups[cat] = node
+			self._root.children.append(node)
 		self._element_nodes: dict[str, _TreeNode] = {}
 		self._emitting_selection: bool = False
-
-	# QAbstractItemModel 接口
 
 	def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
 		if not self.hasIndex(row, column, parent):
@@ -89,7 +117,7 @@ class ElementBrowserModel(QAbstractItemModel):
 		if node.parent is None or node.parent is self._root:
 			return QModelIndex()
 		grandparent = node.parent
-		if grandparent is None:
+		if grandparent is None or grandparent is self._root:
 			return QModelIndex()
 		return self.createIndex(grandparent.row, 0, grandparent)
 
@@ -100,7 +128,7 @@ class ElementBrowserModel(QAbstractItemModel):
 		return len(node.children)
 
 	def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-		return 3  # 名称, 起始 tick, 时长
+		return 3
 
 	def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
 		if not index.isValid():
@@ -110,12 +138,14 @@ class ElementBrowserModel(QAbstractItemModel):
 
 		if role == Qt.DisplayRole:
 			if isinstance(node.data, str) and node.data.startswith("_tf_"):
-				# TF 子节点：从父元素获取时间信息
 				parent_elem = node.parent.data
 				if node.data == "_tf_traj":
-					return (node.label, str(parent_elem.start_tick), str(parent_elem.traj_duration_ticks))[col]
+					vals = (node.label, _format_time_sec(parent_elem.start_tick),
+					        _format_duration_sec(parent_elem.traj_duration_ticks))
 				else:
-					return (node.label, str(parent_elem.fw_start_tick), str(parent_elem.fw_duration_ticks))[col]
+					vals = (node.label, _format_time_sec(parent_elem.fw_start_tick),
+					        _format_duration_sec(parent_elem.fw_duration_ticks))
+				return vals[col]
 			if node.is_group:
 				if col == 0:
 					count = sum(1 for c in node.children if not (isinstance(c.data, str) and c.data.startswith("_tf_")))
@@ -125,11 +155,13 @@ class ElementBrowserModel(QAbstractItemModel):
 			if col == 0:
 				return elem.name
 			elif col == 1:
-				return str(elem.start_tick)
+				return _format_time_sec(elem.start_tick)
 			elif col == 2:
-				return str(elem.duration_ticks)
+				if elem.element_type == ElementType.TRAJ_FIREWORK:
+					return _format_duration_sec(elem.traj_duration_ticks + elem.fw_duration_ticks)
+				return _format_duration_sec(elem.duration_ticks)
 		elif role == Qt.DecorationRole and col == 0:
-			return None  # 后续可加图标
+			return None
 		elif role == Qt.ForegroundRole:
 			if node.is_group:
 				return QColor(100, 100, 100)
@@ -142,7 +174,7 @@ class ElementBrowserModel(QAbstractItemModel):
 
 	def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Any:
 		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-			return ("名称", "起始 Tick", "时长")[section]
+			return ("名称", "起始时间", "时长")[section]
 		return None
 
 	def flags(self, index: QModelIndex) -> Qt.ItemFlags:
@@ -154,8 +186,6 @@ class ElementBrowserModel(QAbstractItemModel):
 			flags |= Qt.ItemIsEditable
 		return flags
 
-	# 数据操作
-
 	def set_controller(self, controller: ElementController) -> None:
 		self._controller = controller
 		controller.element_added.connect(self._on_element_added)
@@ -163,12 +193,15 @@ class ElementBrowserModel(QAbstractItemModel):
 		controller.element_changed.connect(self._on_element_changed)
 		controller.selection_changed.connect(self._on_controller_selection)
 
+	@staticmethod
+	def _category_for_element(elem: Element) -> ElementCategory:
+		if isinstance(elem, DfElement):
+			return elem.category
+		return V1_TO_CATEGORY.get(elem.element_type, ElementCategory.COMPOSITE)
+
 	def _group_for_element(self, elem: Element) -> _TreeNode:
-		if elem.element_type == ElementType.TRAJECTORY:
-			return self._traj_group
-		elif elem.element_type == ElementType.FIREWORK:
-			return self._fw_group
-		return self._tf_group
+		cat = self._category_for_element(elem)
+		return self._groups[cat]
 
 	@Slot(Element)
 	def _on_element_added(self, elem: Element) -> None:
@@ -200,7 +233,6 @@ class ElementBrowserModel(QAbstractItemModel):
 		node = self._element_nodes.pop(element_id, None)
 		if node is None:
 			return
-		# 清理 TF 子节点
 		for suffix in ("::traj", "::fw"):
 			self._element_nodes.pop(element_id + suffix, None)
 		parent_idx = self._index_for_node(node.parent)
@@ -214,7 +246,8 @@ class ElementBrowserModel(QAbstractItemModel):
 		node = self._element_nodes.get(element_id)
 		if node is None:
 			return
-		col_map = {"name": 0, "start_tick": 1, "duration_ticks": 2}
+		col_map = {"name": 0, "start_tick": 1, "duration_ticks": 2,
+		           "traj_duration_ticks": 2, "fw_duration_ticks": 2}
 		col = col_map.get(key, -1)
 		if col >= 0:
 			idx = self._index_for_node(node, col)
@@ -230,9 +263,8 @@ class ElementBrowserModel(QAbstractItemModel):
 		finally:
 			self._emitting_selection = False
 
-	# 查询
-
-	def get_element_from_index(self, index: QModelIndex) -> Element | None:
+	@staticmethod
+	def get_element_from_index(index: QModelIndex) -> Element | None:
 		if not index.isValid():
 			return None
 		node: _TreeNode = index.internalPointer()
@@ -251,14 +283,11 @@ class ElementBrowserModel(QAbstractItemModel):
 			return QModelIndex()
 		return self.createIndex(node.row, column, node)
 
-	# 批量加载
-
 	def load_elements(self, elements: list[Element]) -> None:
 		log.debug(f"浏览器批量加载: {len(elements)} 个元素")
 		self.beginResetModel()
-		self._traj_group.children.clear()
-		self._fw_group.children.clear()
-		self._tf_group.children.clear()
+		for group in self._groups.values():
+			group.children.clear()
 		self._element_nodes.clear()
 		for elem in elements:
 			group = self._group_for_element(elem)

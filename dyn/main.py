@@ -31,7 +31,8 @@ from dyn.service.undo_manager import UndoManager
 from dyn.components.element_browser import ElementBrowserModel
 from dyn.components.inspector import Inspector
 from dyn.components.property_panel import PropertyPanel
-from dyn.components.timeline.timeline_widget import TimelineWidget
+from dyn.components.timeline.df import DFTimelineWidget
+from dyn.components.timeline.df.theme import TICKS_PER_SECOND
 from dyn.components.transport_bar import TransportBar
 from dyn.components.pos_select.select_center import PosSelectMainWindow
 
@@ -59,7 +60,7 @@ class MainWin(QMainWindow):
 		self._element_browser_model = ElementBrowserModel(self)
 		self._element_browser_model.set_controller(self._controller)
 
-		self._timeline = TimelineWidget()
+		self._timeline = DFTimelineWidget()
 		self._timeline.set_controller(self._controller)
 
 		self._property_panel = PropertyPanel(self._controller)
@@ -288,22 +289,19 @@ class MainWin(QMainWindow):
 			self._controller.select_element
 		)
 
-		# 时间线 -> 选中同步（主时间线 + 子轨道）
+		# 时间线 -> 选中同步（主时间线 + 四轨道）
 		self._timeline.element_selected.connect(self._on_timeline_select)
-		self._timeline._fw_track.element_selected.connect(self._on_timeline_select)
-		self._timeline._traj_track.element_selected.connect(self._on_timeline_select)
-		# 子轨道拖拽
-		self._timeline._fw_track.element_moved.connect(self._on_timeline_element_moved)
-		self._timeline._fw_track.element_resized.connect(self._on_timeline_element_resized)
-		self._timeline._traj_track.element_moved.connect(self._on_timeline_element_moved)
-		self._timeline._traj_track.element_resized.connect(self._on_timeline_element_resized)
-		# 拖拽撤销宏 一次拖拽的多个属性变更合并为一个撤销步骤
-		self._timeline._fw_track.drag_undo_begin.connect(
-			lambda: self._undo_manager.begin_macro("拖拽修改"))
-		self._timeline._fw_track.drag_undo_end.connect(self._undo_manager.end_macro)
-		self._timeline._traj_track.drag_undo_begin.connect(
-			lambda: self._undo_manager.begin_macro("拖拽修改"))
-		self._timeline._traj_track.drag_undo_end.connect(self._undo_manager.end_macro)
+		all_tracks = [
+			self._timeline.fw_track, self._timeline.traj_track,
+			self._timeline.effect_track, self._timeline.composite_track,
+		]
+		for track in all_tracks:
+			track.element_selected.connect(self._on_timeline_select)
+			track.element_moved.connect(self._on_timeline_element_moved)
+			track.element_resized.connect(self._on_timeline_element_resized)
+			track.drag_undo_begin.connect(
+				lambda: self._undo_manager.begin_macro("拖拽修改"))
+			track.drag_undo_end.connect(self._undo_manager.end_macro)
 
 		# 控制器的选中变更 -> 各个面板
 		self._controller.selection_changed.connect(self._on_controller_selection)
@@ -323,9 +321,9 @@ class MainWin(QMainWindow):
 		self._timeline.element_moved.connect(self._on_timeline_element_moved)
 		self._timeline.element_resized.connect(self._on_timeline_element_resized)
 
-		# 播放控制 <-> 时间线双向同步
-		self._playback.position_changed.connect(self._timeline.set_playback_tick)
-		self._timeline.playback_cursor_changed.connect(self._playback.seek_to_tick)
+		# 播放控制 <-> 时间线双向同步 (tick <-> second 转换)
+		self._playback.position_changed.connect(self._on_playback_position)
+		self._timeline.playback_cursor_changed.connect(self._on_timeline_cursor)
 
 		# 位置选择器
 		self._pos_selector.send_chosen_point.connect(self._on_position_chosen)
@@ -384,7 +382,7 @@ class MainWin(QMainWindow):
 					self._playback.set_bpm(proj.bpm)
 					self._load_waveform(music_path)
 					self._transport_bar.set_music_path(proj.music_original_name)
-			self._timeline._on_elements_changed()
+			self._timeline.on_elements_changed()
 			self._tree_view.expandAll()
 			self.statusBar().showMessage(f"已打开: {path}")
 		except Exception as e:
@@ -393,7 +391,7 @@ class MainWin(QMainWindow):
 
 	def _sync_positions_to_project(self) -> None:
 		"""将位置选择器的点同步到项目对象."""
-		pts = self._pos_selector._points
+		pts = self._pos_selector.points
 		self._project_manager.project.saved_positions = [
 			{"x": p.x, "y": p.y, "z": p.z, "label": p.label,
 			 "color": {"r": p.pix_color.red(), "g": p.pix_color.green(), "b": p.pix_color.blue()}}
@@ -568,13 +566,17 @@ class MainWin(QMainWindow):
 			if part_id == "traj":
 				proxy_id = parent_elem.id
 				self._timeline._selected_id = proxy_id
-				self._timeline._fw_track.set_selection("")
-				self._timeline._traj_track.set_selection(proxy_id)
+				for t in [self._timeline.fw_track, self._timeline.traj_track,
+				          self._timeline.effect_track, self._timeline.composite_track]:
+					t.set_selection("")
+				self._timeline.traj_track.set_selection(proxy_id)
 			else:
 				proxy_id = parent_elem.id + "::fw"
 				self._timeline._selected_id = proxy_id
-				self._timeline._fw_track.set_selection(proxy_id)
-				self._timeline._traj_track.set_selection("")
+				for t in [self._timeline.fw_track, self._timeline.traj_track,
+				          self._timeline.effect_track, self._timeline.composite_track]:
+					t.set_selection("")
+				self._timeline.fw_track.set_selection(proxy_id)
 			# 覆盖面板为部分加载
 			self._property_panel.load_element(parent_elem, part_id)
 			return
@@ -582,10 +584,13 @@ class MainWin(QMainWindow):
 		if elem is not None:
 			self._controller.select_element(elem.id)
 			self._property_panel.load_element(elem, "")
-			# TF 父节点：高亮两个代理
+			# TF 父节点：高亮所有轨道中的相应代理
 			if hasattr(elem, 'traj_type') and hasattr(elem, 'fw_type'):
-				self._timeline._fw_track.set_selection(elem.id + "::fw")
-				self._timeline._traj_track.set_selection(elem.id)
+				for t in [self._timeline.fw_track, self._timeline.traj_track,
+				          self._timeline.effect_track, self._timeline.composite_track]:
+					t.set_selection("")
+				self._timeline.fw_track.set_selection(elem.id + "::fw")
+				self._timeline.traj_track.set_selection(elem.id)
 
 	@Slot(str)
 	def _on_controller_selection(self, element_id: str) -> None:
@@ -611,7 +616,7 @@ class MainWin(QMainWindow):
 			self._syncing_tree = False
 
 		if elem:
-			self._status_label.setText(f"已选中: {elem.name} (Tick {elem.start_tick})")
+			self._status_label.setText(f"已选中: {elem.name} ({elem.start_tick / TICKS_PER_SECOND:.2f}s)")
 		else:
 			self._status_label.setText("未选中")
 
@@ -652,23 +657,24 @@ class MainWin(QMainWindow):
 		real_id, _ = self._resolve_proxy_id(element_id)
 		parent = self._controller.get_element(real_id)
 		if parent and hasattr(parent, 'element_type') and str(parent.element_type) == "ElementType.TRAJ_FIREWORK":
-			# 仅高亮被点击的代理块
 			self._timeline._selected_id = element_id
-			self._timeline._fw_track.set_selection(element_id)
-			self._timeline._traj_track.set_selection(element_id)
-			# 直接加载面板和检查器（不触发 controller.selection_changed 以防止覆盖高亮）
+			for track in [self._timeline.fw_track, self._timeline.traj_track,
+			              self._timeline.effect_track, self._timeline.composite_track]:
+				track.set_selection(element_id)
 			self._property_panel.load_element(parent)
 			self._inspector.show_element(parent)
-			self._status_label.setText(f"已选中: {parent.name} (Tick {parent.start_tick})")
+			self._status_label.setText(f"已选中: {parent.name} ({parent.start_tick / TICKS_PER_SECOND:.2f}s)")
 			return
 		self._controller.select_element(element_id)
 
-	def _on_timeline_element_moved(self, element_id: str, new_tick: int, old_tick: int) -> None:
+	def _on_timeline_element_moved(self, element_id: str, new_time: float, old_time: float) -> None:
 		real_id, part = self._resolve_proxy_id(element_id)
 		elem = self._controller.get_element(real_id)
-		log.debug(f"时间线移动: {element_id} tick={new_tick} old={old_tick} | real_id={real_id} elem={elem is not None} | controller元素数={len(self._controller._elements)}")
-		key = "start_tick"  # TF 代理移动 -> 整体平移
+		log.debug(f"时间线移动: {element_id} time={new_time:.2f}s old={old_time:.2f}s | real_id={real_id} elem={elem is not None}")
+		key = "start_tick"
 		if elem:
+			new_tick = int(new_time * TICKS_PER_SECOND)
+			old_tick = int(old_time * TICKS_PER_SECOND)
 			self._undo_manager.push_property_change(real_id, key, old_tick, new_tick)
 			self._controller.element_changed.emit(real_id, "drag", None)
 			self._property_panel.load_element(elem)
@@ -677,10 +683,10 @@ class MainWin(QMainWindow):
 		else:
 			log.warning(f"时间线移动: 元素未找到 real_id={real_id}, element_id={element_id}")
 
-	def _on_timeline_element_resized(self, element_id: str, new_dur: int, old_dur: int) -> None:
+	def _on_timeline_element_resized(self, element_id: str, new_dur: float, old_dur: float) -> None:
 		real_id, part = self._resolve_proxy_id(element_id)
 		elem = self._controller.get_element(real_id)
-		log.debug(f"时间线缩放: {element_id} dur={new_dur} old={old_dur} | real_id={real_id} part={part} elem={elem is not None}")
+		log.debug(f"时间线缩放: {element_id} dur={new_dur:.2f}s old={old_dur:.2f}s | real_id={real_id} part={part} elem={elem is not None}")
 		if part == "fw":
 			key = "fw_duration_ticks"
 		elif part == "traj":
@@ -688,7 +694,9 @@ class MainWin(QMainWindow):
 		else:
 			key = "duration_ticks"
 		if elem:
-			self._undo_manager.push_property_change(real_id, key, old_dur, new_dur)
+			new_ticks = int(new_dur * TICKS_PER_SECOND)
+			old_ticks = int(old_dur * TICKS_PER_SECOND)
+			self._undo_manager.push_property_change(real_id, key, old_ticks, new_ticks)
 			self._controller.element_changed.emit(real_id, "drag", None)
 			self._property_panel.load_element(elem)
 			self._inspector.refresh(elem)
@@ -696,10 +704,19 @@ class MainWin(QMainWindow):
 		else:
 			log.warning(f"时间线缩放: 元素未找到 real_id={real_id}, element_id={element_id}")
 
-	def _resolve_proxy_id(self, element_id: str) -> tuple[str, str]:
-		if element_id.endswith("::fw"): return (element_id[:-4], "fw")
-		if element_id.endswith("::traj"): return (element_id[:-6], "traj")  # ::traj 是 6 个字符
-		return (element_id, "")
+	def _on_playback_position(self, tick: int) -> None:
+		"""播放器位置(tick) -> 时间线位置(秒)."""
+		self._timeline.set_playback_time(tick / TICKS_PER_SECOND)
+
+	def _on_timeline_cursor(self, time_sec: float) -> None:
+		"""时间线光标(秒) -> 播放器位置(tick)."""
+		self._playback.seek_to_tick(int(time_sec * TICKS_PER_SECOND))
+
+	@staticmethod
+	def _resolve_proxy_id(element_id: str) -> tuple[str, str]:
+		if element_id.endswith("::fw"): return element_id[:-4], "fw"
+		if element_id.endswith("::traj"): return element_id[:-6], "traj"
+		return element_id, ""
 
 	# 槽：属性变更
 
@@ -757,7 +774,7 @@ class MainWin(QMainWindow):
 		log.debug(f"项目已打开: name={project.name}, elements={len(project.all_elements)}, bpm={project.bpm:.0f}")
 		self._element_browser_model.load_elements(self._controller.all_elements)
 		self._tree_view.expandAll()
-		self._timeline._on_elements_changed()
+		self._timeline.on_elements_changed()
 		# 恢复位置选择器数据
 		try:
 			saved = project.saved_positions
@@ -770,11 +787,11 @@ class MainWin(QMainWindow):
 						label=str(p.get("label", "")),
 						main_color=QColor(c.get("r", 255), c.get("g", 255), c.get("b", 255)),
 					))
-				self._pos_selector._points.clear()
-				self._pos_selector._points.extend(pts)
-				self._pos_selector._fastsearch.clear()
-				self._pos_selector._fastsearch.update((int(pt.x), int(pt.z)) for pt in pts)
-				self._pos_selector.pix_element_list.get_element_list(self._pos_selector._points)
+				self._pos_selector.points.clear()
+				self._pos_selector.points.extend(pts)
+				self._pos_selector.fastsearch.clear()
+				self._pos_selector.fastsearch.update((int(pt.x), int(pt.z)) for pt in pts)
+				self._pos_selector.pix_element_list.get_element_list(self._pos_selector.points)
 		except Exception as e:
 			log.warning(f"恢复位置点失败: {e}")
 
@@ -832,7 +849,7 @@ class MainWin(QMainWindow):
 
 if __name__ == "__main__":
 	setup_logging()
-	log.debug("===== DynFirework 启动 =====")
+	log.debug("DynFirework 启动")
 	app = QApplication(sys.argv)
 	app.setApplicationName("DynFirework")
 	app.setOrganizationName("DynFirework")
