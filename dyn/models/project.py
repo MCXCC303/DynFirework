@@ -74,6 +74,7 @@ class Project:
 	time_signature: tuple[Any] = (4, 4)
 	ticks_per_beat: int = 20
 	mc_version: str = "1.20.1"
+	backend: str = "df"
 
 	# V2 单列表
 	elements: list[DfElement] = field(default_factory=list)
@@ -165,6 +166,7 @@ class Project:
 				"time_signature": list(self.time_signature),
 				"ticks_per_beat": self.ticks_per_beat,
 				"mc_version": self.mc_version,
+				"backend": self.backend,
 				"music_original_name": self.music_original_name,
 			},
 			"elements": [
@@ -221,6 +223,7 @@ class Project:
 			time_signature=tuple(proj.get("time_signature", [4, 4])),
 			ticks_per_beat=proj.get("ticks_per_beat", 20),
 			mc_version=proj.get("mc_version", "1.20.1"),
+			backend=proj.get("backend", "particleex" if data.get("version", "") == "1.0" else "df"),
 			music_original_name=proj.get("music_original_name", ""),
 			elements=elements,
 			saved_positions=data.get("saved_positions", []),
@@ -268,6 +271,7 @@ class Project:
 			time_signature=tuple(proj_meta.get("time_signature", [4, 4])),
 			ticks_per_beat=proj_meta.get("ticks_per_beat", 20),
 			mc_version=proj_meta.get("mc_version", "1.20.1"),
+			backend=proj_meta.get("backend", "particleex" if result.manifest.get("format_version", "") == "1.0" else "df"),
 			music_original_name=music_name,
 			elements=elements,
 			saved_positions=result.positions,
@@ -298,6 +302,7 @@ class Project:
 			"time_signature": list(self.time_signature),
 			"ticks_per_beat": self.ticks_per_beat,
 			"mc_version": self.mc_version,
+			"backend": self.backend,
 		}
 
 		elements_payload: list[dict[str, Any]] = []
