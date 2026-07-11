@@ -96,7 +96,7 @@ class _TrackArea(QWidget):
 		self._scroll_offset = scroll
 		self._compute()
 
-	def _compute_and_update(self) -> None:
+	def compute_and_update(self) -> None:
 		self._compute()
 		self.update()
 

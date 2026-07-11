@@ -27,6 +27,14 @@ from dyn.logging_config import get_logger
 log = get_logger(__name__)
 
 from dyn.models import Project
+from dyn.models.df.base import ElementCategory
+
+CATEGORY_NAMES: dict[ElementCategory, str] = {
+	ElementCategory.FIREWORK: "烟花",
+	ElementCategory.TRAJECTORY: "轨迹",
+	ElementCategory.EFFECT: "效果",
+	ElementCategory.COMPOSITE: "复合",
+}
 
 def _load_project(path: str):
 	project_root = Path(__file__).parent.parent
@@ -44,11 +52,24 @@ def cmd_info(args: argparse.Namespace) -> int:
 	print(f"MC 版本:    {proj.mc_version}")
 	print(f"拍号:       {proj.time_signature[0]}/{proj.time_signature[1]}")
 	print(f"Tick/拍:    {proj.ticks_per_beat}")
-	print(f"总 Tick:    {proj.total_duration_ticks}")
+	print(f"总时长:     {proj.total_duration:.2f}s ({proj.total_duration_ticks}t)")
 	print(f"元素数量:   {len(proj.all_elements)}")
-	print(f"  轨迹:     {len(proj.trajectories)}")
-	print(f"  烟花:     {len(proj.fireworks)}")
-	print(f"  轨迹烟花: {len(proj.traj_fireworks)}")
+
+	# 按类别统计
+	if proj.elements:
+		counts: dict[ElementCategory, int] = {}
+		for e in proj.elements:
+			cat = e.category
+			counts[cat] = counts.get(cat, 0) + 1
+		for cat, display in CATEGORY_NAMES.items():
+			cnt = counts.get(cat, 0)
+			if cnt > 0:
+				print(f"  {display}:     {cnt}")
+	else:
+		print(f"  轨迹:     {len(proj.trajectories)}")
+		print(f"  烟花:     {len(proj.fireworks)}")
+		print(f"  轨迹烟花: {len(proj.traj_fireworks)}")
+
 	print(f"保存位置:   {len(proj.saved_positions)}")
 	print(f"音乐:       {proj.music_original_name if proj.has_music else '无'}")
 	if proj.has_music:
@@ -101,21 +122,39 @@ def cmd_export_table(args: argparse.Namespace) -> int:
 	output = args.output or f"{proj.name}_elements.{fmt}"
 
 	rows: list[dict[str, Any]] = []
-	type_names = {"trajectory": "轨迹", "firework": "烟花", "traj_firework": "轨迹烟花"}
 	for e in elements:
-		etype = e.element_type.value if hasattr(e.element_type, "value") else str(e.element_type)
-		rows.append({
-			"id": e.id,
-			"type": etype,
-			"type_cn": type_names.get(etype, etype),
-			"name": e.name,
-			"start_tick": e.start_tick,
-			"duration_ticks": e.duration_ticks,
-			"enabled": e.enabled,
-		})
+		if hasattr(e, 'category'):
+			cat = e.category.value
+			cat_cn = CATEGORY_NAMES.get(e.category, cat)
+			row = {
+				"id": e.id,
+				"category": cat,
+				"type_cn": cat_cn,
+				"name": e.name,
+				"start_time": round(e.start_time, 2),
+				"duration": round(e.duration, 2),
+				"end_time": round(e.end_time, 2),
+				"enabled": e.enabled,
+			}
+		else:
+			etype = e.element_type.value if hasattr(e.element_type, "value") else str(e.element_type)
+			type_names = {"trajectory": "轨迹", "firework": "烟花", "traj_firework": "轨迹烟花"}
+			row = {
+				"id": e.id,
+				"type": etype,
+				"type_cn": type_names.get(etype, etype),
+				"name": e.name,
+				"start_tick": e.start_tick,
+				"duration_ticks": e.duration_ticks,
+				"enabled": e.enabled,
+			}
+		rows.append(row)
 
 	if fmt == "csv":
-		fieldnames = ["id", "type", "type_cn", "name", "start_tick", "duration_ticks", "enabled"]
+		if rows:
+			fieldnames = list(rows[0].keys())
+		else:
+			fieldnames = ["id", "name", "start_time", "duration"]
 		with open(output, "w", newline="", encoding="utf-8") as f:
 			w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
 			w.writeheader()
@@ -150,13 +189,10 @@ def _do_sync_export(
 			print(f"  进度: {i + 1}/{total}")
 
 	pack_dir = Path(output_dir) / datapack_name
+	export_mcfunction.write_pack_mcmeta(str(pack_dir), pack_format, description)
+
 	func_dir = pack_dir / "data" / namespace / "functions"
 	func_dir.mkdir(parents=True, exist_ok=True)
-
-	mcmeta = {"pack": {"pack_format": pack_format, "description": description}}
-	(pack_dir / "pack.mcmeta").write_text(
-		json.dumps(mcmeta, ensure_ascii=False, indent=2), encoding="utf-8"
-	)
 
 	export_mcfunction.export_mcfunction(str(func_dir), namespace)
 	export_mcfunction.generate_auto_exec_file(str(func_dir), namespace)

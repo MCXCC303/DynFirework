@@ -1,5 +1,4 @@
-"""DynFirework 主窗口."""
-
+"""DynFirework 主窗口 V2."""
 from __future__ import annotations
 
 import re
@@ -14,21 +13,22 @@ from PySide6.QtCore import QItemSelectionModel, Qt, Slot, QSettings
 from PySide6.QtGui import QAction, QColor, QKeySequence
 from PySide6.QtWidgets import (
 	QApplication, QMainWindow, QWidget, QVBoxLayout, QSplitter, QTreeView, QFrame, QFileDialog, QMessageBox,
-	QMenu, QLabel, QDialog, QScrollArea, )
+	QMenu, QLabel, QDialog, QScrollArea,
+)
 
-from dyn.lib.particleex.backend_registry import resolve_mc_version
 from dyn.lib.units import MinecraftPosition
-from dyn.models.elements import TrajectoryElement, FireworkElement, TrajFireworkElement, Position
+from dyn.models.df.base import ElementCategory
+from dyn.models.df.composites import CompositeElement
 from dyn.models import Project
 
 from dyn.service.audio_service import load_waveform, load_waveform_from_bytes
-from dyn.service.element_controller import ElementController
+from dyn.service.element_controller import ElementController, CATEGORY_DISPLAY
 from dyn.service.export_service import ExportService
 from dyn.service.playback_controller import PlaybackController
 from dyn.service.project_manager import ProjectManager
 from dyn.service.undo_manager import UndoManager
 
-from dyn.components.element_browser import ElementBrowserModel
+from dyn.components.element_browser import ElementBrowserModel, ProxyNode, ElementNode
 from dyn.components.inspector import Inspector
 from dyn.components.property_panel import PropertyPanel
 from dyn.components.timeline.df import DFTimelineWidget
@@ -40,8 +40,15 @@ from dyn.actions.about import DYNAboutWindow, DYNHelpWindow
 from dyn.ui.dialogs.export_dialog import ExportDialog
 from dyn.ui.dialogs.project_settings_dialog import ProjectSettingsDialog
 
+_CATEGORY_ICONS: dict[ElementCategory, str] = {
+	ElementCategory.FIREWORK: "*",
+	ElementCategory.TRAJECTORY: "/",
+	ElementCategory.EFFECT: "-",
+	ElementCategory.COMPOSITE: "+",
+}
+
 class MainWin(QMainWindow):
-	"""DynFirework 主窗口."""
+	"""DynFirework 主窗口 V2."""
 
 	def __init__(self) -> None:
 		super().__init__()
@@ -135,20 +142,13 @@ class MainWin(QMainWindow):
 		# 编辑
 		edit_menu = mb.addMenu("编辑(&E)")
 
-		act = QAction("新建轨迹(&T)", self)
-		act.setShortcut(QKeySequence("Ctrl+Shift+T"))
-		act.triggered.connect(lambda: self._on_new_element("trajectory"))
-		edit_menu.addAction(act)
-
-		act = QAction("新建烟花(&F)", self)
-		act.setShortcut(QKeySequence("Ctrl+Shift+F"))
-		act.triggered.connect(lambda: self._on_new_element("firework"))
-		edit_menu.addAction(act)
-
-		act = QAction("新建轨迹烟花", self)
-		act.setShortcut(QKeySequence("Ctrl+Shift+G"))
-		act.triggered.connect(lambda: self._on_new_element("traj_firework"))
-		edit_menu.addAction(act)
+		new_menu = edit_menu.addMenu("新建元素")
+		for cat in ElementCategory:
+			icon = _CATEGORY_ICONS.get(cat, "")
+			label = CATEGORY_DISPLAY.get(cat, cat.value)
+			act = QAction(f"{icon} 新建{label}", self)
+			act.triggered.connect(lambda checked, c=cat: self._on_new_element(c))
+			new_menu.addAction(act)
 
 		edit_menu.addSeparator()
 
@@ -217,14 +217,12 @@ class MainWin(QMainWindow):
 		root_layout.setContentsMargins(0, 0, 0, 0)
 		root_layout.setSpacing(0)
 
-		# 面板/时间线纵向分割
 		main_splitter = QSplitter(Qt.Vertical)
 		root_layout.addWidget(main_splitter, stretch=1)
 
-		# 上部：水平三栏
 		top_splitter = QSplitter(Qt.Horizontal)
 
-		# 左：元素列表
+		# 左: 元素列表
 		left_frame = QFrame()
 		left_layout = QVBoxLayout(left_frame)
 		left_layout.setContentsMargins(4, 4, 4, 4)
@@ -240,10 +238,10 @@ class MainWin(QMainWindow):
 		left_layout.addWidget(self._tree_view)
 		top_splitter.addWidget(left_frame)
 
-		# 中：参数面板
+		# 中: 参数面板
 		top_splitter.addWidget(self._property_panel)
 
-		# 右：检查器
+		# 右: 检查器
 		right_frame = QFrame()
 		right_layout = QVBoxLayout(right_frame)
 		right_layout.setContentsMargins(4, 4, 4, 4)
@@ -253,7 +251,7 @@ class MainWin(QMainWindow):
 
 		main_splitter.addWidget(top_splitter)
 
-		# 下部：传输条 + 时间线
+		# 下部: 传输条 + 时间线
 		bottom_widget = QWidget()
 		bottom_layout = QVBoxLayout(bottom_widget)
 		bottom_layout.setContentsMargins(0, 0, 0, 0)
@@ -279,17 +277,15 @@ class MainWin(QMainWindow):
 	# 信号连接
 
 	def _connect_signals(self) -> None:
-		# 元素列表 TreeView 点击 -> 选中
 		self._tree_view.selectionModel().selectionChanged.connect(
 			self._on_tree_selection_changed
 		)
 
-		# 元素浏览器模型 -> 同步选中
 		self._element_browser_model.selection_changed.connect(
 			self._controller.select_element
 		)
 
-		# 时间线 -> 选中同步（主时间线 + 四轨道）
+		# 时间线选中
 		self._timeline.element_selected.connect(self._on_timeline_select)
 		all_tracks = [
 			self._timeline.fw_track, self._timeline.traj_track,
@@ -303,12 +299,10 @@ class MainWin(QMainWindow):
 				lambda: self._undo_manager.begin_macro("拖拽修改"))
 			track.drag_undo_end.connect(self._undo_manager.end_macro)
 
-		# 控制器的选中变更 -> 各个面板
 		self._controller.selection_changed.connect(self._on_controller_selection)
 		self._controller.element_added.connect(self._on_element_count_changed)
 		self._controller.element_removed.connect(self._on_element_count_changed)
 
-		# 参数面板 -> 元素属性修改 (通过 undo)
 		self._property_panel.property_changed.connect(self._on_property_changed)
 		self._property_panel.element_name_changed.connect(
 			lambda eid, name: self._controller.set_property(eid, "name", name)
@@ -317,24 +311,20 @@ class MainWin(QMainWindow):
 			self._on_position_select_requested
 		)
 
-		# 时间线拖拽 -> 元素修改 + 面板刷新
 		self._timeline.element_moved.connect(self._on_timeline_element_moved)
 		self._timeline.element_resized.connect(self._on_timeline_element_resized)
 
-		# 播放控制 <-> 时间线双向同步 (tick <-> second 转换)
+		# 播放控制 tick <-> second 转换
 		self._playback.position_changed.connect(self._on_playback_position)
 		self._timeline.playback_cursor_changed.connect(self._on_timeline_cursor)
 
-		# 位置选择器
 		self._pos_selector.send_chosen_point.connect(self._on_position_chosen)
 
-		# 导出
 		self._export_service.export_finished.connect(self._on_export_finished)
 		self._export_service.export_progress.connect(
 			lambda p: self.statusBar().showMessage(f"导出中... {p}%")
 		)
 
-		# 项目
 		self._project_manager.project_opened.connect(self._on_project_opened)
 
 	# 快捷键
@@ -345,7 +335,7 @@ class MainWin(QMainWindow):
 		space_action.triggered.connect(self._playback.toggle_play_pause)
 		self.addAction(space_action)
 
-	# 槽：文件操作
+	# 槽: 文件操作
 
 	def _on_new_project(self) -> None:
 		log.debug("新建项目")
@@ -372,6 +362,7 @@ class MainWin(QMainWindow):
 		try:
 			log.debug(f"打开项目: {path}");
 			proj = self._project_manager.open_project(path)
+			self._playback.stop()
 			self._controller.load_from_project(proj)
 			self._element_browser_model.load_elements(self._controller.all_elements)
 			self._undo_manager.clear()
@@ -390,7 +381,6 @@ class MainWin(QMainWindow):
 			QMessageBox.critical(self, "打开失败", str(e))
 
 	def _sync_positions_to_project(self) -> None:
-		"""将位置选择器的点同步到项目对象."""
 		pts = self._pos_selector.points
 		self._project_manager.project.saved_positions = [
 			{"x": p.x, "y": p.y, "z": p.z, "label": p.label,
@@ -454,26 +444,13 @@ class MainWin(QMainWindow):
 
 	def _on_export_datapack(self) -> None:
 		elements = self._controller.all_elements
-		log.debug(f"导出数据包: {len(elements)} 个元素, MC版本={self._project_manager.project.mc_version}")
+		log.debug(f"导出数据包: {len(elements)} 个元素")
 		if not elements:
-			QMessageBox.warning(self, "无元素", "请先创建至少一个轨迹或烟花元素。")
+			QMessageBox.warning(self, "无元素", "请先创建至少一个元素。")
 			return
 
 		proj = self._project_manager.project
-		mc_ver = proj.mc_version
-
-		# 推导默认pack_format和后端信息
-		try:
-			info = resolve_mc_version(mc_ver)
-			default_fmt = info.pack_format
-			backend_label = info.display_name
-		except KeyError:
-			default_fmt = 15
-			backend_label = f"Minecraft {mc_ver} (未知版本)"
-
 		dlg = ExportDialog(proj.name, self)
-		dlg.set_pack_format(default_fmt)
-		dlg.set_backend_info(backend_label)
 		if dlg.exec() != QDialog.DialogCode.Accepted:
 			return
 
@@ -486,11 +463,11 @@ class MainWin(QMainWindow):
 		if not output_dir:
 			return
 
-		log.debug(f"导出数据包: namespace={ns}, mc_version={mc_ver}");
+		log.debug(f"导出数据包: namespace={ns}");
 		self._export_service.export_to_datapack(
 			elements, output_dir, ns,
 			datapack_name=dlg.pack_name, description=dlg.description,
-			pack_format=dlg.pack_format, mc_version=mc_ver,
+			pack_format=dlg.pack_format, mc_version=proj.mc_version,
 		)
 
 	def _on_export_finished(self, success: bool, message: str) -> None:
@@ -501,24 +478,19 @@ class MainWin(QMainWindow):
 			log.error(f"导出失败: {message}")
 			QMessageBox.critical(self, "导出失败", message)
 
-	# 槽：编辑操作
+	# 槽: 编辑操作
 
-	def _on_new_element(self, elem_type: str) -> None:
-		cursor_tick = self._timeline._playback_tick if hasattr(self._timeline, '_playback_tick') else 0
-		# 创建元素但不添加到 controller（由 undo 的 redo 完成添加）
-		if elem_type == "trajectory":
-			elem = TrajectoryElement(
-				name=f"轨迹 {self._controller.trajectory_count}", start_tick=cursor_tick
-			)
-		elif elem_type == "firework":
-			elem = FireworkElement(
-				name=f"烟花 {self._controller.firework_count}", start_tick=cursor_tick
-			)
-		else:
-			elem = TrajFireworkElement(
-				name=f"轨迹烟花 {self._controller.traj_firework_count}", start_tick=cursor_tick
-			)
-		log.debug(f"创建元素: type={elem_type}, name={elem.name}, id={elem.id}, tick={cursor_tick}")
+	def _on_new_element(self, category: ElementCategory) -> None:
+		"""创建 V2 元素."""
+		cursor_time = self._timeline.playback_time
+		cat_label = CATEGORY_DISPLAY.get(category, category.value)
+		count = len(self._controller.get_elements_by_category(category))
+		elem = self._controller.create_element(
+			category=category,
+			name=f"{cat_label} {count}",
+			start_time=round(cursor_time, 2),
+		)
+		log.debug(f"创建元素: category={category.value}, name={elem.name}, id={elem.id}, time={cursor_time:.2f}s")
 		self._undo_manager.push_add_element(elem)
 		self._tree_view.expandAll()
 		self._controller.select_element(elem.id)
@@ -531,7 +503,7 @@ class MainWin(QMainWindow):
 		cloned = self._controller.clone_element(eid)
 		if cloned:
 			log.debug(f"复制元素: src={eid} -> new={cloned.id}, name={cloned.name}")
-		if cloned:
+			self._undo_manager.push_add_element(cloned)
 			self._tree_view.expandAll()
 			self.statusBar().showMessage(f"已复制: {cloned.name}")
 
@@ -546,30 +518,27 @@ class MainWin(QMainWindow):
 		self._tree_view.expandAll()
 		self.statusBar().showMessage("已删除")
 
-	# 槽：选中同步
+	# 槽: 选中同步
 
 	def _on_tree_selection_changed(self, selected, deselected) -> None:
 		if self._syncing_tree or not selected.indexes():
 			return
 		idx = selected.indexes()[0]
 		node = idx.internalPointer()
-		# 检查是否为 TF 子节点
-		if isinstance(node.data, str) and node.data.startswith("_tf_"):
-			part = node.data  # "_tf_traj" or "_tf_fw"
+		# TF 代理子节点
+		if isinstance(node, ProxyNode):
+			part = node.data
 			parent_node = node.parent
 			parent_elem = parent_node.data
 			part_id = "traj" if part == "_tf_traj" else "fw"
-			# 先发信号让控制器/面板加载完整元素，再覆盖为部分
 			self._controller._selected_id = parent_elem.id
 			self._controller.selection_changed.emit(parent_elem.id)
-			# 时间线仅高亮对应代理（另一轨设为空）
 			if part_id == "traj":
-				proxy_id = parent_elem.id
-				self._timeline._selected_id = proxy_id
+				self._timeline._selected_id = parent_elem.id
 				for t in [self._timeline.fw_track, self._timeline.traj_track,
 				          self._timeline.effect_track, self._timeline.composite_track]:
 					t.set_selection("")
-				self._timeline.traj_track.set_selection(proxy_id)
+				self._timeline.traj_track.set_selection(parent_elem.id)
 			else:
 				proxy_id = parent_elem.id + "::fw"
 				self._timeline._selected_id = proxy_id
@@ -577,15 +546,19 @@ class MainWin(QMainWindow):
 				          self._timeline.effect_track, self._timeline.composite_track]:
 					t.set_selection("")
 				self._timeline.fw_track.set_selection(proxy_id)
-			# 覆盖面板为部分加载
 			self._property_panel.load_element(parent_elem, part_id)
 			return
 		elem = self._element_browser_model.get_element_from_index(idx)
 		if elem is not None:
 			self._controller.select_element(elem.id)
 			self._property_panel.load_element(elem, "")
-			# TF 父节点：高亮所有轨道中的相应代理
-			if hasattr(elem, 'traj_type') and hasattr(elem, 'fw_type'):
+			# V2 CompositeElement 代理选中
+			if isinstance(elem, CompositeElement):
+				for t in [self._timeline.fw_track, self._timeline.traj_track,
+				          self._timeline.effect_track, self._timeline.composite_track]:
+					t.set_selection(elem.id)
+			elif hasattr(elem, 'traj_type') and hasattr(elem, 'fw_type'):
+				# V1 TrajFireworkElement
 				for t in [self._timeline.fw_track, self._timeline.traj_track,
 				          self._timeline.effect_track, self._timeline.composite_track]:
 					t.set_selection("")
@@ -596,14 +569,13 @@ class MainWin(QMainWindow):
 	def _on_controller_selection(self, element_id: str) -> None:
 		elem = self._controller.get_element(element_id)
 		if elem:
-			etype = elem.element_type.name if hasattr(elem, 'element_type') else '?'
-			log.debug(f"控制器选中: id={element_id}, name={elem.name}, type={etype}, tick={elem.start_tick}, dur={elem.duration_ticks}")
+			cat = elem.category.value if hasattr(elem, 'category') else '?'
+			log.debug(f"控制器选中: id={element_id}, name={elem.name}, cat={cat}, time={elem.start_time:.2f}s, dur={elem.duration:.2f}s")
 		else:
 			log.debug(f"控制器选中: id={element_id} (未找到)")
 		self._property_panel.load_element(elem)
 		self._inspector.show_element(elem)
 
-		# 同步 TreeView 选中（用标志位防循环，不用 blockSignals 确保视图刷新）
 		self._syncing_tree = True
 		try:
 			sel = self._tree_view.selectionModel()
@@ -616,7 +588,7 @@ class MainWin(QMainWindow):
 			self._syncing_tree = False
 
 		if elem:
-			self._status_label.setText(f"已选中: {elem.name} ({elem.start_tick / TICKS_PER_SECOND:.2f}s)")
+			self._status_label.setText(f"已选中: {elem.name} ({elem.start_time:.2f}s)")
 		else:
 			self._status_label.setText("未选中")
 
@@ -630,12 +602,12 @@ class MainWin(QMainWindow):
 		idx = self._tree_view.indexAt(pos)
 		elem = self._element_browser_model.get_element_from_index(idx) if idx.isValid() else None
 
-		act_new_traj = menu.addAction("新建轨迹")
-		act_new_traj.triggered.connect(lambda: self._on_new_element("trajectory"))
-		act_new_fw = menu.addAction("新建烟花")
-		act_new_fw.triggered.connect(lambda: self._on_new_element("firework"))
-		act_new_tf = menu.addAction("新建轨迹烟花")
-		act_new_tf.triggered.connect(lambda: self._on_new_element("traj_firework"))
+		new_menu = menu.addMenu("新建元素")
+		for cat in ElementCategory:
+			icon = _CATEGORY_ICONS.get(cat, "")
+			label = CATEGORY_DISPLAY.get(cat, cat.value)
+			act = new_menu.addAction(f"{icon} {label}")
+			act.triggered.connect(lambda checked, c=cat: self._on_new_element(c))
 
 		if elem is not None:
 			menu.addSeparator()
@@ -646,7 +618,7 @@ class MainWin(QMainWindow):
 
 		menu.exec(self._tree_view.viewport().mapToGlobal(pos))
 
-	# 槽：时间线拖拽
+	# 槽: 时间线拖拽
 
 	def _on_timeline_select(self, element_id: str) -> None:
 		"""时间线选中 代理元素只高亮自身，面板加载父元素."""
@@ -654,28 +626,28 @@ class MainWin(QMainWindow):
 		if not element_id:
 			self._controller.clear_selection()
 			return
-		real_id, _ = self._resolve_proxy_id(element_id)
+		real_id, part = ElementController.resolve_proxy_id(element_id)
 		parent = self._controller.get_element(real_id)
-		if parent and hasattr(parent, 'element_type') and str(parent.element_type) == "ElementType.TRAJ_FIREWORK":
+		if part:
 			self._timeline._selected_id = element_id
 			for track in [self._timeline.fw_track, self._timeline.traj_track,
 			              self._timeline.effect_track, self._timeline.composite_track]:
 				track.set_selection(element_id)
-			self._property_panel.load_element(parent)
-			self._inspector.show_element(parent)
-			self._status_label.setText(f"已选中: {parent.name} ({parent.start_tick / TICKS_PER_SECOND:.2f}s)")
+			if parent:
+				self._property_panel.load_element(parent)
+				self._inspector.show_element(parent)
+				if hasattr(parent, 'start_time'):
+					self._status_label.setText(f"已选中: {parent.name} ({parent.start_time:.2f}s)")
 			return
 		self._controller.select_element(element_id)
 
 	def _on_timeline_element_moved(self, element_id: str, new_time: float, old_time: float) -> None:
-		real_id, part = self._resolve_proxy_id(element_id)
+		real_id, part = ElementController.resolve_proxy_id(element_id)
 		elem = self._controller.get_element(real_id)
 		log.debug(f"时间线移动: {element_id} time={new_time:.2f}s old={old_time:.2f}s | real_id={real_id} elem={elem is not None}")
-		key = "start_tick"
 		if elem:
-			new_tick = int(new_time * TICKS_PER_SECOND)
-			old_tick = int(old_time * TICKS_PER_SECOND)
-			self._undo_manager.push_property_change(real_id, key, old_tick, new_tick)
+			key = "start_time"
+			self._undo_manager.push_property_change(real_id, key, old_time, new_time)
 			self._controller.element_changed.emit(real_id, "drag", None)
 			self._property_panel.load_element(elem)
 			self._inspector.refresh(elem)
@@ -684,19 +656,12 @@ class MainWin(QMainWindow):
 			log.warning(f"时间线移动: 元素未找到 real_id={real_id}, element_id={element_id}")
 
 	def _on_timeline_element_resized(self, element_id: str, new_dur: float, old_dur: float) -> None:
-		real_id, part = self._resolve_proxy_id(element_id)
+		real_id, part = ElementController.resolve_proxy_id(element_id)
 		elem = self._controller.get_element(real_id)
 		log.debug(f"时间线缩放: {element_id} dur={new_dur:.2f}s old={old_dur:.2f}s | real_id={real_id} part={part} elem={elem is not None}")
-		if part == "fw":
-			key = "fw_duration_ticks"
-		elif part == "traj":
-			key = "traj_duration_ticks"
-		else:
-			key = "duration_ticks"
 		if elem:
-			new_ticks = int(new_dur * TICKS_PER_SECOND)
-			old_ticks = int(old_dur * TICKS_PER_SECOND)
-			self._undo_manager.push_property_change(real_id, key, old_ticks, new_ticks)
+			key = "duration"
+			self._undo_manager.push_property_change(real_id, key, old_dur, new_dur)
 			self._controller.element_changed.emit(real_id, "drag", None)
 			self._property_panel.load_element(elem)
 			self._inspector.refresh(elem)
@@ -705,40 +670,25 @@ class MainWin(QMainWindow):
 			log.warning(f"时间线缩放: 元素未找到 real_id={real_id}, element_id={element_id}")
 
 	def _on_playback_position(self, tick: int) -> None:
-		"""播放器位置(tick) -> 时间线位置(秒)."""
 		self._timeline.set_playback_time(tick / TICKS_PER_SECOND)
 
 	def _on_timeline_cursor(self, time_sec: float) -> None:
-		"""时间线光标(秒) -> 播放器位置(tick)."""
 		self._playback.seek_to_tick(int(time_sec * TICKS_PER_SECOND))
 
-	@staticmethod
-	def _resolve_proxy_id(element_id: str) -> tuple[str, str]:
-		if element_id.endswith("::fw"): return element_id[:-4], "fw"
-		if element_id.endswith("::traj"): return element_id[:-6], "traj"
-		return element_id, ""
-
-	# 槽：属性变更
+	# 槽: 属性变更
 
 	def _on_property_changed(self, element_id: str, key: str, value: object, old_value: object = None) -> None:
 		log.debug(f"属性变更: id={element_id}, {key}={value} (old={old_value})")
 		elem = self._controller.get_element(element_id)
 		if elem is None:
 			return
-		if key in ("position", "extra", "end_position", "traj_type", "fw_type",
-		           "traj_gradient", "inner_gradient", "outer_gradient",
-		           "traj_color_start", "traj_color_end",
-		           "inner_color_start", "inner_color_end",
-		           "outer_color_start", "outer_color_end"):
-			# 已在 property_panel 中直接修改，仅刷新
-			pass
-		else:
-			self._controller.set_property(element_id, key, value)
+		is_complex = self._controller.apply_property_change(element_id, key, value, old_value)
+		if not is_complex:
 			self._undo_manager.push_property_change(element_id, key, old_value, value)
 		self._inspector.refresh(elem)
 		self._project_manager.mark_modified()
 
-	# 槽：位置选择
+	# 槽: 位置选择
 
 	def _on_position_select_requested(self, which: str) -> None:
 		log.debug(f"位置选择请求: target={which}")
@@ -746,36 +696,23 @@ class MainWin(QMainWindow):
 		self._pos_selector.showNormal()
 
 	def _on_position_chosen(self, point: MinecraftPosition) -> None:
-		log.debug(f"位置已选择: ({point.x}, {point.y}, {point.z}), target={getattr(self, '_pending_position_target', 'firework')}")
-		elem = self._controller.selected_element
-		if elem is None:
+		log.debug(f"位置已选择: ({point.x}, {point.y}, {point.z}), target={getattr(self, '_pending_position_target', 'position')}")
+		which = getattr(self, '_pending_position_target', 'position')
+		eid = self._controller.selected_id
+		if not eid or not self._controller.set_position(eid, which, point.x, point.y, point.z):
 			return
-		pos = Position(x=point.x, y=point.y, z=point.z)
-		which = getattr(self, '_pending_position_target', 'firework')
-		if which == "end":
-			if isinstance(elem, TrajFireworkElement):
-				elem.mid_position = pos
-			elif isinstance(elem, TrajectoryElement):
-				elem.end_position = pos
-		else:
-			if isinstance(elem, TrajFireworkElement):
-				elem.start_position = pos
-			elif isinstance(elem, TrajectoryElement):
-				elem.start_position = pos
-			elif isinstance(elem, FireworkElement):
-				elem.position = pos
+		elem = self._controller.selected_element
 		self._property_panel.load_element(elem)
 		self._inspector.refresh(elem)
 		self._project_manager.mark_modified()
 
-	# 槽：项目操作
+	# 槽: 项目操作
 
 	def _on_project_opened(self, project: Project) -> None:
 		log.debug(f"项目已打开: name={project.name}, elements={len(project.all_elements)}, bpm={project.bpm:.0f}")
 		self._element_browser_model.load_elements(self._controller.all_elements)
 		self._tree_view.expandAll()
 		self._timeline.on_elements_changed()
-		# 恢复位置选择器数据
 		try:
 			saved = project.saved_positions
 			if saved:
@@ -856,5 +793,3 @@ if __name__ == "__main__":
 	win = MainWin()
 	win.show()
 	sys.exit(app.exec())
-
-# Logging 已在文件头部配置

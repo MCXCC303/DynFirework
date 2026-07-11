@@ -3,7 +3,6 @@ V2: 使用 EXPORT_DISPATCH + df_backend，移除 backend_registry 依赖.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
@@ -15,7 +14,7 @@ from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
-from dyn.models.elements import Element
+from dyn.models.df.base import Element as DfElement
 
 class _TaskSignals(QObject):
 	finished = Signal(bool, str)
@@ -23,9 +22,9 @@ class _TaskSignals(QObject):
 
 class _ExportTask(QRunnable):
 
-	def __init__(self, elements: list[Element], output_dir: str, namespace: str,
+	def __init__(self, elements: list[DfElement], output_dir: str, namespace: str,
 	             datapack_name: str = "DynFirework", description: str = "",
-	             pack_format: int = 6, mc_version: str = "1.21.8") -> None:
+	             pack_format: int = 48, mc_version: str = "1.21.8") -> None:
 		super().__init__()
 		self._elements = elements
 		self._output_dir = output_dir
@@ -35,6 +34,10 @@ class _ExportTask(QRunnable):
 		self._pack_format = pack_format
 		self._mc_version = mc_version
 		self.signals = _TaskSignals()
+
+	@property
+	def elements(self):
+		return self._elements
 
 	def run(self) -> None:
 		try:
@@ -60,11 +63,10 @@ class _ExportTask(QRunnable):
 		log.debug(f"命令生成完成: {cmd_count} 条命令, MAX_TICK={global_storage.MAX_TICK}")
 
 		pack_dir = Path(self._output_dir) / self._datapack_name
+		export_mcfunction.write_pack_mcmeta(str(pack_dir), self._pack_format, self._description)
+
 		func_dir = pack_dir / "data" / self._namespace / "functions"
 		func_dir.mkdir(parents=True, exist_ok=True)
-
-		mcmeta = {"pack": {"pack_format": self._pack_format, "description": self._description}}
-		(pack_dir / "pack.mcmeta").write_text(json.dumps(mcmeta, ensure_ascii=False, indent=2), encoding="utf-8")
 
 		export_mcfunction.export_mcfunction(str(func_dir), self._namespace)
 		export_mcfunction.generate_auto_exec_file(str(func_dir), self._namespace)
@@ -78,12 +80,12 @@ class ExportService(QObject):
 
 	def export_to_datapack(
 			self,
-			elements: list[Element],
+			elements: list[DfElement],
 			output_dir: str,
 			namespace: str = "fireworks1",
 			datapack_name: str = "DynFirework",
 			description: str = "",
-			pack_format: int = 6,
+			pack_format: int = 48,
 			mc_version: str = "1.21.8",
 	) -> None:
 		task = _ExportTask(elements, output_dir, namespace,

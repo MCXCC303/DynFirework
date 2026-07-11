@@ -1,4 +1,4 @@
-"""属性面板中控 V2 注册表驱动 + 懒加载 支持 df 全部 4 类别 16 子类型."""
+"""属性面板中控 V2 注册表驱动 + 懒加载."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
@@ -176,7 +176,8 @@ class PropertyPanel(QScrollArea):
 		self._forms[type_key] = form
 		return form
 
-	def load_element(self, elem) -> None:
+	def load_element(self, elem, part: str = "") -> None:
+		# 对V1的兼容签名适配
 		if self._loading:
 			return
 		self._loading = True

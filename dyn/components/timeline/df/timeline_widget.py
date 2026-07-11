@@ -11,7 +11,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
-from dyn.models.elements import Element
+from dyn.models.df.base import Element as DfElement
 from dyn.service.element_controller import ElementController
 from .header import _HeaderWidget
 from .overlay import _CursorOverlayWidget
@@ -40,9 +40,10 @@ class DFTimelineWidget(QWidget):
 		self._controller: ElementController | None = None
 		self._pixels_per_second: float = PIXELS_PER_SECOND_DEFAULT
 		self._scroll_offset: float = 0.0
-		self._elements: list[Element] = []
+		self._elements: list[DfElement] = []
 		self._selected_id: str = ""
 		self._playback_time: float = 0.0
+
 		self._waveform_samples: list[float] | None = None
 
 		self._update_colors()
@@ -50,16 +51,16 @@ class DFTimelineWidget(QWidget):
 		self._header = _HeaderWidget(self)
 		self._header._timeline = self
 		self._waveform = _WaveformWidget(self)
-		self.fw_track = _TrackArea("烟花", self)
-		self.traj_track = _TrackArea("轨迹", self)
-		self.effect_track = _TrackArea("效果", self)
-		self.composite_track = _TrackArea("复合", self)
+		self._fw_track = _TrackArea("烟花", self)
+		self._traj_track = _TrackArea("轨迹", self)
+		self._effect_track = _TrackArea("效果", self)
+		self._composite_track = _TrackArea("复合", self)
 
-		all_tracks = [self.fw_track, self.traj_track, self.effect_track, self.composite_track]
+		all_tracks = [self._fw_track, self._traj_track, self._effect_track, self._composite_track]
 		for src in all_tracks:
 			for dst in all_tracks:
 				if src is not dst:
-					src.drag_update.connect(dst._compute_and_update)
+					src.drag_update.connect(dst.compute_and_update)
 
 		for track in all_tracks:
 			track.element_selected.connect(self._on_track_selected)
@@ -76,6 +77,50 @@ class DFTimelineWidget(QWidget):
 		self.setMouseTracking(True)
 		self.setFocusPolicy(Qt.StrongFocus)
 		self.setMinimumHeight(120)
+
+	@property
+	def elements(self):
+		return self._elements
+
+	@property
+	def fw_track(self):
+		return self._fw_track
+
+	@property
+	def traj_track(self):
+		return self._traj_track
+
+	@property
+	def effect_track(self):
+		return self._effect_track
+
+	@property
+	def composite_track(self):
+		return self._composite_track
+
+	@fw_track.setter
+	def fw_track(self, value):
+		self._fw_track = value
+
+	@traj_track.setter
+	def traj_track(self, value):
+		self._traj_track = value
+
+	@effect_track.setter
+	def effect_track(self, value):
+		self._effect_track = value
+
+	@composite_track.setter
+	def composite_track(self, value):
+		self._composite_track = value
+
+	@property
+	def pixels_per_second(self) -> float:
+		return self._pixels_per_second
+
+	@property
+	def playback_time(self) -> float:
+		return self._playback_time
 
 	def _update_colors(self):
 		c = palette_colors()
@@ -138,10 +183,6 @@ class DFTimelineWidget(QWidget):
 		self._playback_time = time_sec
 		self.update()
 
-	@property
-	def pixels_per_second(self) -> float:
-		return self._pixels_per_second
-
 	def time_to_x(self, t: float) -> float:
 		return TRACK_LABEL_WIDTH + t * self._pixels_per_second - self._scroll_offset
 
@@ -150,10 +191,10 @@ class DFTimelineWidget(QWidget):
 
 	def _refresh_tracks(self) -> None:
 		views = create_track_views(self._elements)
-		self.fw_track.set_data(views["fw"], self._pixels_per_second, self._scroll_offset)
-		self.traj_track.set_data(views["traj"], self._pixels_per_second, self._scroll_offset)
-		self.effect_track.set_data(views["effect"], self._pixels_per_second, self._scroll_offset)
-		self.composite_track.set_data(views["composite"], self._pixels_per_second, self._scroll_offset)
+		self._fw_track.set_data(views["fw"], self._pixels_per_second, self._scroll_offset)
+		self._traj_track.set_data(views["traj"], self._pixels_per_second, self._scroll_offset)
+		self._effect_track.set_data(views["effect"], self._pixels_per_second, self._scroll_offset)
+		self._composite_track.set_data(views["composite"], self._pixels_per_second, self._scroll_offset)
 		self._waveform.set_view(self._pixels_per_second / TICKS_PER_SECOND, self._scroll_offset)
 
 	def resizeEvent(self, event: QResizeEvent) -> None:
@@ -170,15 +211,15 @@ class DFTimelineWidget(QWidget):
 		remaining = max(self.height() - y, 160)
 		h = remaining // 4
 		extra = remaining - h * 4
-		self.fw_track.setGeometry(0, y, w, h + (1 if extra > 0 else 0))
+		self._fw_track.setGeometry(0, y, w, h + (1 if extra > 0 else 0))
 		y += h + (1 if extra > 0 else 0)
 		extra -= 1
-		self.traj_track.setGeometry(0, y, w, h + (1 if extra > 0 else 0))
+		self._traj_track.setGeometry(0, y, w, h + (1 if extra > 0 else 0))
 		y += h + (1 if extra > 0 else 0)
 		extra -= 1
-		self.effect_track.setGeometry(0, y, w, h + (1 if extra > 0 else 0))
+		self._effect_track.setGeometry(0, y, w, h + (1 if extra > 0 else 0))
 		y += h + (1 if extra > 0 else 0)
-		self.composite_track.setGeometry(0, y, w, h + (1 if extra > 1 else 0))
+		self._composite_track.setGeometry(0, y, w, h + (1 if extra > 1 else 0))
 		self._overlay_cursor.setGeometry(0, 0, w, self.height())
 		self._overlay_cursor.raise_()
 
@@ -332,12 +373,12 @@ class DFTimelineWidget(QWidget):
 
 	def _on_selection_changed(self, element_id: str) -> None:
 		self._selected_id = element_id
-		for track in [self.fw_track, self.traj_track, self.effect_track, self.composite_track]:
+		for track in [self._fw_track, self._traj_track, self._effect_track, self._composite_track]:
 			track.set_selection(element_id)
 
 	def _on_track_selected(self, element_id: str) -> None:
 		self._selected_id = element_id
-		for track in [self.fw_track, self.traj_track, self.effect_track, self.composite_track]:
+		for track in [self._fw_track, self._traj_track, self._effect_track, self._composite_track]:
 			track.set_selection(element_id)
 		self.element_selected.emit(element_id)
 
@@ -346,19 +387,3 @@ class DFTimelineWidget(QWidget):
 
 	def _on_track_resized(self, eid: str, new_dur: float, old_dur: float) -> None:
 		self.element_resized.emit(eid, new_dur, old_dur)
-
-	@property
-	def fw_track(self):
-		return self.fw_track
-
-	@property
-	def traj_track(self):
-		return self.traj_track
-
-	@property
-	def effect_track(self):
-		return self.effect_track
-
-	@property
-	def composite_track(self):
-		return self.composite_track

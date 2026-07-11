@@ -101,6 +101,10 @@ class _TrackArea(QWidget):
 		self.setMouseTracking(True)
 		self.setMinimumHeight(60)
 
+	@property
+	def elements(self):
+		return self._elements
+
 	def _update_colors(self):
 		c = palette_colors()
 		self._bg = c["bg"]

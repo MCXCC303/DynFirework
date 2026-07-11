@@ -1,4 +1,4 @@
-"""播放控制栏 音乐播放/暂停/停止和时间显示."""
+"""播放控制栏 音乐播放/暂停/停止和时间显示 V2 秒单位."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Slot
@@ -29,19 +29,16 @@ class TransportBar(QWidget):
 		layout.setContentsMargins(8, 4, 8, 4)
 		layout.setSpacing(6)
 
-		# 播放/暂停
 		self._btn_play = QPushButton("▶")
 		self._btn_play.setFixedSize(32, 32)
 		self._btn_play.setToolTip("播放/暂停 (Space)")
 		layout.addWidget(self._btn_play)
 
-		# 停止
 		self._btn_stop = QPushButton("■")
 		self._btn_stop.setFixedSize(32, 32)
 		self._btn_stop.setToolTip("停止")
 		layout.addWidget(self._btn_stop)
 
-		# 跳转到开头
 		self._btn_start = QPushButton("⏮")
 		self._btn_start.setFixedSize(32, 32)
 		self._btn_start.setToolTip("跳转到开头")
@@ -50,8 +47,8 @@ class TransportBar(QWidget):
 		layout.addSpacing(12)
 
 		# 时间显示
-		self._label_time = QLabel("00:00.000")
-		self._label_time.setFixedWidth(100)
+		self._label_time = QLabel("0.00s")
+		self._label_time.setFixedWidth(80)
 		self._label_time.setAlignment(Qt.AlignCenter)
 		self._label_time.setStyleSheet("font-family: monospace; font-size: 14px;")
 		layout.addWidget(self._label_time)
@@ -117,17 +114,14 @@ class TransportBar(QWidget):
 	@Slot(int)
 	def _on_volume_changed(self, value: int) -> None:
 		log.debug(f"音量变更: {value}%")
-		audio = self._controller._player.audioOutput()
+		audio = self._controller.player.audioOutput()
 		if audio:
 			audio.setVolume(value / 100.0)
 
 	@Slot(int)
 	def _on_position_changed(self, tick: int) -> None:
 		seconds = tick / 20.0
-		minutes = int(seconds // 60)
-		secs = seconds % 60
-		ms = int((secs - int(secs)) * 1000)
-		self._label_time.setText(f"{minutes:02d}:{int(secs):02d}.{ms:03d}")
+		self._label_time.setText(f"{seconds:.2f}s")
 		self._label_tick.setText(f"Tick: {tick}")
 
 	@Slot(str)

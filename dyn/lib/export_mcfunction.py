@@ -73,3 +73,13 @@ def generate_data_pack(datapack_name, datapack_namespace, datapack_desc):
 	except Exception as e:
 		log.error(f"生成数据包失败: {e}", exc_info=True)
 		return False, None
+
+def write_pack_mcmeta(pack_dir: str, pack_format: int, description: str) -> None:
+	"""创建数据包目录结构并写入 pack.mcmeta."""
+	import json, os
+	os.makedirs(pack_dir, exist_ok=True)
+	mcmeta = {"pack": {"pack_format": pack_format, "description": description}}
+	mcmeta_path = os.path.join(pack_dir, "pack.mcmeta")
+	with open(mcmeta_path, "w", encoding="utf-8", newline="\n") as f:
+		json.dump(mcmeta, f, ensure_ascii=False, indent=2)
+	log.debug(f"写入 pack.mcmeta: {mcmeta_path}")

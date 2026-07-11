@@ -62,6 +62,10 @@ class ParticleexTimelineWidget(QWidget):
 		self.setFocusPolicy(Qt.StrongFocus)
 		self.setMinimumHeight(120)
 
+	@property
+	def elements(self):
+		return self._elements
+
 	def _update_colors(self):
 		c = palette_colors()
 		self._bg_color = c["bg_dark"]

@@ -1,4 +1,4 @@
-"""检查器面板 以只读 JSON 显示当前选中元素."""
+"""检查器面板 以只读 JSON 显示当前选中元素 V2."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ import logging
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPlainTextEdit, QLabel
 
-from dyn.models.elements import Element
+from dyn.models.df.base import Element as DfElement
 
 log = logging.getLogger("dyn.components.inspector")
 
@@ -33,7 +33,7 @@ class Inspector(QWidget):
 		self._editor.setFont(font)
 		layout.addWidget(self._editor)
 
-	def show_element(self, element: Element | None) -> None:
+	def show_element(self, element) -> None:
 		if element is None:
 			log.debug("检查器: 清空")
 			self._editor.setPlainText("")
@@ -41,15 +41,19 @@ class Inspector(QWidget):
 			self._label.setText("检查器")
 			return
 
-		log.debug(f"检查器: 显示元素 id={element.id}, name={element.name}, type={element.element_type.name}, tick={element.start_tick}")
+		name = getattr(element, 'name', '?')
+		eid = getattr(element, 'id', '?')
+		if isinstance(element, DfElement):
+			log.debug(f"检查器: 显示元素 id={eid}, name={name}, cat={element.category.value}, time={element.start_time:.2f}s")
+		else:
+			log.debug(f"检查器: 显示元素 id={eid}, name={name}, tick={element.start_tick}")
 		json_str = element.to_json()
 		formatted = json.dumps(json_str, ensure_ascii=False, indent=2)
 		log.debug(f"  数据大小: {len(formatted)} 字符")
 		self._editor.setPlainText(formatted)
-		self._label.setText(f"检查器   {element.name}")
+		self._label.setText(f"检查器   {name}")
 
-	def refresh(self, element: Element | None) -> None:
-		"""与 show_element 相同，用于外部刷新."""
+	def refresh(self, element) -> None:
 		self.show_element(element)
 
 	def clear(self) -> None:
