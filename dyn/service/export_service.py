@@ -10,6 +10,9 @@ from PySide6.QtCore import QRunnable, QThreadPool
 from dyn.lib import global_storage, export_mcfunction
 from dyn.lib import trajectories as traj, fireworks as fw
 from dyn.lib.backend_registry import set_backend, resolve_mc_version, BackendType
+from dyn.lib.export_helpers import (
+	TRAJ_FUNC_MAP, FW_FUNC_MAP, build_traj_kwargs, fill_fw_kwargs,
+)
 from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
@@ -20,23 +23,6 @@ from dyn.models.elements import (
 	FireworkElement,
 	Position,
 )
-
-# 映射 gui 模板名或元素类型到实际函数
-_TRAJ_FUNC_MAP = {
-	"launch": "launch_trajectory",
-	"spark": "launch_spark_trajectory",
-	"offset": "trajectory_with_random_offset",
-	"thick": "thick_trajectory_with_random_offset",
-	"expanding": "expanding_trajectory_with_random_offset",
-}
-
-_FW_FUNC_MAP = {
-	"single_layer": "basic_single_layer_firework",
-	"double_layer": "basic_double_layer_firework",
-	"directional": "directional_firework",
-	"clustered": "clustered_firework",
-	"expanding_sphere": "expanding_sphere_firework",
-}
 
 class _TaskSignals(QObject):
 	"""QRunnable 信号容器."""
@@ -124,35 +110,15 @@ class _ExportTask(QRunnable):
 		"""导出 TrajFireworkElement 分别导出轨迹和烟花部分."""
 		pos = elem.start_position or Position()
 		end = elem.mid_position or Position()
-		color = elem.traj_color
-		func = getattr(traj, _TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
+
+		func = getattr(traj, TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
 		if func:
-			kwargs = {
-				"x0": pos.x, "y0": pos.y, "z0": pos.z,
-				"x1": end.x, "y1": end.y, "z1": end.z,
-				"start_color": color.start.as_tuple(),
-				"end_color": color.end.as_tuple() if color.use_gradient else color.start.as_tuple(),
-				"duration": elem.traj_duration_ticks / 20,
-				"k": elem.k, "m0": elem.m0,
-				"lifetime": elem.traj_duration_ticks / 20,
-			}
-			if elem.traj_type == "launch":
-				kwargs["rho"] = elem.rho
-			elif elem.traj_type in ("spark",):
-				kwargs["particle_count"] = elem.particle_count
-			elif elem.traj_type in ("offset", "thick", "expanding"):
-				kwargs["interval_ticks"] = elem.interval_ticks
-				kwargs["points_per_tick"] = elem.points_per_tick
-				if elem.traj_type in ("thick", "expanding"):
-					kwargs["range_x"] = elem.range_x
-					kwargs["range_y"] = elem.range_y
-					kwargs["range_z"] = elem.range_z
-					kwargs["particle_count"] = elem.particle_count
-				if elem.traj_type == "expanding":
-					kwargs["speed_factor"] = elem.speed_factor
+			kwargs = build_traj_kwargs(elem, pos.x, pos.y, pos.z,
+			                           end.x, end.y, end.z,
+			                           elem.traj_duration_ticks)
 			func(elem.start_tick, **kwargs)
 
-		fw_func = getattr(fw, _FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
+		fw_func = getattr(fw, FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
 		if fw_func:
 			fw_kwargs = {
 				"tick": elem.fw_start_tick,
@@ -160,91 +126,23 @@ class _ExportTask(QRunnable):
 				"duration": elem.fw_duration_ticks / 20,
 				"lifetime": elem.fw_duration_ticks / 20,
 			}
-			self._fill_fw_kwargs(elem, fw_kwargs)
+			fill_fw_kwargs(elem, fw_kwargs)
 			fw_func(**fw_kwargs)
 
-	@staticmethod
-	def _fill_fw_kwargs(elem, kwargs: dict) -> None:
-		"""填充烟花导出参数 与 _export_firework 共用."""
-		inner_end = elem.inner_color.end.as_tuple() if elem.inner_color.use_gradient else elem.inner_color.start.as_tuple()
-		outer_end = elem.outer_color.end.as_tuple() if elem.outer_color.use_gradient else elem.outer_color.start.as_tuple()
-
-		if elem.fw_type == "single_layer":
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = inner_end
-			kwargs["speed"] = elem.speed
-			kwargs["horizontal_angle_step"] = elem.horizontal_angle
-			kwargs["vertical_angle_step"] = elem.vertical_angle
-		elif elem.fw_type == "double_layer":
-			kwargs["inner_start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["inner_end_color"] = inner_end
-			kwargs["outer_start_color"] = elem.outer_color.start.as_tuple()
-			kwargs["outer_end_color"] = outer_end
-			kwargs["inner_speed"] = elem.inner_speed
-			kwargs["outer_speed"] = elem.outer_speed
-			kwargs["outer_horizontal_angle_step"] = elem.horizontal_angle
-			kwargs["outer_vertical_angle_step"] = elem.vertical_angle
-		elif elem.fw_type == "directional":
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = inner_end
-			kwargs["speed"] = elem.speed
-			kwargs["spread_angle"] = elem.spread_angle
-			kwargs["track_count"] = elem.track_count
-			kwargs["direction_horizontal_angle"] = elem.horizontal_angle
-			kwargs["direction_vertical_angle"] = elem.vertical_angle
-		elif elem.fw_type == "clustered":
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = inner_end
-			kwargs["speed"] = elem.speed
-			kwargs["spread_angle"] = elem.spread_angle
-			kwargs["track_count"] = elem.track_count
-			kwargs["horizontal_angle_step"] = elem.horizontal_angle
-			kwargs["vertical_angle_step"] = elem.vertical_angle
-		elif elem.fw_type == "expanding_sphere":
-			kwargs["start_color"] = elem.inner_color.start.as_tuple()
-			kwargs["end_color"] = inner_end
-			kwargs["radius"] = elem.radius
-			kwargs["particle_count"] = elem.track_count
-			kwargs["radial_speed"] = elem.radial_speed
-
 	def _export_trajectory(self, elem: TrajectoryElement, traj) -> None:
-		func = getattr(traj, _TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
+		func = getattr(traj, TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
 		if func is None:
 			return
 
 		pos = elem.start_position
 		end = elem.end_position
-		color = elem.traj_color
-
-		kwargs = {
-			"x0": pos.x, "y0": pos.y, "z0": pos.z,
-			"x1": end.x, "y1": end.y, "z1": end.z,
-			"start_color": color.start.as_tuple(),
-			"end_color": color.end.as_tuple() if color.use_gradient else color.start.as_tuple(),
-			"duration": elem.duration_ticks / 20,
-			"k": elem.k, "m0": elem.m0,
-			"lifetime": elem.duration_ticks / 20,
-		}
-
-		if elem.traj_type == "launch":
-			kwargs["rho"] = elem.rho
-		elif elem.traj_type in ("spark",):
-			kwargs["particle_count"] = elem.particle_count
-		elif elem.traj_type in ("offset", "thick", "expanding"):
-			kwargs["interval_ticks"] = elem.interval_ticks
-			kwargs["points_per_tick"] = elem.points_per_tick
-			if elem.traj_type in ("thick", "expanding"):
-				kwargs["range_x"] = elem.range_x
-				kwargs["range_y"] = elem.range_y
-				kwargs["range_z"] = elem.range_z
-				kwargs["particle_count"] = elem.particle_count
-			if elem.traj_type == "expanding":
-				kwargs["speed_factor"] = elem.speed_factor
-
+		kwargs = build_traj_kwargs(elem, pos.x, pos.y, pos.z,
+		                           end.x, end.y, end.z,
+		                           elem.duration_ticks)
 		func(elem.start_tick, **kwargs)
 
 	def _export_firework(self, elem: FireworkElement, fw) -> None:
-		func = getattr(fw, _FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
+		func = getattr(fw, FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
 		if func is None:
 			return
 
@@ -255,7 +153,7 @@ class _ExportTask(QRunnable):
 			"duration": elem.duration_ticks / 20,
 			"lifetime": elem.duration_ticks / 20,
 		}
-		self._fill_fw_kwargs(elem, kwargs)
+		fill_fw_kwargs(elem, kwargs)
 		func(**kwargs)
 
 class ExportService(QObject):

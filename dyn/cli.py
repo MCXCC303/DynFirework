@@ -25,6 +25,9 @@ from dyn.lib import fireworks as fw
 from dyn.lib import global_storage, export_mcfunction
 from dyn.lib import trajectories as traj
 from dyn.lib.backend_registry import set_backend, resolve_mc_version, BackendType, MC_VERSION_MAP
+from dyn.lib.export_helpers import (
+	TRAJ_FUNC_MAP, FW_FUNC_MAP, build_traj_kwargs, fill_fw_kwargs,
+)
 from dyn.models.elements import TrajectoryElement, FireworkElement
 from dyn.models.timeline import Project
 
@@ -147,8 +150,6 @@ def _do_sync_export(
 		mc_version: str,
 ) -> tuple[bool, str]:
 	"""同步导出数据包（无 Qt 依赖）."""
-
-	# 根据 MC 版本设置后端
 	try:
 		info = resolve_mc_version(mc_version)
 		set_backend(info.backend)
@@ -156,25 +157,8 @@ def _do_sync_export(
 		log.warning(f"CLI 导出: 未知MC版本 {mc_version}, 使用默认DFP后端")
 		set_backend(BackendType.DFP)
 
-	# 清空全局存储
 	global_storage.commands_by_tick.clear()
 	global_storage.MAX_TICK = 0
-
-	# 函数映射
-	_TRAJ_FUNC_MAP = {
-		"launch": "launch_trajectory",
-		"spark": "launch_spark_trajectory",
-		"offset": "trajectory_with_random_offset",
-		"thick": "thick_trajectory_with_random_offset",
-		"expanding": "expanding_trajectory_with_random_offset",
-	}
-	_FW_FUNC_MAP = {
-		"single_layer": "basic_single_layer_firework",
-		"double_layer": "basic_double_layer_firework",
-		"directional": "directional_firework",
-		"clustered": "clustered_firework",
-		"expanding_sphere": "expanding_sphere_firework",
-	}
 
 	total = len(elements)
 	for i, elem in enumerate(elements):
@@ -182,67 +166,43 @@ def _do_sync_export(
 			continue
 
 		if isinstance(elem, TrajectoryElement):
-			_export_traj_sync(elem, traj, _TRAJ_FUNC_MAP)
+			_export_traj_sync(elem, traj)
 		elif isinstance(elem, FireworkElement):
-			_export_fw_sync(elem, fw, _FW_FUNC_MAP)
+			_export_fw_sync(elem, fw)
 		elif hasattr(elem, "traj_type") and hasattr(elem, "fw_type"):
-			_export_tf_sync(elem, traj, fw, _TRAJ_FUNC_MAP, _FW_FUNC_MAP)
+			_export_tf_sync(elem, traj, fw)
 
 		if (i + 1) % 10 == 0:
 			print(f"  进度: {i + 1}/{total}")
 
-	# 创建数据包目录
 	pack_dir = Path(output_dir) / datapack_name
 	func_dir = pack_dir / "data" / namespace / "functions"
 	func_dir.mkdir(parents=True, exist_ok=True)
 
-	# pack.mcmeta
 	mcmeta = {"pack": {"pack_format": pack_format, "description": description}}
 	(pack_dir / "pack.mcmeta").write_text(
 		json.dumps(mcmeta, ensure_ascii=False, indent=2), encoding="utf-8"
 	)
 
-	# function 文件 + auto_exec
 	export_mcfunction.export_mcfunction(str(func_dir), namespace)
 	export_mcfunction.generate_auto_exec_file(str(func_dir), namespace)
 
 	return True, f"导出完成: {pack_dir}"
 
-def _export_traj_sync(elem: Any, traj_mod: Any, func_map: dict) -> None:
-	func = getattr(traj_mod, func_map.get(elem.traj_type, "launch_trajectory"), None)
+def _export_traj_sync(elem: Any, traj_mod: Any) -> None:
+	func = getattr(traj_mod, TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
 	if func is None:
 		log.warning(f"CLI 导出: 未知轨迹类型 {elem.traj_type}, 元素 id={elem.id}")
 		return
 	pos = elem.start_position
 	end = elem.end_position
-	color = elem.traj_color
-	kwargs: dict[str, Any] = {
-		"x0": pos.x, "y0": pos.y, "z0": pos.z,
-		"x1": end.x, "y1": end.y, "z1": end.z,
-		"start_color": color.start.as_tuple(),
-		"end_color": color.end.as_tuple() if color.use_gradient else color.start.as_tuple(),
-		"duration": elem.duration_ticks / 20,
-		"k": elem.k, "m0": elem.m0,
-		"lifetime": elem.duration_ticks / 20,
-	}
-	if elem.traj_type == "launch":
-		kwargs["rho"] = elem.rho
-	elif elem.traj_type in ("spark",):
-		kwargs["particle_count"] = elem.particle_count
-	elif elem.traj_type in ("offset", "thick", "expanding"):
-		kwargs["interval_ticks"] = elem.interval_ticks
-		kwargs["points_per_tick"] = elem.points_per_tick
-		if elem.traj_type in ("thick", "expanding"):
-			kwargs["range_x"] = elem.range_x
-			kwargs["range_y"] = elem.range_y
-			kwargs["range_z"] = elem.range_z
-			kwargs["particle_count"] = elem.particle_count
-		if elem.traj_type == "expanding":
-			kwargs["speed_factor"] = elem.speed_factor
+	kwargs = build_traj_kwargs(elem, pos.x, pos.y, pos.z,
+	                           end.x, end.y, end.z,
+	                           elem.duration_ticks)
 	func(elem.start_tick, **kwargs)
 
-def _export_fw_sync(elem: Any, fw_mod: Any, func_map: dict) -> None:
-	func = getattr(fw_mod, func_map.get(elem.fw_type, "basic_single_layer_firework"), None)
+def _export_fw_sync(elem: Any, fw_mod: Any) -> None:
+	func = getattr(fw_mod, FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
 	if func is None:
 		log.warning(f"CLI 导出: 未知烟花类型 {elem.fw_type}, 元素 id={elem.id}")
 		return
@@ -252,99 +212,31 @@ def _export_fw_sync(elem: Any, fw_mod: Any, func_map: dict) -> None:
 		"x": pos.x, "y": pos.y, "z": pos.z,
 		"duration": elem.duration_ticks / 20,
 		"lifetime": elem.duration_ticks / 20,
-		"horizontal_angle_step": elem.horizontal_angle,
-		"vertical_angle_step": elem.vertical_angle,
 	}
-	ic = elem.inner_color
-	oc = elem.outer_color
-	if elem.fw_type == "single_layer":
-		kwargs["start_color"] = ic.start.as_tuple()
-		kwargs["end_color"] = ic.end.as_tuple() if ic.use_gradient else ic.start.as_tuple()
-		kwargs["speed"] = elem.speed
-	elif elem.fw_type == "double_layer":
-		kwargs["inner_start_color"] = ic.start.as_tuple()
-		kwargs["inner_end_color"] = ic.end.as_tuple() if ic.use_gradient else ic.start.as_tuple()
-		kwargs["outer_start_color"] = oc.start.as_tuple()
-		kwargs["outer_end_color"] = oc.end.as_tuple() if oc.use_gradient else oc.start.as_tuple()
-		kwargs["inner_speed"] = elem.inner_speed
-		kwargs["outer_speed"] = elem.outer_speed
-	elif elem.fw_type in ("directional", "clustered"):
-		kwargs["start_color"] = ic.start.as_tuple()
-		kwargs["end_color"] = ic.end.as_tuple() if ic.use_gradient else ic.start.as_tuple()
-		kwargs["speed"] = elem.speed
-		kwargs["spread_angle"] = elem.spread_angle
-		kwargs["track_count"] = elem.track_count
-		if elem.fw_type == "directional":
-			kwargs["direction_horizontal_angle"] = elem.horizontal_angle
-			kwargs["direction_vertical_angle"] = elem.vertical_angle
-	elif elem.fw_type == "expanding_sphere":
-		kwargs["start_color"] = ic.start.as_tuple()
-		kwargs["end_color"] = ic.end.as_tuple() if ic.use_gradient else ic.start.as_tuple()
-		kwargs["radius"] = getattr(elem, "radius", 5.0)
-		kwargs["particle_count"] = elem.track_count
-		kwargs["radial_speed"] = getattr(elem, "radial_speed", 3.0)
+	fill_fw_kwargs(elem, kwargs)
 	func(**kwargs)
 
-def _export_tf_sync(elem: Any, traj_mod: Any, fw_mod: Any,
-                    traj_map: dict, fw_map: dict) -> None:
+def _export_tf_sync(elem: Any, traj_mod: Any, fw_mod: Any) -> None:
 	"""导出 TrajFireworkElement."""
 	pos = elem.start_position
 	end = elem.mid_position or pos
-	color = elem.traj_color
-	# 轨迹部分
-	func = getattr(traj_mod, traj_map.get(elem.traj_type, "launch_trajectory"), None)
-	if func is None:
-		log.warning(f"CLI 导出 TF: 未知轨迹类型 {elem.traj_type}, 元素 id={elem.id}")
+
+	func = getattr(traj_mod, TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
 	if func:
-		kwargs: dict[str, Any] = {
-			"x0": pos.x, "y0": pos.y, "z0": pos.z,
-			"x1": end.x, "y1": end.y, "z1": end.z,
-			"start_color": color.start.as_tuple(),
-			"end_color": color.end.as_tuple() if color.use_gradient else color.start.as_tuple(),
-			"duration": elem.traj_duration_ticks / 20,
-			"k": elem.k, "m0": elem.m0,
-			"lifetime": elem.traj_duration_ticks / 20,
-		}
-		if elem.traj_type == "launch":
-			kwargs["rho"] = elem.rho
-		elif elem.traj_type in ("spark",):
-			kwargs["particle_count"] = 1
+		kwargs = build_traj_kwargs(elem, pos.x, pos.y, pos.z,
+		                           end.x, end.y, end.z,
+		                           elem.traj_duration_ticks)
 		func(elem.start_tick, **kwargs)
-	# 烟花部分
-	fw_func = getattr(fw_mod, fw_map.get(elem.fw_type, "basic_single_layer_firework"), None)
+
+	fw_func = getattr(fw_mod, FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
 	if fw_func:
-		ic = elem.inner_color
 		fw_kwargs: dict[str, Any] = {
 			"tick": elem.fw_start_tick,
 			"x": end.x, "y": end.y, "z": end.z,
 			"duration": elem.fw_duration_ticks / 20,
 			"lifetime": elem.fw_duration_ticks / 20,
-			"horizontal_angle_step": elem.horizontal_angle,
-			"vertical_angle_step": elem.vertical_angle,
-			"start_color": ic.start.as_tuple(),
-			"end_color": ic.end.as_tuple() if ic.use_gradient else ic.start.as_tuple(),
 		}
-		if elem.fw_type == "single_layer":
-			fw_kwargs["speed"] = elem.speed
-		elif elem.fw_type == "double_layer":
-			oc = elem.outer_color
-			fw_kwargs["inner_start_color"] = ic.start.as_tuple()
-			fw_kwargs["inner_end_color"] = ic.end.as_tuple() if ic.use_gradient else ic.start.as_tuple()
-			fw_kwargs["outer_start_color"] = oc.start.as_tuple()
-			fw_kwargs["outer_end_color"] = oc.end.as_tuple() if oc.use_gradient else oc.start.as_tuple()
-			fw_kwargs["inner_speed"] = elem.inner_speed
-			fw_kwargs["outer_speed"] = elem.outer_speed
-		elif elem.fw_type in ("directional", "clustered"):
-			fw_kwargs["speed"] = elem.speed
-			fw_kwargs["spread_angle"] = elem.spread_angle
-			fw_kwargs["track_count"] = elem.track_count
-			if elem.fw_type == "directional":
-				fw_kwargs["direction_horizontal_angle"] = elem.horizontal_angle
-				fw_kwargs["direction_vertical_angle"] = elem.vertical_angle
-		elif elem.fw_type == "expanding_sphere":
-			fw_kwargs["radius"] = getattr(elem, "radius", 5.0)
-			fw_kwargs["particle_count"] = elem.track_count
-			fw_kwargs["radial_speed"] = getattr(elem, "radial_speed", 3.0)
+		fill_fw_kwargs(elem, fw_kwargs)
 		fw_func(**fw_kwargs)
 
 def cmd_export_datapack(args: argparse.Namespace) -> int:
