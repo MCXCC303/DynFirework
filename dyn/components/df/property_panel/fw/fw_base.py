@@ -1,4 +1,4 @@
-"""烟花表单共享基类 提供位置 + 内外层颜色."""
+"""df 烟花表单共享基类 位置 + 内外层颜色 + 角度拨盘 + tail_flicker."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
@@ -9,17 +9,18 @@ from PySide6.QtWidgets import (
 
 from dyn.components.base.color_picker import ColorPicker
 from dyn.components.base.form_base import FormBase
-from dyn.models.elements import Element, FireworkElement, TrajFireworkElement, Position, ColorRGB
+from dyn.models.df.fireworks import FireworkElement
+from dyn.models.df.values import Position, ColorRGB
 
 class FwBase(FormBase):
-	"""烟花表单共享基类 子类只需实现 _setup_type_sections 和 _load_type_sections."""
+	"""df 烟花表单共享基类 子类实现 _setup_type_sections 和 _load_type_sections."""
 
 	property_changed = Signal(str, str, object, object)
 	position_select_requested = Signal(str)
 
 	def __init__(self, parent: QWidget | None = None) -> None:
 		super().__init__(parent)
-		self._element: Element | None = None
+		self._element: FireworkElement | None = None
 		self._loading: bool = False
 
 		layout = QVBoxLayout(self)
@@ -30,6 +31,7 @@ class FwBase(FormBase):
 		self._setup_inner_color()
 		self._setup_outer_color()
 		self._setup_angle()
+		self._setup_tail_flicker()
 		self._setup_type_sections()
 		layout.addStretch()
 
@@ -50,25 +52,18 @@ class FwBase(FormBase):
 		self._spin_pos_z.setRange(-100000, 100000)
 		self._spin_pos_z.setDecimals(2)
 		self._add_row(form, "fw_pos_z", "Z:", self._spin_pos_z)
-		self._spin_pos_x.valueChanged.connect(self._on_pos_changed)
-		self._spin_pos_y.valueChanged.connect(self._on_pos_changed)
-		self._spin_pos_z.valueChanged.connect(self._on_pos_changed)
+		for w in (self._spin_pos_x, self._spin_pos_y, self._spin_pos_z):
+			w.valueChanged.connect(self._on_pos_changed)
 		self._btn_pos_select = QPushButton("在地图上选择...")
 		self._btn_pos_select.clicked.connect(lambda: self.position_select_requested.emit("firework"))
 		form.addRow("", self._btn_pos_select)
 		self.layout().addWidget(self._group_pos)
 
 	def _on_pos_changed(self) -> None:
-		if self._loading:
-			return
-		e = self._element
-		if e is None:
+		if self._loading or self._element is None:
 			return
 		pos = Position(x=self._spin_pos_x.value(), y=self._spin_pos_y.value(), z=self._spin_pos_z.value())
-		if isinstance(e, TrajFireworkElement):
-			e.mid_position = pos
-		elif isinstance(e, FireworkElement):
-			e.position = pos
+		self._element.position = pos
 		self._emit("position", None)
 
 	def _setup_inner_color(self) -> None:
@@ -116,9 +111,7 @@ class FwBase(FormBase):
 		self._dial_h.setNotchesVisible(True)
 		self._dial_h.setFixedSize(80, 80)
 		h_grp.addWidget(self._dial_h, alignment=Qt.AlignCenter)
-		h_lbl = QLabel("水平角度")
-		h_lbl.setAlignment(Qt.AlignCenter)
-		h_grp.addWidget(h_lbl)
+		h_grp.addWidget(QLabel("水平角度"), alignment=Qt.AlignCenter)
 		self._spin_h_angle = QDoubleSpinBox()
 		self._spin_h_angle.setRange(1, 360)
 		self._spin_h_angle.setValue(30)
@@ -138,9 +131,7 @@ class FwBase(FormBase):
 		self._dial_v.setNotchesVisible(True)
 		self._dial_v.setFixedSize(80, 80)
 		v_grp.addWidget(self._dial_v, alignment=Qt.AlignCenter)
-		v_lbl = QLabel("垂直角度")
-		v_lbl.setAlignment(Qt.AlignCenter)
-		v_grp.addWidget(v_lbl)
+		v_grp.addWidget(QLabel("垂直角度"), alignment=Qt.AlignCenter)
 		self._spin_v_angle = QDoubleSpinBox()
 		self._spin_v_angle.setRange(1, 180)
 		self._spin_v_angle.setValue(30)
@@ -154,51 +145,48 @@ class FwBase(FormBase):
 		layout.addLayout(row)
 		self.layout().addWidget(self._group_angle)
 
+	def _setup_tail_flicker(self) -> None:
+		self._chk_tail_flicker = QCheckBox("启用尾部闪烁")
+		self._chk_tail_flicker.toggled.connect(lambda v: self._emit("enable_tail_flicker", v))
+		self.layout().addWidget(self._chk_tail_flicker)
+
 	def _setup_type_sections(self) -> None:
 		"""子类重写以添加类型专属参数组."""
 
 	def _hide_all(self) -> None:
 		for grp in [self._group_pos, self._group_inner, self._group_outer, self._group_angle]:
 			grp.hide()
+		self._chk_tail_flicker.hide()
 		for grp in getattr(self, '_sub_groups', []):
 			grp.hide()
 
-	def load(self, e: Element, read_only_pos: bool = False) -> None:
+	def load(self, elem: FireworkElement) -> None:
 		self._loading = True
-		self._element = e
+		self._element = elem
 		self.block_signals(True)
 
 		self._hide_all()
 		self._group_pos.show()
 		self._group_inner.show()
+		self._chk_tail_flicker.show()
 
-		if isinstance(e, TrajFireworkElement):
-			mp = e.mid_position
-			self._spin_pos_x.setValue(mp.x if mp else 0)
-			self._spin_pos_y.setValue(mp.y if mp else 0)
-			self._spin_pos_z.setValue(mp.z if mp else 0)
-		else:
-			self._spin_pos_x.setValue(e.position.x)
-			self._spin_pos_y.setValue(e.position.y)
-			self._spin_pos_z.setValue(e.position.z)
-		self._spin_pos_x.setReadOnly(read_only_pos)
-		self._spin_pos_y.setReadOnly(read_only_pos)
-		self._spin_pos_z.setReadOnly(read_only_pos)
-		self._btn_pos_select.setVisible(not read_only_pos)
-		if read_only_pos:
-			self._group_pos.setTitle("爆炸中心（由轨迹终点决定）")
+		self._spin_pos_x.setValue(elem.position.x)
+		self._spin_pos_y.setValue(elem.position.y)
+		self._spin_pos_z.setValue(elem.position.z)
 
-		self._chk_inner_gradient.setChecked(e.inner_color.use_gradient)
-		self._color_inner_end.setEnabled(e.inner_color.use_gradient)
-		self._color_inner_start.set_color(e.inner_color.start)
-		self._color_inner_end.set_color(e.inner_color.end)
+		self._chk_inner_gradient.setChecked(elem.inner_color.use_gradient)
+		self._color_inner_end.setEnabled(elem.inner_color.use_gradient)
+		self._color_inner_start.set_color(elem.inner_color.start)
+		self._color_inner_end.set_color(elem.inner_color.end)
 
-		self._load_type_sections(e)
+		self._chk_tail_flicker.setChecked(elem.enable_tail_flicker)
+
+		self._load_type_sections(elem)
 		self.block_signals(False)
 		self._loading = False
 		self._update_reset_buttons()
 
-	def _load_type_sections(self, e: Element) -> None:
+	def _load_type_sections(self, elem: FireworkElement) -> None:
 		"""子类重写以加载类型专属数据."""
 
 	def clear_form(self) -> None:

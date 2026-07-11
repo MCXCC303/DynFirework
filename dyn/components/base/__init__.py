@@ -1,12 +1,13 @@
-"""元素浏览器共享基类 重导出 shim 实际定义在 base/browser_model.py."""
-from __future__ import annotations
-
-from dyn.components.base.browser_model import (
+"""共享 UI 基类 与模型解耦 适用于 df 和 cb."""
+from .browser_model import (
 	BaseNode, GroupNode, ElementNode, ProxyNode,
 	_BaseBrowserModel, _format_time_sec, _format_cb_time,
 )
+from .color_picker import ColorPicker, _ColorVal
+from .form_base import FormBase
 
 __all__ = [
+	"FormBase", "ColorPicker", "_ColorVal",
 	"BaseNode", "GroupNode", "ElementNode", "ProxyNode",
 	"_BaseBrowserModel", "_format_time_sec", "_format_cb_time",
 ]

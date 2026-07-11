@@ -6,7 +6,6 @@ from PySide6.QtCore import QModelIndex, Qt
 from dyn.models.df.base import ElementCategory
 from dyn.models.particleex.base import ElementType
 from dyn.models.particleex.composites import TrajFireworkElement
-
 from .._base import (
 	_BaseBrowserModel, GroupNode, ElementNode, ProxyNode,
 	_format_cb_time,

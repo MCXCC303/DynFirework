@@ -28,11 +28,11 @@ from dyn.service.playback_controller import PlaybackController
 from dyn.service.project_manager import ProjectManager
 from dyn.service.undo_manager import UndoManager
 
-from dyn.components.element_browser import ElementBrowserModel, ProxyNode, ElementNode
+from dyn.components.element_browser import ElementBrowserModel, ProxyNode
 from dyn.components.inspector import Inspector
 from dyn.components.property_panel import PropertyPanel
-from dyn.components.timeline.df import DFTimelineWidget
-from dyn.components.timeline.df.theme import TICKS_PER_SECOND
+from dyn.components.df.timeline import DFTimelineWidget
+from dyn.components.df.timeline.theme import TICKS_PER_SECOND
 from dyn.components.transport_bar import TransportBar
 from dyn.components.pos_select.select_center import PosSelectMainWindow
 

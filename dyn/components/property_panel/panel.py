@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 	QLabel, QLineEdit, QDoubleSpinBox, QCheckBox, QComboBox, QGroupBox, QScrollArea,
 )
 
-from dyn.components.property_panel.df import get_form, _init_form_registry
+from dyn.components.df.property_panel import get_form, _init_form_registry
 from dyn.logging_config import get_logger
 from dyn.models.df.base import ElementCategory
 from dyn.models.df.composites import CompositeElement

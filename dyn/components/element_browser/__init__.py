@@ -2,11 +2,10 @@
 DF (默认): 4列 4分类 注册表驱动 类型列
 ParticleEx: 3列 3分类 TF 子节点
 """
+from dyn.components.df.element_browser import DfElementBrowserModel
 from ._base import BaseNode, GroupNode, ElementNode, ProxyNode
-from .df import DfElementBrowserModel
 from .particleex import CbElementBrowserModel
 
-# 默认使用 DF 浏览器
 ElementBrowserModel = DfElementBrowserModel
 
 __all__ = [

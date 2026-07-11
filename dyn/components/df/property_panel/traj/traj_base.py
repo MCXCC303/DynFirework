@@ -1,4 +1,4 @@
-"""轨迹表单共享基类 提供位置/终点/颜色."""
+"""df 轨迹表单共享基类 起始/结束位置 + 颜色 + add_shell."""
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
@@ -9,17 +9,18 @@ from PySide6.QtWidgets import (
 
 from dyn.components.base.color_picker import ColorPicker
 from dyn.components.base.form_base import FormBase
-from dyn.models.elements import Element, TrajectoryElement, TrajFireworkElement, Position, ColorRGB
+from dyn.models.df.trajectories import TrajectoryElement
+from dyn.models.df.values import Position, ColorRGB
 
 class TrajBase(FormBase):
-	"""轨迹表单共享基类 子类只需在 _setup_type_params 中添加类型专属参数."""
+	"""df 轨迹表单共享基类 子类只需在 _setup_type_params 中添加类型专属参数."""
 
 	property_changed = Signal(str, str, object, object)
 	position_select_requested = Signal(str)
 
 	def __init__(self, parent: QWidget | None = None) -> None:
 		super().__init__(parent)
-		self._element: Element | None = None
+		self._element: TrajectoryElement | None = None
 		self._loading: bool = False
 
 		layout = QVBoxLayout(self)
@@ -49,26 +50,19 @@ class TrajBase(FormBase):
 		self._spin_pos_z.setRange(-100000, 100000)
 		self._spin_pos_z.setDecimals(2)
 		self._add_row(form, "pos_z", "Z:", self._spin_pos_z)
-		self._spin_pos_x.valueChanged.connect(self._on_pos_changed)
-		self._spin_pos_y.valueChanged.connect(self._on_pos_changed)
-		self._spin_pos_z.valueChanged.connect(self._on_pos_changed)
+		for w in (self._spin_pos_x, self._spin_pos_y, self._spin_pos_z):
+			w.valueChanged.connect(self._on_pos_changed)
 		self._btn_pos_select = QPushButton("在地图上选择...")
 		self._btn_pos_select.clicked.connect(lambda: self.position_select_requested.emit("firework"))
 		form.addRow("", self._btn_pos_select)
 		self.layout().addWidget(self._group_pos)
 
 	def _on_pos_changed(self) -> None:
-		if self._loading:
-			return
-		e = self._element
-		if e is None:
+		if self._loading or self._element is None:
 			return
 		pos = Position(x=self._spin_pos_x.value(), y=self._spin_pos_y.value(), z=self._spin_pos_z.value())
-		if isinstance(e, TrajFireworkElement):
-			e.start_position = pos
-		elif isinstance(e, TrajectoryElement):
-			e.start_position = pos
-		self._emit("position", None)
+		self._element.start_position = pos
+		self._emit("start_position", None)
 
 	def _setup_end_position(self) -> None:
 		self._group_endpos = QGroupBox("结束位置")
@@ -85,25 +79,18 @@ class TrajBase(FormBase):
 		self._spin_end_z.setRange(-100000, 100000)
 		self._spin_end_z.setDecimals(2)
 		self._add_row(form, "end_z", "Z:", self._spin_end_z)
-		self._spin_end_x.valueChanged.connect(self._on_end_pos_changed)
-		self._spin_end_y.valueChanged.connect(self._on_end_pos_changed)
-		self._spin_end_z.valueChanged.connect(self._on_end_pos_changed)
+		for w in (self._spin_end_x, self._spin_end_y, self._spin_end_z):
+			w.valueChanged.connect(self._on_end_pos_changed)
 		self._btn_end_select = QPushButton("在地图上选择...")
 		self._btn_end_select.clicked.connect(lambda: self.position_select_requested.emit("end"))
 		form.addRow("", self._btn_end_select)
 		self.layout().addWidget(self._group_endpos)
 
 	def _on_end_pos_changed(self) -> None:
-		if self._loading:
-			return
-		e = self._element
-		if e is None:
+		if self._loading or self._element is None:
 			return
 		pos = Position(x=self._spin_end_x.value(), y=self._spin_end_y.value(), z=self._spin_end_z.value())
-		if isinstance(e, TrajFireworkElement):
-			e.mid_position = pos
-		elif isinstance(e, TrajectoryElement):
-			e.end_position = pos
+		self._element.end_position = pos
 		self._emit("end_position", None)
 
 	def _setup_color(self) -> None:
@@ -129,9 +116,9 @@ class TrajBase(FormBase):
 		for grp in getattr(self, '_sub_groups', []):
 			grp.hide()
 
-	def load(self, e: Element, tf_part: bool = False) -> None:
+	def load(self, elem: TrajectoryElement) -> None:
 		self._loading = True
-		self._element = e
+		self._element = elem
 		self.block_signals(True)
 
 		self._hide_all()
@@ -139,38 +126,25 @@ class TrajBase(FormBase):
 		self._group_endpos.show()
 		self._group_color.show()
 
-		self._spin_pos_x.setValue(e.start_position.x)
-		self._spin_pos_y.setValue(e.start_position.y)
-		self._spin_pos_z.setValue(e.start_position.z)
-		self._spin_pos_x.setReadOnly(False)
-		self._spin_pos_y.setReadOnly(False)
-		self._spin_pos_z.setReadOnly(False)
-		self._btn_pos_select.show()
+		self._spin_pos_x.setValue(elem.start_position.x)
+		self._spin_pos_y.setValue(elem.start_position.y)
+		self._spin_pos_z.setValue(elem.start_position.z)
 
-		if isinstance(e, TrajFireworkElement):
-			self._spin_end_x.setValue(e.mid_position.x)
-			self._spin_end_y.setValue(e.mid_position.y)
-			self._spin_end_z.setValue(e.mid_position.z)
-		else:
-			self._spin_end_x.setValue(e.end_position.x)
-			self._spin_end_y.setValue(e.end_position.y)
-			self._spin_end_z.setValue(e.end_position.z)
-		self._spin_end_x.setReadOnly(False)
-		self._spin_end_y.setReadOnly(False)
-		self._spin_end_z.setReadOnly(False)
-		self._btn_end_select.show()
+		self._spin_end_x.setValue(elem.end_position.x)
+		self._spin_end_y.setValue(elem.end_position.y)
+		self._spin_end_z.setValue(elem.end_position.z)
 
-		self._chk_gradient.setChecked(e.traj_color.use_gradient)
-		self._color_end.setEnabled(e.traj_color.use_gradient)
-		self._color_start.set_color(e.traj_color.start)
-		self._color_end.set_color(e.traj_color.end)
+		self._chk_gradient.setChecked(elem.traj_color.use_gradient)
+		self._color_end.setEnabled(elem.traj_color.use_gradient)
+		self._color_start.set_color(elem.traj_color.start)
+		self._color_end.set_color(elem.traj_color.end)
 
-		self._load_type_params(e)
+		self._load_type_params(elem)
 		self.block_signals(False)
 		self._loading = False
 		self._update_reset_buttons()
 
-	def _load_type_params(self, e: Element) -> None:
+	def _load_type_params(self, elem: TrajectoryElement) -> None:
 		"""子类重写以加载类型专属参数."""
 
 	def clear_form(self) -> None:
@@ -193,7 +167,7 @@ class TrajBase(FormBase):
 		elif key == "traj_color_end":
 			old_value = e.traj_color.end
 			e.traj_color.end = value
-		elif key not in ("position", "end_position", "extra"):
+		elif key not in ("start_position", "end_position", "extra"):
 			pass
 
 		self.property_changed.emit(e.id, key, value, old_value)
