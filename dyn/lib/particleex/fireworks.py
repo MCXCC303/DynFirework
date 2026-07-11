@@ -5,10 +5,10 @@ import logging
 import math
 import random
 
-from . import shared_functions
-from .global_storage import g
+from dyn.lib.global_storage import g
+from dyn.lib.particleex import shared_functions
 
-log = logging.getLogger("dyn.lib.fireworks")
+log = logging.getLogger("dyn.lib.particleex.fireworks")
 
 def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step,
                                 vertical_angle_step, duration, lifetime):

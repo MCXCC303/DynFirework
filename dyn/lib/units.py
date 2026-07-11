@@ -1,5 +1,12 @@
+"""单位转换工具."""
 import math
 from dataclasses import dataclass
+
+def seconds_to_tick(seconds: float) -> int:
+	return int(seconds * 20)
+
+def tick_to_seconds(tick: int) -> float:
+	return tick / 20.0
 
 from PySide6.QtGui import QColor
 

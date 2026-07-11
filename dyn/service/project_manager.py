@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from dyn.logging_config import get_logger
-from dyn.models.timeline import Project
+from dyn.models import Project
 
 log = get_logger(__name__)
 

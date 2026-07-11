@@ -16,10 +16,10 @@ from PySide6.QtWidgets import (
 	QApplication, QMainWindow, QWidget, QVBoxLayout, QSplitter, QTreeView, QFrame, QFileDialog, QMessageBox,
 	QMenu, QLabel, QDialog, QScrollArea, )
 
-from dyn.lib.backend_registry import resolve_mc_version
+from dyn.lib.particleex.backend_registry import resolve_mc_version
 from dyn.lib.units import MinecraftPosition
 from dyn.models.elements import TrajectoryElement, FireworkElement, TrajFireworkElement, Position
-from dyn.models.timeline import Project
+from dyn.models import Project
 
 from dyn.service.audio_service import load_waveform, load_waveform_from_bytes
 from dyn.service.element_controller import ElementController

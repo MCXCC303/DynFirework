@@ -37,7 +37,7 @@ class ExportDialog(QDialog):
         )
         form.addRow("Pack Format:", self.spin_format)
 
-        self.label_backend = QLabel("DynFirework Particles (/dfp)")
+        self.label_backend = QLabel("ParticleEx / Colorblock (/particleex)")
         self.label_backend.setStyleSheet("color: #888; font-size: 11px;")
         form.addRow("命令后端:", self.label_backend)
 

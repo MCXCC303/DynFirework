@@ -8,10 +8,10 @@ import random
 import numpy as np
 from scipy.interpolate import splprep, splev
 
-from . import shared_functions
-from .global_storage import g
+from dyn.lib.global_storage import g
+from dyn.lib.particleex import shared_functions
 
-log = logging.getLogger("dyn.lib.trajectories")
+log = logging.getLogger("dyn.lib.particleex.trajectories")
 
 def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
 	t_step = 1.0 / 20  # 一秒20个tick

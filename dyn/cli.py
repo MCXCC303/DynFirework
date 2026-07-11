@@ -1,41 +1,34 @@
 """
 用法::
 
-    python -m dyn.cli <command> [options]
+	python -m dyn.cli <command> [options]
 
 命令::
 
-    info             显示项目信息
-    export points    导出位置点到 JSON
-    export datapack  导出 Minecraft 数据包
-    export music     提取嵌入的音乐文件
-    export table     导出元素表 (JSON / CSV)
+	info             显示项目信息
+	export points    导出位置点到 JSON
+	export datapack  导出 Minecraft 数据包
+	export music     提取嵌入的音乐文件
+	export table     导出元素表 (JSON / CSV)
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import json
-import logging
 import sys
 from pathlib import Path
 from typing import Any
 
-from dyn.lib import fireworks as fw
 from dyn.lib import global_storage, export_mcfunction
-from dyn.lib import trajectories as traj
-from dyn.lib.backend_registry import set_backend, resolve_mc_version, BackendType, MC_VERSION_MAP
-from dyn.lib.export_helpers import (
-	TRAJ_FUNC_MAP, FW_FUNC_MAP, build_traj_kwargs, fill_fw_kwargs,
-)
-from dyn.models.elements import TrajectoryElement, FireworkElement
-from dyn.models.timeline import Project
+from dyn.lib.export_helpers import export_element
+from dyn.logging_config import get_logger
 
-log = logging.getLogger("dyn.cli")
+log = get_logger(__name__)
+
+from dyn.models import Project
 
 def _load_project(path: str):
-	"""加载 .dyn 项目文件."""
-	# 确保项目根目录在 sys.path 中
 	project_root = Path(__file__).parent.parent
 	if str(project_root) not in sys.path:
 		sys.path.insert(0, str(project_root))
@@ -45,7 +38,6 @@ def _load_project(path: str):
 # info
 
 def cmd_info(args: argparse.Namespace) -> int:
-	"""显示项目基本信息."""
 	proj = _load_project(args.project)
 	print(f"项目名称:   {proj.name}")
 	print(f"BPM:        {proj.bpm:.0f}")
@@ -66,7 +58,6 @@ def cmd_info(args: argparse.Namespace) -> int:
 # export points
 
 def cmd_export_points(args: argparse.Namespace) -> int:
-	"""导出位置点到 JSON 文件."""
 	proj = _load_project(args.project)
 	pts = proj.saved_positions
 	if not pts:
@@ -86,7 +77,6 @@ def cmd_export_points(args: argparse.Namespace) -> int:
 # export music
 
 def cmd_export_music(args: argparse.Namespace) -> int:
-	"""提取嵌入的音乐文件."""
 	proj = _load_project(args.project)
 	if not proj.has_music:
 		print("项目中没有嵌入的音乐。", file=sys.stderr)
@@ -101,7 +91,6 @@ def cmd_export_music(args: argparse.Namespace) -> int:
 # export table
 
 def cmd_export_table(args: argparse.Namespace) -> int:
-	"""导出元素表."""
 	proj = _load_project(args.project)
 	elements = proj.all_elements
 	if not elements:
@@ -138,7 +127,7 @@ def cmd_export_table(args: argparse.Namespace) -> int:
 	print(f"已导出 {len(rows)} 个元素到: {output}")
 	return 0
 
-# export datapack
+# export datapack (V2)
 
 def _do_sync_export(
 		elements: list[Any],
@@ -147,16 +136,8 @@ def _do_sync_export(
 		datapack_name: str,
 		description: str,
 		pack_format: int,
-		mc_version: str,
 ) -> tuple[bool, str]:
-	"""同步导出数据包（无 Qt 依赖）."""
-	try:
-		info = resolve_mc_version(mc_version)
-		set_backend(info.backend)
-	except KeyError:
-		log.warning(f"CLI 导出: 未知MC版本 {mc_version}, 使用默认DFP后端")
-		set_backend(BackendType.DFP)
-
+	"""同步导出数据包 使用 EXPORT_DISPATCH + df_backend."""
 	global_storage.commands_by_tick.clear()
 	global_storage.MAX_TICK = 0
 
@@ -164,14 +145,7 @@ def _do_sync_export(
 	for i, elem in enumerate(elements):
 		if not elem.enabled:
 			continue
-
-		if isinstance(elem, TrajectoryElement):
-			_export_traj_sync(elem, traj)
-		elif isinstance(elem, FireworkElement):
-			_export_fw_sync(elem, fw)
-		elif hasattr(elem, "traj_type") and hasattr(elem, "fw_type"):
-			_export_tf_sync(elem, traj, fw)
-
+		export_element(elem)
 		if (i + 1) % 10 == 0:
 			print(f"  进度: {i + 1}/{total}")
 
@@ -189,58 +163,7 @@ def _do_sync_export(
 
 	return True, f"导出完成: {pack_dir}"
 
-def _export_traj_sync(elem: Any, traj_mod: Any) -> None:
-	func = getattr(traj_mod, TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
-	if func is None:
-		log.warning(f"CLI 导出: 未知轨迹类型 {elem.traj_type}, 元素 id={elem.id}")
-		return
-	pos = elem.start_position
-	end = elem.end_position
-	kwargs = build_traj_kwargs(elem, pos.x, pos.y, pos.z,
-	                           end.x, end.y, end.z,
-	                           elem.duration_ticks)
-	func(elem.start_tick, **kwargs)
-
-def _export_fw_sync(elem: Any, fw_mod: Any) -> None:
-	func = getattr(fw_mod, FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
-	if func is None:
-		log.warning(f"CLI 导出: 未知烟花类型 {elem.fw_type}, 元素 id={elem.id}")
-		return
-	pos = elem.position
-	kwargs: dict[str, Any] = {
-		"tick": elem.start_tick,
-		"x": pos.x, "y": pos.y, "z": pos.z,
-		"duration": elem.duration_ticks / 20,
-		"lifetime": elem.duration_ticks / 20,
-	}
-	fill_fw_kwargs(elem, kwargs)
-	func(**kwargs)
-
-def _export_tf_sync(elem: Any, traj_mod: Any, fw_mod: Any) -> None:
-	"""导出 TrajFireworkElement."""
-	pos = elem.start_position
-	end = elem.mid_position or pos
-
-	func = getattr(traj_mod, TRAJ_FUNC_MAP.get(elem.traj_type, "launch_trajectory"), None)
-	if func:
-		kwargs = build_traj_kwargs(elem, pos.x, pos.y, pos.z,
-		                           end.x, end.y, end.z,
-		                           elem.traj_duration_ticks)
-		func(elem.start_tick, **kwargs)
-
-	fw_func = getattr(fw_mod, FW_FUNC_MAP.get(elem.fw_type, "basic_single_layer_firework"), None)
-	if fw_func:
-		fw_kwargs: dict[str, Any] = {
-			"tick": elem.fw_start_tick,
-			"x": end.x, "y": end.y, "z": end.z,
-			"duration": elem.fw_duration_ticks / 20,
-			"lifetime": elem.fw_duration_ticks / 20,
-		}
-		fill_fw_kwargs(elem, fw_kwargs)
-		fw_func(**fw_kwargs)
-
 def cmd_export_datapack(args: argparse.Namespace) -> int:
-	"""导出 Minecraft 数据包."""
 	proj = _load_project(args.project)
 	elements = proj.all_elements
 	if not elements:
@@ -251,28 +174,21 @@ def cmd_export_datapack(args: argparse.Namespace) -> int:
 	namespace = args.namespace or "fireworks1"
 	name = args.name or proj.name or "DynFirework"
 	desc = args.description or "DynFirework generated datapack"
-
-	# 从 MC 版本映射获取 pack_format
-	mc_ver = args.mc_version or proj.mc_version
-	info = MC_VERSION_MAP.get(mc_ver)
-	if info:
-		pack_format = args.pack_format or info.pack_format
-	else:
-		pack_format = args.pack_format or 15
+	pack_format = args.pack_format or 48
 
 	print(f"导出数据包: {name}")
 	print(f"  输出目录:   {Path(output_dir).resolve()}")
 	print(f"  命名空间:   {namespace}")
-	print(f"  MC 版本:   {mc_ver} (pack_format={pack_format})")
+	print(f"  pack_format: {pack_format}")
 	print(f"  元素数量:   {len(elements)}")
 
 	ok, msg = _do_sync_export(
-		elements, output_dir, namespace, name, desc, pack_format, mc_ver
+		elements, output_dir, namespace, name, desc, pack_format
 	)
 	print(msg)
 	return 0 if ok else 1
 
-# CLI 入口
+# CLI entry
 
 def _add_common_args(sub: argparse.ArgumentParser) -> None:
 	sub.add_argument("project", help=".dyn 项目文件路径")
@@ -299,7 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
 	# export music
 	p = sub.add_parser("music", help="提取嵌入的音乐文件")
 	_add_common_args(p)
-	_add_output_arg(p, None, "输出音频文件路径（默认: <项目名>_music.<ext>）")
+	_add_output_arg(p, None, "输出音频文件路径 (默认: <项目名>_music.<ext>)")
 
 	# export table
 	p = sub.add_parser("table", help="导出元素表")
@@ -315,8 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
 	p.add_argument("--namespace", default=None, help="命名空间 (默认: fireworks1)")
 	p.add_argument("--name", default=None, help="数据包名称 (默认: 项目名)")
 	p.add_argument("--description", default=None, help="数据包描述")
-	p.add_argument("--mc-version", default=None, help="MC 版本 (覆盖项目设置)")
-	p.add_argument("--pack-format", type=int, default=None, help="pack_format (覆盖自动推导)")
+	p.add_argument("--pack-format", type=int, default=None, help="pack_format")
 
 	return parser
 

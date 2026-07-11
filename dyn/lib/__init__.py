@@ -1,11 +1,13 @@
 """DynFirework 核心计算库.
 
-从 gui/lib 复制并适配的函数，用于烟花生成、轨迹计算、特效和命令导出。
-"""
+lib/df/          DynFireworkMod v2.0 - /df 命令 + 物理计算
+lib/particleex/  ParticleEx / Colorblock - /particleex 命令 + 物理计算 (旧)
 
+共享层: global_storage.py, export_mcfunction.py, export_helpers.py (导出基础设施)
+"""
+from . import df
+from . import export_helpers
 from . import export_mcfunction
-from . import fireworks
 from . import global_storage
-from . import shared_functions
-from . import special_effects
-from . import trajectories
+from . import particleex
+from . import units
