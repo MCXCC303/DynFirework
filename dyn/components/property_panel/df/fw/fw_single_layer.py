@@ -4,7 +4,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox
 
 from dyn.components.property_panel.df.fw.fw_base import FwBase
-from dyn.models.df.fireworks import FireworkElement as FireworkElementV2
+from dyn.models.df.fireworks import FireworkElement
 
 class SingleLayerForm(FwBase):
 	"""单层烟花参数表单."""
@@ -30,7 +30,7 @@ class SingleLayerForm(FwBase):
 		self.layout().addWidget(self._group_params)
 		self._sub_groups = [self._group_params]
 
-	def _load_type_sections(self, elem: FireworkElementV2) -> None:
+	def _load_type_sections(self, elem: FireworkElement) -> None:
 		self._group_angle.show()
 		self._group_params.show()
 		self._spin_h_angle.setValue(elem.horizontal_angle)

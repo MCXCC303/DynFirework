@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 
 from dyn.components.property_panel._base import _FormBase
 from dyn.components.property_panel.color_picker import ColorPicker
-from dyn.models.df.fireworks import FireworkElement as FireworkElementV2
+from dyn.models.df.fireworks import FireworkElement
 from dyn.models.df.values import Position, ColorRGB
 
 class FwBase(_FormBase):
@@ -20,7 +20,7 @@ class FwBase(_FormBase):
 
 	def __init__(self, parent: QWidget | None = None) -> None:
 		super().__init__(parent)
-		self._element: FireworkElementV2 | None = None
+		self._element: FireworkElement | None = None
 		self._loading: bool = False
 
 		layout = QVBoxLayout(self)
@@ -160,7 +160,7 @@ class FwBase(_FormBase):
 		for grp in getattr(self, '_sub_groups', []):
 			grp.hide()
 
-	def load(self, elem: FireworkElementV2) -> None:
+	def load(self, elem: FireworkElement) -> None:
 		self._loading = True
 		self._element = elem
 		self.block_signals(True)
@@ -186,7 +186,7 @@ class FwBase(_FormBase):
 		self._loading = False
 		self._update_reset_buttons()
 
-	def _load_type_sections(self, elem: FireworkElementV2) -> None:
+	def _load_type_sections(self, elem: FireworkElement) -> None:
 		"""子类重写以加载类型专属数据."""
 
 	def clear_form(self) -> None:

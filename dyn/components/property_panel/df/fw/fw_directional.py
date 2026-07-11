@@ -4,7 +4,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox
 
 from dyn.components.property_panel.df.fw.fw_base import FwBase
-from dyn.models.df.fireworks import FireworkElement as FireworkElementV2
+from dyn.models.df.fireworks import FireworkElement
 
 class DirectionalForm(FwBase):
 	"""定向烟花参数表单."""
@@ -37,7 +37,7 @@ class DirectionalForm(FwBase):
 		self.layout().addWidget(self._group_params)
 		self._sub_groups = [self._group_params]
 
-	def _load_type_sections(self, elem: FireworkElementV2) -> None:
+	def _load_type_sections(self, elem: FireworkElement) -> None:
 		self._group_params.show()
 		self._spin_speed.setValue(elem.speed)
 		self._spin_spread.setValue(elem.spread_angle)

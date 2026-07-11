@@ -1,4 +1,4 @@
-"""导出数据包对话框 V2 移除后端/MC版本选择."""
+"""导出数据包对话框 df 移除后端/MC版本选择."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import (

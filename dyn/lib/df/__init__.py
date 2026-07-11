@@ -34,14 +34,14 @@ from .effects import (
 from .fireworks import (
 	single_layer_firework,
 	double_layer_firework,
-	directional_firework_v2,
-	clustered_firework_v2,
-	expanding_sphere_firework_v2,
+	directional_firework,
+	clustered_firework,
+	expanding_sphere_firework,
 	nebula_firework,
 )
 from .trajectories import (
-	launch_trajectory_v2,
-	launch_spark_trajectory_v2,
-	expanding_trajectory_v2,
-	spiral_trajectory_v2,
+	launch_trajectory,
+	launch_spark_trajectory,
+	expanding_trajectory,
+	spiral_trajectory,
 )

@@ -1,4 +1,4 @@
-"""项目容器模型 V2 单列表 + V1 三列表向后兼容."""
+"""项目容器模型 df 单列表 + cb 三列表向后兼容."""
 from __future__ import annotations
 
 import json
@@ -11,62 +11,62 @@ from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
-from .df.base import Element as DfElement, ElementCategory
+from .df.base import Element, ElementCategory
 from .df.composites import CompositeElement
 from .df.effects import EffectElement
-from .df.fireworks import FireworkElement as FireworkElementV2
-from .df.trajectories import TrajectoryElement as TrajectoryElementV2
+from .df.fireworks import FireworkElement
+from .df.trajectories import TrajectoryElement
 from .particleex import (
-	Element as V1Element,
-	TrajectoryElement as V1TrajectoryElement,
-	FireworkElement as V1FireworkElement,
-	TrajFireworkElement as V1TrajFireworkElement,
+	Element as CbElement,
+	TrajectoryElement as CbTrajectoryElement,
+	FireworkElement as CbFireworkElement,
+	TrajFireworkElement as CbTrajFireworkElement,
 )
 
-_V2_ELEMENT_CLASSES: dict[str, type] = {
-	"firework_v2": FireworkElementV2,
-	"trajectory_v2": TrajectoryElementV2,
+_DF_ELEMENT_CLASSES: dict[str, type] = {
+	"df_firework": FireworkElement,
+	"df_trajectory": TrajectoryElement,
 	"effect": EffectElement,
 	"composite": CompositeElement,
 }
 
-_V1_ELEMENT_CLASSES: dict[str, type] = {
-	"trajectory": V1TrajectoryElement,
-	"firework": V1FireworkElement,
-	"traj_firework": V1TrajFireworkElement,
+_CB_ELEMENT_CLASSES: dict[str, type] = {
+	"trajectory": CbTrajectoryElement,
+	"firework": CbFireworkElement,
+	"traj_firework": CbTrajFireworkElement,
 }
 
 def _detect_element_version(data: dict) -> str:
 	"""检测元素 JSON 数据的格式版本.
-	V1: 包含 start_tick / duration_ticks
-	V2: 包含 start_time / duration
+	cb: 包含 start_tick / duration_ticks
+	df: 包含 start_time / duration
 	"""
 	if "start_tick" in data or "duration_ticks" in data:
-		return "v1"
-	return "v2"
+		return "cb"
+	return "df"
 
-def _convert_v1_element_to_v2(elem: V1Element) -> DfElement:
-	"""将 V1 元素对象转换为 V2."""
-	from dyn.lib.export_helpers import _ensure_v2
-	return _ensure_v2(elem)
+def _convert_cb_to_df(elem: CbElement) -> Element:
+	"""将 cb 元素对象转换为 df 对象."""
+	from dyn.lib.export_helpers import _ensure_df
+	return _ensure_df(elem)
 
-def _deserialize_v2_element(etype: str, data: dict) -> DfElement:
-	"""从 JSON 反序列化 V2 元素."""
-	cls = _V2_ELEMENT_CLASSES.get(etype)
+def _deserialize_df_element(etype: str, data: dict) -> Element:
+	"""从 JSON 反序列化 df 元素."""
+	cls = _DF_ELEMENT_CLASSES.get(etype)
 	if cls is None:
-		raise ValueError(f"Unknown V2 element type: {etype}")
+		raise ValueError(f"Unknown df element type: {etype}")
 	return cls.from_json(data)
 
-def _deserialize_v1_element(etype: str, data: dict) -> V1Element:
-	"""从 JSON 反序列化 V1 元素."""
-	cls = _V1_ELEMENT_CLASSES.get(etype)
+def _deserialize_cb_element(etype: str, data: dict) -> CbElement:
+	"""从 JSON 反序列化 cb 元素."""
+	cls = _CB_ELEMENT_CLASSES.get(etype)
 	if cls is None:
-		raise ValueError(f"Unknown V1 element type: {etype}")
+		raise ValueError(f"Unknown cb element type: {etype}")
 	return cls.from_json(data)
 
 @dataclass
 class Project:
-	"""DynFirework 项目的完整数据容器 V2."""
+	"""DynFirework 项目的完整数据容器 V2.0."""
 
 	version: str = "2.0"
 	name: str = "Untitled"
@@ -76,13 +76,13 @@ class Project:
 	mc_version: str = "1.20.1"
 	backend: str = "df"
 
-	# V2 单列表
-	elements: list[DfElement] = field(default_factory=list)
+	# df 单列表
+	elements: list[Element] = field(default_factory=list)
 
-	# V1 三列表 向后兼容
-	trajectories: list[V1TrajectoryElement] = field(default_factory=list)
-	fireworks: list[V1FireworkElement] = field(default_factory=list)
-	traj_fireworks: list[V1TrajFireworkElement] = field(default_factory=list)
+	# cb 三列表 向后兼容
+	trajectories: list[CbTrajectoryElement] = field(default_factory=list)
+	fireworks: list[CbFireworkElement] = field(default_factory=list)
+	traj_fireworks: list[CbTrajFireworkElement] = field(default_factory=list)
 
 	saved_positions: list[dict] = field(default_factory=list)
 
@@ -133,7 +133,7 @@ class Project:
 			return max(e.end_time for e in all_elems)
 		return max(e.end_tick for e in all_elems) / 20.0
 
-	def get_element(self, element_id: str) -> DfElement | V1Element | None:
+	def get_element(self, element_id: str) -> Element | CbElement | None:
 		for e in self.elements:
 			if e.id == element_id:
 				return e
@@ -143,7 +143,7 @@ class Project:
 					return e
 		return None
 
-	def remove_element(self, element_id: str) -> DfElement | V1Element | None:
+	def remove_element(self, element_id: str) -> Element | CbElement | None:
 		for i, e in enumerate(self.elements):
 			if e.id == element_id:
 				return self.elements.pop(i)
@@ -153,11 +153,11 @@ class Project:
 					return lst.pop(i)
 		return None
 
-	def add_element(self, elem: DfElement) -> None:
+	def add_element(self, elem: Element) -> None:
 		self.elements.append(elem)
 
 	def to_json(self) -> dict[str, Any]:
-		"""序列化为 JSON 字典 V2 格式."""
+		"""序列化为 JSON 字典 df 格式 (df)."""
 		result: dict[str, Any] = {
 			"version": self.version,
 			"project": {
@@ -171,7 +171,7 @@ class Project:
 			},
 			"elements": [
 				{
-					"type": f"{e.category.value}_v2" if e.category in (ElementCategory.FIREWORK,
+					"type": f"{e.category.value}_df" if e.category in (ElementCategory.FIREWORK,
 					                                                   ElementCategory.TRAJECTORY) else e.category.value,
 					"id": e.id,
 					"data": e.to_json(),
@@ -189,32 +189,32 @@ class Project:
 
 	@classmethod
 	def from_json(cls, data: dict[str, Any]) -> Project:
-		"""从 JSON 字典反序列化 支持 V1 和 V2 格式."""
+		"""从 JSON 字典反序列化 支持 V1 和 df 格式 (df)."""
 		proj = data.get("project", {})
 		ts_data = data.get("timeline_state", {})
 
-		elements: list[DfElement] = []
+		elements: list[Element] = []
 
-		# V2 格式 elements 列表
+		# df 格式 (df) elements 列表
 		raw_elements = data.get("elements", [])
 		if raw_elements:
 			for entry in raw_elements:
 				etype = entry["type"]
 				elem_data = entry["data"]
 				ver = _detect_element_version(elem_data)
-				if ver == "v2":
-					elements.append(_deserialize_v2_element(etype, elem_data))
+				if ver == "df":
+					elements.append(_deserialize_df_element(etype, elem_data))
 				else:
-					v1_elem = _deserialize_v1_element(etype, elem_data)
-					elements.append(_convert_v1_element_to_v2(v1_elem))
+					v1_elem = _deserialize_cb_element(etype, elem_data)
+					elements.append(_convert_cb_to_df(v1_elem))
 		else:
-			# V1 格式 三列表
+			# cb 格式 三列表
 			for t in data.get("trajectories", []):
-				elements.append(_convert_v1_element_to_v2(V1TrajectoryElement.from_json(t)))
+				elements.append(_convert_cb_to_df(CbTrajectoryElement.from_json(t)))
 			for f in data.get("fireworks", []):
-				elements.append(_convert_v1_element_to_v2(V1FireworkElement.from_json(f)))
+				elements.append(_convert_cb_to_df(CbFireworkElement.from_json(f)))
 			for tf in data.get("traj_fireworks", []):
-				elements.append(_convert_v1_element_to_v2(V1TrajFireworkElement.from_json(tf)))
+				elements.append(_convert_cb_to_df(CbTrajFireworkElement.from_json(tf)))
 
 		return cls(
 			version=data.get("version", "1.0"),
@@ -242,23 +242,23 @@ class Project:
 		result = read_project_archive(path)
 
 		proj_meta = result.manifest.get("project", {})
-		elements: list[DfElement] = []
+		elements: list[Element] = []
 
 		for elem in result.elements:
 			etype = elem["type"]
 			elem_data = elem["data"]
 			ver = _detect_element_version(elem_data)
-			if ver == "v2":
+			if ver == "df":
 				try:
-					elements.append(_deserialize_v2_element(etype, elem_data))
+					elements.append(_deserialize_df_element(etype, elem_data))
 				except (KeyError, ValueError) as e:
-					log.warning(f"V2 元素反序列化失败: {e}, type={etype}, id={elem.get('id')}")
+					log.warning(f"df 元素反序列化失败: {e}, type={etype}, id={elem.get('id')}")
 			else:
 				try:
-					v1_elem = _deserialize_v1_element(etype, elem_data)
-					elements.append(_convert_v1_element_to_v2(v1_elem))
+					v1_elem = _deserialize_cb_element(etype, elem_data)
+					elements.append(_convert_cb_to_df(v1_elem))
 				except (KeyError, ValueError) as e:
-					log.warning(f"V1 元素反序列化/迁移失败: {e}, type={etype}, id={elem.get('id')}")
+					log.warning(f"cb 元素反序列化/迁移失败: {e}, type={etype}, id={elem.get('id')}")
 
 		music_name = ""
 		if result.manifest.get("music"):
@@ -292,7 +292,7 @@ class Project:
 		return proj
 
 	def to_file(self, path: str | Path) -> None:
-		"""将项目写入 .dyn tar.gz 归档 V2 格式."""
+		"""将项目写入 .dyn tar.gz 归档 df 格式 (df)."""
 		path = Path(path)
 		log.debug(f"写入项目归档: {path}")
 
@@ -309,7 +309,7 @@ class Project:
 		for e in self.elements:
 			cat = e.category
 			if cat in (ElementCategory.FIREWORK, ElementCategory.TRAJECTORY):
-				etype = f"{cat.value}_v2"
+				etype = f"{cat.value}_df"
 			else:
 				etype = cat.value
 			elements_payload.append({"type": etype, "id": e.id, "data": e.to_json()})

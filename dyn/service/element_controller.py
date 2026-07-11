@@ -1,5 +1,5 @@
 """元素控制器 管理所有时间线元素的 CRUD 和属性同步.
-V2: 统一存储 df 元素 (start_time/duration float)，V1 元素在加载时自动转换.
+df: 统一存储 df 元素 (start_time/duration float)，cb 元素在加载时自动转换.
 """
 from __future__ import annotations
 
@@ -14,10 +14,12 @@ from dyn.logging_config import get_logger
 log = get_logger(__name__)
 
 from dyn.models.df.base import ElementCategory, Element as DfElement
-from dyn.models.df.composites import CompositeElement
-from dyn.models.df.effects import EffectElement
-from dyn.models.df.fireworks import FireworkElement as FireworkElementV2
-from dyn.models.df.trajectories import TrajectoryElement as TrajectoryElementV2
+from dyn.models.df.composites import CompositeElement as DfCompositeElement
+from dyn.models.df.effects import EffectElement as DfEffectElement
+from dyn.models.df.fireworks import FireworkElement as DfFireworkElement
+from dyn.models.df.trajectories import TrajectoryElement as DfTrajectoryElement
+from dyn.models.particleex import Position as CbPosition
+from dyn.models.particleex import TrajFireworkElement as CbTrajFireworkElement
 from dyn.models.df.values import (
 	FireworkType, TrajectoryType, EffectType, CompositeType, Position,
 )
@@ -26,10 +28,10 @@ if TYPE_CHECKING:
 	pass
 
 _ELEMENT_CLASSES: dict[ElementCategory, type] = {
-	ElementCategory.FIREWORK: FireworkElementV2,
-	ElementCategory.TRAJECTORY: TrajectoryElementV2,
-	ElementCategory.EFFECT: EffectElement,
-	ElementCategory.COMPOSITE: CompositeElement,
+	ElementCategory.FIREWORK: DfFireworkElement,
+	ElementCategory.TRAJECTORY: DfTrajectoryElement,
+	ElementCategory.EFFECT: DfEffectElement,
+	ElementCategory.COMPOSITE: DfCompositeElement,
 }
 
 _DEFAULT_TYPE_KEYS: dict[ElementCategory, str] = {
@@ -73,7 +75,7 @@ _PROXY_SUFFIXES: tuple[str, ...] = (
 )
 
 class ElementController(QObject):
-	"""中央元素管理服务 V2 统一存储 df 元素."""
+	"""中央元素管理服务 df: 统一存储 df 元素."""
 
 	element_added = Signal(DfElement)
 	element_removed = Signal(str)
@@ -154,7 +156,7 @@ class ElementController(QObject):
 			self, category: ElementCategory, type_key: str = "",
 			name: str = "", start_time: float = 0.0,
 	) -> DfElement:
-		"""工厂方法 创建指定类别 + 子类型的 V2 元素."""
+		"""工厂方法 创建指定类别 + 子类型的 df 元素."""
 		cls = _ELEMENT_CLASSES.get(category)
 		if cls is None:
 			raise ValueError(f"Unknown category: {category}")
@@ -165,29 +167,28 @@ class ElementController(QObject):
 		elem_name = name or f"{cat_label} {count}"
 
 		if category == ElementCategory.FIREWORK:
-			elem = FireworkElementV2(
+			elem = DfFireworkElement(
 				name=elem_name, start_time=start_time,
 				fw_type=FireworkType(tk) if tk else FireworkType.SINGLE_LAYER,
 			)
 		elif category == ElementCategory.TRAJECTORY:
-			elem = TrajectoryElementV2(
+			elem = DfTrajectoryElement(
 				name=elem_name, start_time=start_time,
 				traj_type=TrajectoryType(tk) if tk else TrajectoryType.LAUNCH,
 			)
 		elif category == ElementCategory.EFFECT:
-			elem = EffectElement(
+			elem = DfEffectElement(
 				name=elem_name, start_time=start_time,
 				effect_type=EffectType(tk) if tk else EffectType.BEAM,
 			)
 		elif category == ElementCategory.COMPOSITE:
-			elem = CompositeElement(
+			elem = DfCompositeElement(
 				name=elem_name, start_time=start_time,
 				composite_type=CompositeType(tk) if tk else CompositeType.SECONDARY_EXPLOSION,
 			)
 		else:
 			raise ValueError(f"Unknown category: {category}")
 
-		self.add_element(elem)
 		return elem
 
 	# 删除
@@ -236,16 +237,16 @@ class ElementController(QObject):
 
 		pos = Position(x=x, y=y, z=z)
 
-		if isinstance(elem, TrajectoryElementV2):
+		if isinstance(elem, DfTrajectoryElement):
 			if which == "end":
 				elem.end_position = pos
 			else:
 				elem.start_position = pos
-		elif isinstance(elem, FireworkElementV2):
+		elif isinstance(elem, DfFireworkElement):
 			elem.position = pos
-		elif isinstance(elem, EffectElement):
+		elif isinstance(elem, DfEffectElement):
 			elem.position = pos
-		elif isinstance(elem, CompositeElement):
+		elif isinstance(elem, DfCompositeElement):
 			if which == "se_start":
 				elem.se_start_position = pos
 			elif which == "se_mid":
@@ -253,22 +254,20 @@ class ElementController(QObject):
 			else:
 				elem.position = pos
 		else:
-			# V1 兼容
-			from dyn.models.particleex import Position as V1Position, \
-				TrajectoryElement, FireworkElement, TrajFireworkElement
-			v1pos = V1Position(x=x, y=y, z=z)
+			# cb 兼容
+			cb_pos = CbPosition(x=x, y=y, z=z)
 			if which == "end":
-				if isinstance(elem, TrajFireworkElement):
-					elem.mid_position = v1pos
-				elif isinstance(elem, TrajectoryElement):
-					elem.end_position = v1pos
+				if isinstance(elem, CbTrajFireworkElement):
+					elem.mid_position = cb_pos
+				elif isinstance(elem, DfTrajectoryElement):
+					elem.end_position = cb_pos
 			else:
-				if isinstance(elem, TrajFireworkElement):
-					elem.start_position = v1pos
-				elif isinstance(elem, TrajectoryElement):
-					elem.start_position = v1pos
-				elif isinstance(elem, FireworkElement):
-					elem.position = v1pos
+				if isinstance(elem, CbTrajFireworkElement):
+					elem.start_position = cb_pos
+				elif isinstance(elem, DfTrajectoryElement):
+					elem.start_position = cb_pos
+				elif isinstance(elem, DfFireworkElement):
+					elem.position = cb_pos
 
 		self.element_changed.emit(element_id, "position", pos)
 		return True
@@ -300,35 +299,34 @@ class ElementController(QObject):
 		cloned = copy.deepcopy(elem)
 		cloned.id = str(uuid4())
 		cloned.name = f"{elem.name} (副本)"
-		self.add_element(cloned)
 		return cloned
 
 	# 项目同步
 
 	def load_from_project(self, project) -> None:
-		"""从 Project 加载元素 自动将 V1 元素转换为 V2."""
-		from dyn.lib.export_helpers import _ensure_v2
+		"""从 Project 加载元素 自动将 cb 元素转换为 df."""
+		from dyn.lib.export_helpers import _ensure_df
 
 		self._elements.clear()
 		self._selected_id = ""
 
-		# V2 单列表优先
-		v2_list = getattr(project, 'elements', None)
-		if v2_list:
-			for e in v2_list:
+		# df 单列表优先
+		df_list = getattr(project, 'elements', None)
+		if df_list:
+			for e in df_list:
 				self._elements[e.id] = e
 			return
 
-		# V1 三列表兼容
+		# cb 三列表兼容
 		for e in getattr(project, 'trajectories', []):
-			v2 = _ensure_v2(e)
-			self._elements[v2.id] = v2
+			df_elem = _ensure_df(e)
+			self._elements[df_elem.id] = df_elem
 		for e in getattr(project, 'fireworks', []):
-			v2 = _ensure_v2(e)
-			self._elements[v2.id] = v2
+			df_elem = _ensure_df(e)
+			self._elements[df_elem.id] = df_elem
 		for e in getattr(project, 'traj_fireworks', []):
-			v2 = _ensure_v2(e)
-			self._elements[v2.id] = v2
+			df_elem = _ensure_df(e)
+			self._elements[df_elem.id] = df_elem
 
 	def to_project(self, project) -> None:
 		"""将元素写回 Project V2 单列表."""

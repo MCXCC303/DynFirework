@@ -166,7 +166,7 @@ def cmd_export_table(args: argparse.Namespace) -> int:
 	print(f"已导出 {len(rows)} 个元素到: {output}")
 	return 0
 
-# export datapack (V2)
+# export datapack (df)
 
 def _do_sync_export(
 		elements: list[Any],

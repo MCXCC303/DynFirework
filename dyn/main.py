@@ -1,4 +1,4 @@
-"""DynFirework 主窗口 V2."""
+"""DynFirework 主窗口."""
 from __future__ import annotations
 
 import re
@@ -286,7 +286,7 @@ class MainWin(QMainWindow):
 		)
 
 		# 时间线选中
-		self._timeline.element_selected.connect(self._on_timeline_select)
+		# (去重) 时间线选中直连 track 级别
 		all_tracks = [
 			self._timeline.fw_track, self._timeline.traj_track,
 			self._timeline.effect_track, self._timeline.composite_track,
@@ -311,8 +311,8 @@ class MainWin(QMainWindow):
 			self._on_position_select_requested
 		)
 
-		self._timeline.element_moved.connect(self._on_timeline_element_moved)
-		self._timeline.element_resized.connect(self._on_timeline_element_resized)
+		# (去重) timeline element_moved 由 track 级别直连处理
+		# (去重) timeline element_resized 由 track 级别直连处理
 
 		# 播放控制 tick <-> second 转换
 		self._playback.position_changed.connect(self._on_playback_position)
@@ -481,7 +481,7 @@ class MainWin(QMainWindow):
 	# 槽: 编辑操作
 
 	def _on_new_element(self, category: ElementCategory) -> None:
-		"""创建 V2 元素."""
+		"""创建 元素."""
 		cursor_time = self._timeline.playback_time
 		cat_label = CATEGORY_DISPLAY.get(category, category.value)
 		count = len(self._controller.get_elements_by_category(category))
@@ -552,13 +552,13 @@ class MainWin(QMainWindow):
 		if elem is not None:
 			self._controller.select_element(elem.id)
 			self._property_panel.load_element(elem, "")
-			# V2 CompositeElement 代理选中
+			# CompositeElement 代理选中
 			if isinstance(elem, CompositeElement):
 				for t in [self._timeline.fw_track, self._timeline.traj_track,
 				          self._timeline.effect_track, self._timeline.composite_track]:
 					t.set_selection(elem.id)
 			elif hasattr(elem, 'traj_type') and hasattr(elem, 'fw_type'):
-				# V1 TrajFireworkElement
+				# cb TrajFireworkElement
 				for t in [self._timeline.fw_track, self._timeline.traj_track,
 				          self._timeline.effect_track, self._timeline.composite_track]:
 					t.set_selection("")

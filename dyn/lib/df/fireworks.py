@@ -36,7 +36,7 @@ def double_layer_firework(elem) -> None:
 	)
 	global_storage.add_command(tick, cmd)
 
-def directional_firework_v2(elem) -> None:
+def directional_firework(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	pos = elem.position
 	cmd = cmd_directional(
@@ -49,7 +49,7 @@ def directional_firework_v2(elem) -> None:
 	)
 	global_storage.add_command(tick, cmd)
 
-def clustered_firework_v2(elem) -> None:
+def clustered_firework(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	pos = elem.position
 	cmd = cmd_clustered(
@@ -63,7 +63,7 @@ def clustered_firework_v2(elem) -> None:
 	)
 	global_storage.add_command(tick, cmd)
 
-def expanding_sphere_firework_v2(elem) -> None:
+def expanding_sphere_firework(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	pos = elem.position
 	cmd = cmd_expanding(

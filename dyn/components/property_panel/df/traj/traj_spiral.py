@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QFormLayout, QVBoxLayout, QGroupBox, QDoubleSpinBo
 
 from dyn.components.property_panel.color_picker import ColorPicker
 from dyn.components.property_panel.df.traj.traj_base import TrajBase
-from dyn.models.df.trajectories import TrajectoryElement as TrajectoryElementV2
+from dyn.models.df.trajectories import TrajectoryElement
 
 class SpiralForm(TrajBase):
 	"""螺旋轨迹表单 螺旋参数 + 粒子参数 + 外壳参数."""
@@ -69,7 +69,7 @@ class SpiralForm(TrajBase):
 
 		self._sub_groups = [self._group_spiral, self._group_particle, self._group_shell]
 
-	def _load_type_params(self, elem: TrajectoryElementV2) -> None:
+	def _load_type_params(self, elem: TrajectoryElement) -> None:
 		for grp in self._sub_groups:
 			grp.show()
 		self._spin_spiral_radius.setValue(elem.spiral_radius)

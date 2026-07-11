@@ -12,9 +12,9 @@ from dyn.logging_config import get_logger
 from dyn.models.df.base import ElementCategory
 from dyn.models.df.composites import CompositeElement
 from dyn.models.df.effects import EffectElement
-from dyn.models.df.fireworks import FireworkElement as FireworkElementV2
+from dyn.models.df.fireworks import FireworkElement
 from dyn.models.df.registry import get_type_key, get_types_by_category
-from dyn.models.df.trajectories import TrajectoryElement as TrajectoryElementV2
+from dyn.models.df.trajectories import TrajectoryElement
 from dyn.service.element_controller import ElementController
 
 log = get_logger(__name__)
@@ -33,8 +33,8 @@ class PropertyPanel(QScrollArea):
 	"""动态参数面板 中控.
 
 	根据 ElementCategory + sub_type 切换表单:
-		FireworkElementV2   -> 按 fw_type 选取烟花表单
-		TrajectoryElementV2 -> 按 traj_type 选取轨迹表单
+		FireworkElement   -> 按 fw_type 选取烟花表单
+		TrajectoryElement -> 按 traj_type 选取轨迹表单
 		EffectElement       -> 按 effect_type 选取效果表单
 		CompositeElement    -> 按 composite_type 选取复合表单
 	"""
@@ -133,10 +133,10 @@ class PropertyPanel(QScrollArea):
 
 	def _set_element_type(self, type_key: str) -> None:
 		e = self._current_element
-		if isinstance(e, FireworkElementV2):
+		if isinstance(e, FireworkElement):
 			from dyn.models.df.values import FireworkType
 			e.fw_type = FireworkType(type_key)
-		elif isinstance(e, TrajectoryElementV2):
+		elif isinstance(e, TrajectoryElement):
 			from dyn.models.df.values import TrajectoryType
 			e.traj_type = TrajectoryType(type_key)
 		elif isinstance(e, EffectElement):

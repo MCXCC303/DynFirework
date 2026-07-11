@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 
 from dyn.components.property_panel._base import _FormBase
 from dyn.components.property_panel.color_picker import ColorPicker
-from dyn.models.df.trajectories import TrajectoryElement as TrajectoryElementV2
+from dyn.models.df.trajectories import TrajectoryElement
 from dyn.models.df.values import Position, ColorRGB
 
 class TrajBase(_FormBase):
@@ -20,7 +20,7 @@ class TrajBase(_FormBase):
 
 	def __init__(self, parent: QWidget | None = None) -> None:
 		super().__init__(parent)
-		self._element: TrajectoryElementV2 | None = None
+		self._element: TrajectoryElement | None = None
 		self._loading: bool = False
 
 		layout = QVBoxLayout(self)
@@ -116,7 +116,7 @@ class TrajBase(_FormBase):
 		for grp in getattr(self, '_sub_groups', []):
 			grp.hide()
 
-	def load(self, elem: TrajectoryElementV2) -> None:
+	def load(self, elem: TrajectoryElement) -> None:
 		self._loading = True
 		self._element = elem
 		self.block_signals(True)
@@ -144,7 +144,7 @@ class TrajBase(_FormBase):
 		self._loading = False
 		self._update_reset_buttons()
 
-	def _load_type_params(self, elem: TrajectoryElementV2) -> None:
+	def _load_type_params(self, elem: TrajectoryElement) -> None:
 		"""子类重写以加载类型专属参数."""
 
 	def clear_form(self) -> None:

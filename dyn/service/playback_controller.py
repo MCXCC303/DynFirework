@@ -1,4 +1,4 @@
-"""播放控制器 封装 QMediaPlayer 用于音乐回放 V2 适配秒单位."""
+"""播放控制器 封装 QMediaPlayer 用于音乐回放 df 适配秒单位."""
 from __future__ import annotations
 
 from pathlib import Path

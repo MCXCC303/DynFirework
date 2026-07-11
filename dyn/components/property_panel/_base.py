@@ -1,4 +1,4 @@
-"""属性表单共享基类 V2 适配秒单位."""
+"""属性表单共享基类, DynFirework Mod 适配秒单位."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
@@ -62,7 +62,8 @@ class _FormBase(QWidget):
 		self.layout().addWidget(group)
 		return group, sx, sy, sz, btn
 
-	def _reset_value(self, key: str, default: object, widget: QWidget) -> None:
+	@staticmethod
+	def _reset_value(key: str, default: object, widget: QWidget) -> None:
 		if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
 			widget.setValue(default)
 		elif isinstance(widget, QComboBox):

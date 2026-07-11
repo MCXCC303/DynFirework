@@ -9,7 +9,7 @@ from dyn.models.particleex.composites import TrajFireworkElement
 
 from .._base import (
 	_BaseBrowserModel, GroupNode, ElementNode, ProxyNode,
-	_format_v1_time,
+	_format_cb_time,
 )
 
 CATEGORY_DISPLAY = {
@@ -18,7 +18,7 @@ CATEGORY_DISPLAY = {
 	ElementCategory.COMPOSITE: "轨迹烟花",
 }
 
-V1_TO_CATEGORY = {
+CB_TO_CATEGORY = {
 	ElementType.TRAJECTORY: ElementCategory.TRAJECTORY,
 	ElementType.FIREWORK: ElementCategory.FIREWORK,
 	ElementType.TRAJ_FIREWORK: ElementCategory.COMPOSITE,
@@ -26,7 +26,7 @@ V1_TO_CATEGORY = {
 
 _HEADERS = ("名称", "起始时间", "时长")
 
-class ParticleexElementBrowserModel(_BaseBrowserModel):
+class CbElementBrowserModel(_BaseBrowserModel):
 	"""ParticleEx 元素浏览器 3列 3分类 TF 子节点."""
 
 	def _setup_groups(self) -> None:
@@ -47,7 +47,7 @@ class ParticleexElementBrowserModel(_BaseBrowserModel):
 	@staticmethod
 	def _category_for_element(elem) -> ElementCategory:
 		if hasattr(elem, 'element_type'):
-			return V1_TO_CATEGORY.get(elem.element_type, ElementCategory.COMPOSITE)
+			return CB_TO_CATEGORY.get(elem.element_type, ElementCategory.COMPOSITE)
 		return ElementCategory.COMPOSITE
 
 	def data(self, index: QModelIndex, role: int = Qt.DisplayRole):
@@ -60,11 +60,11 @@ class ParticleexElementBrowserModel(_BaseBrowserModel):
 			if isinstance(node, ProxyNode):
 				parent_elem = node.parent.data
 				if node.data == "_tf_traj":
-					vals = (node.label, _format_v1_time(parent_elem.start_tick),
-					        _format_v1_time(parent_elem.traj_duration_ticks))
+					vals = (node.label, _format_cb_time(parent_elem.start_tick),
+					        _format_cb_time(parent_elem.traj_duration_ticks))
 				else:
-					vals = (node.label, _format_v1_time(parent_elem.fw_start_tick),
-					        _format_v1_time(parent_elem.fw_duration_ticks))
+					vals = (node.label, _format_cb_time(parent_elem.fw_start_tick),
+					        _format_cb_time(parent_elem.fw_duration_ticks))
 				return vals[col]
 			if isinstance(node, GroupNode):
 				if col == 0:
@@ -76,11 +76,11 @@ class ParticleexElementBrowserModel(_BaseBrowserModel):
 				if col == 0:
 					return getattr(elem, 'name', '?')
 				elif col == 1:
-					return _format_v1_time(elem.start_tick)
+					return _format_cb_time(elem.start_tick)
 				elif col == 2:
 					if isinstance(elem, TrajFireworkElement):
-						return _format_v1_time(elem.traj_duration_ticks + elem.fw_duration_ticks)
-					return _format_v1_time(elem.duration_ticks)
+						return _format_cb_time(elem.traj_duration_ticks + elem.fw_duration_ticks)
+					return _format_cb_time(elem.duration_ticks)
 
 		return self._style_data(node, role, col)
 

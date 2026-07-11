@@ -1,5 +1,5 @@
 """导出服务 将项目元素生成为 Minecraft 数据包.
-V2: 使用 EXPORT_DISPATCH + df_backend，移除 backend_registry 依赖.
+df: 使用 EXPORT_DISPATCH + df_backend，移除 backend_registry 依赖.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
-from dyn.models.df.base import Element as DfElement
+from dyn.models.df.base import Element
 
 class _TaskSignals(QObject):
 	finished = Signal(bool, str)
@@ -22,7 +22,7 @@ class _TaskSignals(QObject):
 
 class _ExportTask(QRunnable):
 
-	def __init__(self, elements: list[DfElement], output_dir: str, namespace: str,
+	def __init__(self, elements: list[Element], output_dir: str, namespace: str,
 	             datapack_name: str = "DynFirework", description: str = "",
 	             pack_format: int = 48, mc_version: str = "1.21.8") -> None:
 		super().__init__()
@@ -80,7 +80,7 @@ class ExportService(QObject):
 
 	def export_to_datapack(
 			self,
-			elements: list[DfElement],
+			elements: list[Element],
 			output_dir: str,
 			namespace: str = "fireworks1",
 			datapack_name: str = "DynFirework",

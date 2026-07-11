@@ -17,7 +17,7 @@ from PySide6.QtGui import QFont, QColor
 from dyn.service.element_controller import ElementController
 
 if TYPE_CHECKING:
-	from dyn.models.df.base import Element as DfElement
+	from dyn.models.df.base import Element
 	from dyn.models.particleex.base import Element as CbElement
 
 log = logging.getLogger("dyn.components.element_browser")
@@ -25,7 +25,7 @@ log = logging.getLogger("dyn.components.element_browser")
 def _format_time_sec(value: float) -> str:
 	return f"{value:.2f}s"
 
-def _format_v1_time(tick: int) -> str:
+def _format_cb_time(tick: int) -> str:
 	return f"{tick / 20.0:.2f}s"
 
 # 树节点 按种类分子类，消除 Any
@@ -58,12 +58,12 @@ class GroupNode(BaseNode):
 		self.data: Enum = data
 
 class ElementNode(BaseNode):
-	"""元素节点 data: DfElement | CbElement."""
+	"""元素节点 data: Element | CbElement."""
 	__slots__ = ("data",)
 
-	def __init__(self, label: str, data: DfElement | CbElement, parent: BaseNode | None = None) -> None:
+	def __init__(self, label: str, data: Element | CbElement, parent: BaseNode | None = None) -> None:
 		super().__init__(label, parent)
-		self.data: DfElement | CbElement = data
+		self.data: Element | CbElement = data
 
 class ProxyNode(BaseNode):
 	"""代理节点 data: 代理标识字符串 ("_tf_traj" / "_tf_fw")."""

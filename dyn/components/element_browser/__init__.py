@@ -4,12 +4,12 @@ ParticleEx: 3列 3分类 TF 子节点
 """
 from ._base import BaseNode, GroupNode, ElementNode, ProxyNode
 from .df import DfElementBrowserModel
-from .particleex import ParticleexElementBrowserModel
+from .particleex import CbElementBrowserModel
 
 # 默认使用 DF 浏览器
 ElementBrowserModel = DfElementBrowserModel
 
 __all__ = [
-	"ElementBrowserModel", "DfElementBrowserModel", "ParticleexElementBrowserModel",
+	"ElementBrowserModel", "DfElementBrowserModel", "CbElementBrowserModel",
 	"BaseNode", "GroupNode", "ElementNode", "ProxyNode",
 ]

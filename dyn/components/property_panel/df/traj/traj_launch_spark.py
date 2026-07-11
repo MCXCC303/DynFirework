@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QFormLayout, QVBoxLayout, QGroupBox, QDoubleSpinBo
 
 from dyn.components.property_panel.color_picker import ColorPicker
 from dyn.components.property_panel.df.traj.traj_base import TrajBase
-from dyn.models.df.trajectories import TrajectoryElement as TrajectoryElementV2
+from dyn.models.df.trajectories import TrajectoryElement
 
 class LaunchSparkForm(TrajBase):
 	"""发射火花轨迹表单 物理参数 + 外壳参数."""
@@ -55,7 +55,7 @@ class LaunchSparkForm(TrajBase):
 
 		self._sub_groups = [self._group_physics, self._group_shell]
 
-	def _load_type_params(self, elem: TrajectoryElementV2) -> None:
+	def _load_type_params(self, elem: TrajectoryElement) -> None:
 		for grp in self._sub_groups:
 			grp.show()
 		self._spin_k.setValue(elem.k)

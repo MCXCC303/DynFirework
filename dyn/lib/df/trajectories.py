@@ -7,7 +7,7 @@ from dyn.lib.df.commands import (
 )
 from dyn.lib.units import seconds_to_tick
 
-def launch_trajectory_v2(elem) -> None:
+def launch_trajectory(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	sp = elem.start_position
 	ep = elem.end_position
@@ -24,7 +24,7 @@ def launch_trajectory_v2(elem) -> None:
 		sc = elem.shell_color
 		global_storage.add_command(tick, cmd_shell(ep.x, ep.y, ep.z, sc.r, sc.g, sc.b, elem.shell_size))
 
-def launch_spark_trajectory_v2(elem) -> None:
+def launch_spark_trajectory(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	sp = elem.start_position
 	ep = elem.end_position
@@ -38,7 +38,7 @@ def launch_spark_trajectory_v2(elem) -> None:
 	)
 	global_storage.add_command(tick, cmd)
 
-def expanding_trajectory_v2(elem) -> None:
+def expanding_trajectory(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	sp = elem.start_position
 	ep = elem.end_position
@@ -54,7 +54,7 @@ def expanding_trajectory_v2(elem) -> None:
 	)
 	global_storage.add_command(tick, cmd)
 
-def spiral_trajectory_v2(elem) -> None:
+def spiral_trajectory(elem) -> None:
 	tick = seconds_to_tick(elem.start_time)
 	sp = elem.start_position
 	ep = elem.end_position

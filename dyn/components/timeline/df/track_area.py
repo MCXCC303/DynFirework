@@ -11,9 +11,13 @@ from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
-from dyn.models.particleex.fireworks import FireworkElement
-from dyn.models.particleex.trajectories import TrajectoryElement
+from dyn.models.particleex.fireworks import FireworkElement as CbFireworkElement
+from dyn.models.particleex.trajectories import TrajectoryElement as CbTrajectoryElement
 from dyn.models.particleex.values import ColorRGB
+from dyn.models.df.fireworks import FireworkElement as DfFireworkElement
+from dyn.models.df.trajectories import TrajectoryElement as DfTrajectoryElement
+from dyn.models.df.effects import EffectElement as DfEffectElement
+from dyn.models.df.composites import CompositeElement as DfCompositeElement
 from .proxy import _ElementView
 from .theme import (
 	palette_colors,
@@ -159,30 +163,60 @@ class _TrackArea(QWidget):
 			p.end()
 
 	def _paint_block(self, p: QPainter, blk: _BlockLayout) -> None:
-		view = blk.element
-		r = blk.rect
-		sel = self._match_selection(view, self._selected_id)
-		self._paint_block_gradient(p, view, r, sel)
-		if sel:
-			p.setPen(QPen(self._sel_color, 2))
-			p.drawRoundedRect(r.adjusted(1, 1, -1, -1), 3, 3)
-		if r.width() > 20:
-			p.setPen(QPen(QColor(255, 255, 255), 1))
-			f = QFont()
-			f.setPointSize(7)
-			p.setFont(f)
-			p.drawText(r.adjusted(4, 0, -4, 0), Qt.AlignVCenter | Qt.AlignLeft, view.name)
-		if r.width() > 36:
-			p.setPen(QPen(QColor(255, 255, 255, 150), 1))
-			f2 = QFont()
-			f2.setPointSize(6)
-			p.setFont(f2)
-			p.drawText(QRect(r.right() - 18, r.top() + 2, 14, r.height() - 4), Qt.AlignCenter, self._icon(view))
+		try:
+			view = blk.element
+			r = blk.rect
+			sel = self._match_selection(view, self._selected_id)
+			self._paint_block_gradient(p, view, r, sel)
+			if sel:
+				p.setPen(QPen(self._sel_color, 2))
+				p.drawRoundedRect(r.adjusted(1, 1, -1, -1), 3, 3)
+			if r.width() > 20:
+				p.setPen(QPen(QColor(255, 255, 255), 1))
+				f = QFont()
+				f.setPointSize(7)
+				p.setFont(f)
+				p.drawText(r.adjusted(4, 0, -4, 0), Qt.AlignVCenter | Qt.AlignLeft, view.name)
+			if r.width() > 36:
+				p.setPen(QPen(QColor(255, 255, 255, 150), 1))
+				f2 = QFont()
+				f2.setPointSize(6)
+				p.setFont(f2)
+				p.drawText(QRect(r.right() - 18, r.top() + 2, 14, r.height() - 4), Qt.AlignCenter, self._icon(view))
+		except Exception as e:
+			log.error(f"_paint_block 异常: id={blk.element.id[:8]} type={type(blk.element.elem).__name__}: {e}", exc_info=True)
+
+	@staticmethod
+	def _effect_color(elem) -> ColorRGB:
+		et = elem.effect_type
+		if hasattr(et, "value"):
+			et = et.value
+		colors = {"beam": ColorRGB(255, 200, 100), "spray": ColorRGB(100, 200, 255),
+		          "double_helix": ColorRGB(200, 100, 255), "rotating_ring": ColorRGB(100, 255, 200)}
+		return colors.get(et, ColorRGB(150, 150, 150))
+
+	@staticmethod
+	def _fw_is_double(elem) -> bool:
+		ft = elem.fw_type
+		if hasattr(ft, "value"):
+			ft = ft.value
+		return ft == "double_layer"
+
+	@staticmethod
+	def _composite_color(elem) -> ColorRGB:
+		ct = elem.composite_type
+		if hasattr(ct, "value"):
+			ct = ct.value
+		if ct == "secondary_explosion":
+			return elem.se_primary_color.start
+		return elem.ce_cluster_color.start
 
 	@staticmethod
 	def _paint_block_gradient(p: QPainter, view: _ElementView, r: QRect, sel: bool) -> None:
 		disabled = not view.enabled
 		elem = view.elem
+
+		# Determine color based on element type
 		if view.is_composite_part and view.is_tf():
 			parent = elem
 			if view.part == "traj":
@@ -196,17 +230,40 @@ class _TrackArea(QWidget):
 				c_end = parent.inner_color.end
 				c_outer_start = parent.outer_color.start
 				c_outer_end = parent.outer_color.end
-		elif isinstance(elem, TrajectoryElement):
+		elif view.is_composite_part:
+			parent = elem
+			if view.part == "primary":
+				c_start, c_end = parent.se_primary_color.start, parent.se_primary_color.end
+				use_grad = parent.se_primary_color.use_gradient
+			elif view.part == "secondary":
+				c_start, c_end = parent.se_secondary_color.start, parent.se_secondary_color.end
+				use_grad = parent.se_secondary_color.use_gradient
+			elif view.part == "clustered":
+				c_start, c_end = parent.ce_cluster_color.start, parent.ce_cluster_color.end
+				use_grad = parent.ce_cluster_color.use_gradient
+			else:
+				c_start, c_end = parent.ce_sphere_color.start, parent.ce_sphere_color.end
+				use_grad = parent.ce_sphere_color.use_gradient
+			layers = 1
+		elif isinstance(elem, (CbTrajectoryElement, DfTrajectoryElement)):
 			c_start, c_end = elem.traj_color.start, elem.traj_color.end
 			use_grad = elem.traj_color.use_gradient
 			layers = 1
-		elif isinstance(elem, FireworkElement):
+		elif isinstance(elem, (CbFireworkElement, DfFireworkElement)):
 			use_grad = elem.inner_color.use_gradient
-			layers = 2 if elem.fw_type == "double_layer" else 1
+			layers = 2 if _TrackArea._fw_is_double(elem) else 1
 			c_start = elem.inner_color.start
 			c_end = elem.inner_color.end
 			c_outer_start = elem.outer_color.start
 			c_outer_end = elem.outer_color.end
+		elif isinstance(elem, DfEffectElement):
+			c_start = c_end = _TrackArea._effect_color(elem)
+			use_grad = False
+			layers = 1
+		elif isinstance(elem, DfCompositeElement):
+			c_start = c_end = _TrackArea._composite_color(elem)
+			use_grad = False
+			layers = 1
 		else:
 			c_start = c_end = ColorRGB(128, 128, 128)
 			use_grad = False
@@ -227,7 +284,7 @@ class _TrackArea(QWidget):
 				parent = elem
 				in_grad = parent.inner_color.use_gradient
 				out_grad = parent.outer_color.use_gradient
-			elif isinstance(elem, FireworkElement):
+			elif isinstance(elem, (CbFireworkElement, DfFireworkElement)):
 				in_grad = elem.inner_color.use_gradient
 				out_grad = elem.outer_color.use_gradient
 			if in_grad:
@@ -261,11 +318,17 @@ class _TrackArea(QWidget):
 			else:
 				c = parent.inner_color.start
 			return QColor(c.r, c.g, c.b, 200)
-		if isinstance(elem, TrajectoryElement):
+		if isinstance(elem, (CbTrajectoryElement, DfTrajectoryElement)):
 			c = elem.traj_color.start
 			return QColor(c.r, c.g, c.b, 200)
-		elif isinstance(elem, FireworkElement):
+		elif isinstance(elem, (CbFireworkElement, DfFireworkElement)):
 			c = elem.inner_color.start
+			return QColor(c.r, c.g, c.b, 200)
+		if isinstance(elem, DfEffectElement):
+			c = _TrackArea._effect_color(elem)
+			return QColor(c.r, c.g, c.b, 200)
+		if isinstance(elem, DfCompositeElement):
+			c = _TrackArea._composite_color(elem)
 			return QColor(c.r, c.g, c.b, 200)
 		return QColor(128, 128, 128, 200)
 
@@ -283,12 +346,18 @@ class _TrackArea(QWidget):
 					"directional": "➳",
 					"clustered": "❈",
 					"expanding_sphere": "◉"}.get(parent.fw_type, "★")
-		if isinstance(elem, FireworkElement):
-			return {"single_layer": "✦", "double_layer": "✶",
-			        "directional": "➳", "clustered": "❈", "expanding_sphere": "◉"}.get(elem.fw_type, "★")
-		if isinstance(elem, TrajectoryElement):
-			return {"launch": "↗", "spark": "✳",
-			        "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(elem.traj_type, "->")
+		if isinstance(elem, (CbFireworkElement, DfFireworkElement)):
+			return {"single_layer": "✦", "double_layer": "✶", "nebula": "☁",
+			        "directional": "➳", "clustered": "❈", "expanding_sphere": "◉"}.get(
+				elem.fw_type.value if hasattr(elem.fw_type, "value") else elem.fw_type, "★")
+		if isinstance(elem, (CbTrajectoryElement, DfTrajectoryElement)):
+			return {"launch": "↗", "launch_spark": "✳", "spiral": "∿",
+			        "expanding": "⬍"}.get(
+				elem.traj_type.value if hasattr(elem.traj_type, "value") else elem.traj_type, "->")
+		if isinstance(elem, DfEffectElement):
+			return {"beam": "|", "spray": "≈", "double_helix": "♲", "rotating_ring": "○"}.get(elem.effect_type.value, "-")
+		if isinstance(elem, DfCompositeElement):
+			return {"secondary_explosion": "✳", "combo_ec": "✿"}.get(elem.composite_type.value, "+")
 		return "?"
 
 	def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -302,7 +371,7 @@ class _TrackArea(QWidget):
 				self._drag_start_time = blk.element.start_time
 				self._drag_start_duration = blk.element.duration
 				if blk.element.is_composite_part:
-					self._drag_parent_start_time = _ElementView.tick_to_second(blk.element.elem.start_tick)
+					self._drag_parent_start_time = blk.element.start_time
 					log.debug(
 						f"拖拽开始(复合): id={blk.element.id}, part={blk.element.part}, "
 						f"start={blk.element.start_time:.2f}s, dur={blk.element.duration:.2f}s"
@@ -337,7 +406,10 @@ class _TrackArea(QWidget):
 			view = self._dragging.element
 			if self._dragging_edge == "move":
 				if view.is_composite_part:
-					view.elem.start_tick = max(0, _ElementView.second_to_tick(self._drag_parent_start_time + dt))
+					if view._is_cb:
+						view.elem.start_tick = max(0, _ElementView.second_to_tick(self._drag_parent_start_time + dt))
+					else:
+						view.elem.start_time = max(0.0, self._drag_parent_start_time + dt)
 				else:
 					view.start_time = max(0.0, self._drag_start_time + dt)
 			elif self._dragging_edge == "left":
@@ -374,15 +446,20 @@ class _TrackArea(QWidget):
 			view = self._dragging.element
 			if self._dragging_edge == "move" and view.is_composite_part:
 				parent = view.elem
-				new_parent_start = _ElementView.tick_to_second(parent.start_tick)
+				if view._is_cb:
+					new_parent_start = _ElementView.tick_to_second(parent.start_tick)
+				else:
+					new_parent_start = parent.start_time
 				if new_parent_start != self._drag_parent_start_time:
 					self.element_moved.emit(view.id, new_parent_start, self._drag_parent_start_time)
 			elif not view.is_composite_part or view.part == "traj":
 				if view.start_time != self._drag_start_time:
 					self.element_moved.emit(view.id, view.start_time, self._drag_start_time)
+			if self._dragging_edge == "left" and view.is_composite_part and view.start_time != self._drag_start_time:
+				self.element_moved.emit(view.id, view.start_time, self._drag_start_time)
 			if view.duration != self._drag_start_duration:
 				self.element_resized.emit(view.id, view.duration, self._drag_start_duration)
-			if view.is_composite_part and view.part == "fw" and self._dragging_edge == "left":
+			if view._is_cb and view.is_composite_part and view.part == "fw" and self._dragging_edge == "left":
 				parent = view.elem
 				old_traj_dur_tick = _ElementView.second_to_tick(self._drag_start_time - self._drag_parent_start_time)
 				old_traj_dur_sec = _ElementView.tick_to_second(old_traj_dur_tick)
@@ -390,21 +467,20 @@ class _TrackArea(QWidget):
 					self.element_resized.emit(parent.id + "::traj",
 					                          _ElementView.tick_to_second(parent.traj_duration_ticks),
 					                          old_traj_dur_sec)
-			self.drag_undo_end.emit()
 			if view.is_composite_part:
-				p = view.elem
 				log.debug(
-					f"拖拽结束(复合): id={p.id[:8]}, part={view.part}, "
-					f"start={p.start_tick}, traj_dur={p.traj_duration_ticks}, fw_dur={p.fw_duration_ticks}"
+					f"拖拽结束(复合): id={view.id[:8]}, part={view.part}, "
+					f"start={view.start_time:.2f}s, dur={view.duration:.2f}s"
 				)
 			else:
 				log.debug(
 					f"拖拽结束: id={view.id[:8]}, name={view.name}, "
 					f"start={view.start_time:.2f}s, dur={view.duration:.2f}s, end={view.end_time:.2f}s"
 				)
-		self._dragging = None
-		self._dragging_edge = ""
-		self._drag_start_pos = None
+			self.drag_undo_end.emit()
+			self._dragging = None
+			self._dragging_edge = ""
+			self._drag_start_pos = None
 
 	def wheelEvent(self, event: QWheelEvent) -> None:
 		event.ignore()

@@ -4,7 +4,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QGroupBox, QDoubleSpinBox, QSpinBox
 
 from dyn.components.property_panel.df.traj.traj_base import TrajBase
-from dyn.models.df.trajectories import TrajectoryElement as TrajectoryElementV2
+from dyn.models.df.trajectories import TrajectoryElement
 
 class LaunchForm(TrajBase):
 	"""发射轨迹表单 物理参数 + 粒子参数."""
@@ -44,7 +44,7 @@ class LaunchForm(TrajBase):
 
 		self._sub_groups = [self._group_physics, self._group_particle]
 
-	def _load_type_params(self, elem: TrajectoryElementV2) -> None:
+	def _load_type_params(self, elem: TrajectoryElement) -> None:
 		for grp in self._sub_groups:
 			grp.show()
 		self._spin_k.setValue(elem.k)

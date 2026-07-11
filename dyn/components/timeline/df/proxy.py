@@ -1,14 +1,14 @@
-"""统一元素代理层 秒单位视图，封装 V1 tick 转 second 转换和 V2 直通."""
+"""统一元素代理层 秒单位视图，封装 V1 (cb) tick 转 second 转换和 V2 直通."""
 from __future__ import annotations
 
 from enum import Enum
 
-from dyn.models.df.base import Element as DfElement
-from dyn.models.particleex.base import Element as V1Element
+from dyn.models.df.base import Element
+from dyn.models.particleex.base import Element as CbElement
 from dyn.models.particleex.composites import TrajFireworkElement
 
 class _ElementView:
-	"""秒单位视图，封装 V1/V2 元素，统一 start_time/duration 接口.
+	"""秒单位视图，封装 cb/df 元素，统一 start_time/duration 接口.
 
 	简单元素：_elem = 元素自身，_part = None
 	复合元素子部件：_elem = 复合元素，_part = "traj"|"fw"|...
@@ -19,12 +19,12 @@ class _ElementView:
 		self._part = part
 
 	@property
-	def _is_v1(self) -> bool:
-		return isinstance(self._elem, V1Element)
+	def _is_cb(self) -> bool:
+		return isinstance(self._elem, CbElement)
 
 	@property
 	def start_time(self) -> float | int | None:
-		if self._is_v1:
+		if self._is_cb:
 			if self._part is None:
 				return self._elem.start_tick / 20.0
 			elif self._part == "traj":
@@ -37,7 +37,7 @@ class _ElementView:
 
 	@start_time.setter
 	def start_time(self, v: float | int):
-		if self._is_v1:
+		if self._is_cb:
 			tick = max(0, round(v * 20))
 			if self._part is None:
 				self._elem.start_tick = tick
@@ -51,7 +51,7 @@ class _ElementView:
 
 	@property
 	def duration(self) -> float | int | None:
-		if self._is_v1:
+		if self._is_cb:
 			if self._part is None:
 				return self._elem.duration_ticks / 20.0
 			elif self._part == "traj":
@@ -65,7 +65,7 @@ class _ElementView:
 	@duration.setter
 	def duration(self, v: float):
 		tick = max(1, round(v * 20))
-		if self._is_v1:
+		if self._is_cb:
 			if self._part is None:
 				self._elem.duration_ticks = tick
 			elif self._part == "traj":
@@ -121,23 +121,26 @@ class _ElementView:
 		return self._part
 
 def create_track_views(elements: list) -> dict[str, list[_ElementView]]:
-	"""将元素列表转换为四轨道的视图列表."""
-	from dyn.models.particleex.base import ElementType as V1ElementType
+	"""将元素列表转换为四轨道的视图列表.
+	cb (ColorBlock) 元素通过 element_type 属性识别，df (DynFirework) 元素通过 category 属性识别.
+	"""
+	from dyn.models.particleex.base import ElementType as CbElementType
+	from dyn.models.df.base import ElementCategory
 
 	views: dict[str, list[_ElementView]] = {
 		"fw": [], "traj": [], "effect": [], "composite": [],
 	}
 	for elem in elements:
-		if isinstance(elem, TrajFireworkElement):
-			views["traj"].append(_ElementView(elem, "traj"))
-			views["fw"].append(_ElementView(elem, "fw"))
-			views["composite"].append(_ElementView(elem))
-		elif elem.element_type == V1ElementType.TRAJECTORY:
-			views["traj"].append(_ElementView(elem))
-		elif elem.element_type == V1ElementType.FIREWORK:
-			views["fw"].append(_ElementView(elem))
-		elif isinstance(elem, DfElement):
-			from dyn.models.df.base import ElementCategory
+		if isinstance(elem, CbElement):
+			if isinstance(elem, TrajFireworkElement):
+				views["traj"].append(_ElementView(elem, "traj"))
+				views["fw"].append(_ElementView(elem, "fw"))
+				views["composite"].append(_ElementView(elem))
+			elif elem.element_type == CbElementType.TRAJECTORY:
+				views["traj"].append(_ElementView(elem))
+			elif elem.element_type == CbElementType.FIREWORK:
+				views["fw"].append(_ElementView(elem))
+		elif isinstance(elem, Element):
 			cat = elem.category
 			if cat == ElementCategory.FIREWORK:
 				views["fw"].append(_ElementView(elem))

@@ -7,25 +7,25 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QUndoCommand, QUndoStack
 
 from dyn.logging_config import get_logger
-from dyn.models.df.base import Element as DfElement
+from dyn.models.df.base import Element
 
 log = get_logger(__name__)
 
 def _elem_time_state(elem) -> str:
-	"""返回元素的关键时间状态字符串，兼容 V1/V2."""
+	"""返回元素的关键时间状态字符串，兼容 cb/df."""
 	if elem is None:
 		return "elem=None"
 	eid = getattr(elem, 'id', '?')[:8]
 	name = getattr(elem, 'name', '?')
 
-	# V2 元素
-	if isinstance(elem, DfElement):
+	# df 元素
+	if isinstance(elem, Element):
 		parts = [f"id={eid}", f"name={name}", f"start={elem.start_time:.2f}s", f"dur={elem.duration:.2f}s"]
 		if hasattr(elem, 'composite_type'):
 			parts.append(f"end={elem.end_time:.2f}s")
 		return " ".join(parts)
 
-	# V1 元素
+	# cb 元素
 	if hasattr(elem, 'start_tick'):
 		parts = [f"id={eid}", f"name={name}", f"start={elem.start_tick}t"]
 		if hasattr(elem, 'traj_duration_ticks') and hasattr(elem, 'fw_duration_ticks'):
