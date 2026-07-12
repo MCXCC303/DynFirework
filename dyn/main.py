@@ -47,7 +47,8 @@ from dyn.components.cb.timeline import ParticleexTimelineWidget
 from dyn.components.transport_bar import TransportBar
 from dyn.components.pos_select.select_center import PosSelectMainWindow
 
-from dyn.actions.about import DYNAboutWindow, DYNHelpWindow
+from dyn.actions.about import DYNAboutWindow
+from dyn.actions.help import DYNHelpWindow
 from dyn.ui.dialogs.export_dialog import ExportDialog
 from dyn.ui.dialogs.project_creation_dialog import ProjectCreationDialog
 from dyn.ui.dialogs.project_settings_dialog import ProjectSettingsDialog
