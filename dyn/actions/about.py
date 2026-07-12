@@ -89,6 +89,8 @@ class DYNHelpWindow(QtWidgets.QDialog):
 					left_layout.replaceWidget(w, self._tree)
 					w.hide()
 					break
+				else:
+					log.warning("帮助: 未找到占位标签")
 
 		# 右侧详情
 		self._detail = QtWidgets.QTextBrowser()
@@ -104,6 +106,8 @@ class DYNHelpWindow(QtWidgets.QDialog):
 					right_layout.replaceWidget(w, self._detail)
 					w.hide()
 					break
+				else:
+					log.warning("帮助: 未找到占位标签")
 
 		# 左右比例 20% : 80%
 		self.ui.gridLayout.setColumnStretch(0, 1)
@@ -119,6 +123,7 @@ class DYNHelpWindow(QtWidgets.QDialog):
 			nodes: list,
 	) -> None:
 		for name, filename, children in nodes:
+			log.debug(f"帮助树节点: {name}")
 			item = QtWidgets.QTreeWidgetItem([name])
 			if filename:
 				self._file_map[item] = filename
@@ -139,6 +144,7 @@ class DYNHelpWindow(QtWidgets.QDialog):
 			filepath = self._HELP_DIR / filename
 			if filepath.exists():
 				self._detail.setMarkdown(filepath.read_text(encoding="utf-8"))
+				log.debug(f"加载帮助: {filename}")
 			else:
 				log.warning(f"帮助文档未找到: {filename}")
 				self._detail.setPlainText("文档未找到。")

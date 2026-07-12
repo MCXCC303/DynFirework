@@ -58,6 +58,7 @@ def _get_type_tag(elem, backend: Backend) -> str:
 			return "trajectory"
 		if isinstance(elem, CbFw):
 			return "firework"
+		log.error(f"未知 CB 元素类型: {type(elem)}, id={getattr(elem, 'id', 'N/A')}, name={getattr(elem, 'name', 'N/A')}")
 		raise ValueError(f"Unknown cb element type: {type(elem)}")
 	else:
 		cat = elem.category
@@ -69,6 +70,7 @@ def _deserialize_element(backend: Backend, type_tag: str, data: dict):
 	class_map = _CB_ELEMENT_CLASSES if backend == Backend.CB else _DF_ELEMENT_CLASSES
 	cls = class_map.get(type_tag)
 	if cls is None:
+		log.warning(f"未知元素类型标签: type_tag={type_tag}, backend={backend.value}")
 		raise ValueError(f"Unknown element type: {type_tag} for backend {backend.value}")
 	return cls.from_json(data)
 
@@ -125,15 +127,20 @@ class Project:
 		for e in self.elements:
 			if e.id == element_id:
 				return e
+		log.debug(f"元素未找到: id={element_id}")
 		return None
 
 	def remove_element(self, element_id: str):
 		for i, e in enumerate(self.elements):
 			if e.id == element_id:
-				return self.elements.pop(i)
+				removed = self.elements.pop(i)
+				log.info(f"移除元素: id={removed.id}, name={removed.name}")
+				return removed
+		log.warning(f"移除元素未找到: id={element_id}")
 		return None
 
 	def add_element(self, elem) -> None:
+		log.info(f"添加元素: id={elem.id}, name={elem.name}")
 		self.elements.append(elem)
 
 	def to_json(self) -> dict[str, Any]:
@@ -171,7 +178,11 @@ class Project:
 		ts_data = data.get("timeline_state", {})
 
 		backend_raw = data.get("backend", "df")
-		backend = Backend(backend_raw)
+		try:
+			backend = Backend(backend_raw)
+		except ValueError:
+			log.warning(f"未知后端类型: {backend_raw}，回退为 df")
+			backend = Backend.DF
 
 		elements: list = []
 		for entry in data.get("elements", []):

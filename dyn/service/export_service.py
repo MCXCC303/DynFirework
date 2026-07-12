@@ -44,18 +44,24 @@ class _ExportTask(QRunnable):
 		try:
 			log.debug(f"导出开始: {self._output_dir}, namespace={self._namespace}, backend={self._backend.value}, elements={len(self._elements)}")
 			self._do_export()
+			log.info(f"导出成功: {self._output_dir}, {len(self._elements)} 元素")
 			self.signals.finished.emit(True, f"导出完成: {self._output_dir}")
 		except Exception as e:
 			log.exception("导出失败")
 			self.signals.finished.emit(False, f"导出失败: {e}")
 
 	def _do_export(self) -> None:
+		if not self._elements:
+			log.warning("导出: 无元素可导出")
+			return
+		log.debug("清空全局命令存储")
 		global_storage.commands_by_tick.clear()
 		global_storage.MAX_TICK = 0
 
 		total = len(self._elements)
 		for i, elem in enumerate(self._elements):
 			if not elem.enabled:
+				log.debug(f"跳过禁用元素: {elem.name}")
 				continue
 			if self._backend == Backend.CB:
 				export_cb_element(elem)
@@ -93,6 +99,7 @@ class ExportService(QObject):
 			pack_format: int = 48,
 			mc_version: str = "1.21.8",
 	) -> None:
+		log.info(f"开始导出: {len(elements)} 元素 -> {output_dir}, namespace={namespace}, backend={backend}")
 		task = _ExportTask(elements, output_dir, namespace,
 		                   backend=backend,
 		                   datapack_name=datapack_name, description=description,

@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from dyn.logging_config import get_logger
 from .base import Element, ElementType
+
+log = get_logger(__name__)
 from .values import ColorRGB, GradientColor, Position
 
 @dataclass
@@ -95,6 +98,7 @@ class TrajFireworkElement(Element):
 	@classmethod
 	def from_json(cls, data: dict) -> TrajFireworkElement:
 		base = cls._from_json_base(data)
+		log.debug(f"反序列化 TrajFireworkElement: name={base.get('name')}")
 		params = data.get("params", {})
 		angles = data.get("angles", {})
 		return cls(

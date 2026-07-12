@@ -149,14 +149,25 @@ class BaseBrowserModel(QAbstractItemModel):
 		return None
 
 	def set_controller(self, controller: ElementController) -> None:
+		if self._controller is not None:
+			try:
+				self._controller.element_added.disconnect(self._on_element_added)
+				self._controller.element_removed.disconnect(self._on_element_removed)
+				self._controller.element_changed.disconnect(self._on_element_changed)
+				self._controller.selection_changed.disconnect(self._on_controller_selection)
+			except (TypeError, RuntimeError):
+				pass
 		self._controller = controller
 		controller.element_added.connect(self._on_element_added)
 		controller.element_removed.connect(self._on_element_removed)
 		controller.element_changed.connect(self._on_element_changed)
 		controller.selection_changed.connect(self._on_controller_selection)
+		log.debug("已连接控制器信号")
 
 	def _group_for_element(self, elem) -> GroupNode:
 		cat = self._category_for_element(elem)
+		if cat not in self._groups:
+			log.error(f"未知类别: {cat}")
 		return self._groups[cat]
 
 	@Slot(object)
@@ -181,6 +192,7 @@ class BaseBrowserModel(QAbstractItemModel):
 		log.debug(f"浏览器移除元素: id={element_id}")
 		node = self._element_nodes.pop(element_id, None)
 		if node is None:
+			log.warning(f"元素移除通知: 浏览器中未找到 id={element_id}")
 			return
 		self._cleanup_extra_nodes(element_id)
 		parent_idx = self._index_for_node(node.parent)
@@ -197,6 +209,7 @@ class BaseBrowserModel(QAbstractItemModel):
 	def _on_element_changed(self, element_id: str, key: str, value: object) -> None:
 		node = self._element_nodes.get(element_id)
 		if node is None:
+			log.warning(f"元素变更通知: 浏览器中未找到 id={element_id}")
 			return
 		col = self._change_key_column(key)
 		if col >= 0:

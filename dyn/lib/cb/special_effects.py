@@ -2,10 +2,13 @@
 # Special firework effects for advanced visual patterns
 # pylint: skip-file
 # flake8: noqa
+import logging
 import math
 import random
 
 from dyn.lib.cb import commands
+
+log = logging.getLogger(__name__)
 
 def rotating_ring_with_dispersion(start_tick, duration_ticks, center_x, center_y, center_z,
                                   ring_radius, tube_radius, rotation_speed,
@@ -27,6 +30,7 @@ def rotating_ring_with_dispersion(start_tick, duration_ticks, center_x, center_y
 		lifetime: Particle lifetime in ticks
 		start_color, end_color: Color gradient tuples (R, G, B)
 	"""
+	log.debug(f"rotating_ring_with_dispersion: start_tick={start_tick}, duration={duration_ticks}, radius={ring_radius}, rotation_speed={rotation_speed}")
 	for tick_offset in range(duration_ticks):
 		tick = start_tick + tick_offset
 
@@ -84,6 +88,7 @@ def spiral_ribbon_with_rise(start_tick, duration_ticks, center_x, center_z,
 		lifetime: Particle lifetime in ticks
 		start_color, end_color: Color gradient tuples (R, G, B)
 	"""
+	log.debug(f"spiral_ribbon_with_rise: start_tick={start_tick}, duration={duration_ticks}, radius={spiral_radius}, rise_speed={rise_speed}")
 	min_vy, max_vy = vertical_velocity_range
 
 	for tick_offset in range(duration_ticks):
@@ -137,6 +142,7 @@ def double_helix_spiral(start_tick, duration_ticks, center_x, center_z,
 		lifetime: Particle lifetime in ticks
 		color1, color2: Tuples of (start_color, end_color) for each helix
 	"""
+	log.debug(f"double_helix_spiral: start_tick={start_tick}, duration={duration_ticks}, radius={helix_radius}, rise_speed={rise_speed}")
 	min_vy, max_vy = vertical_velocity_range
 
 	for tick_offset in range(duration_ticks):

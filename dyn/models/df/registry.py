@@ -4,7 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from dyn.logging_config import get_logger
 from .base import ElementCategory
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
 	from .base import Element
@@ -22,9 +25,13 @@ class ElementTypeDef:
 ELEMENT_TYPE_REGISTRY: dict[str, ElementTypeDef] = {}
 
 def register_type(def_: ElementTypeDef) -> None:
+	if def_.type_key in ELEMENT_TYPE_REGISTRY:
+		log.warning(f"覆盖已注册的类型键: {def_.type_key}")
 	ELEMENT_TYPE_REGISTRY[def_.type_key] = def_
 
 def get_type_def(type_key: str) -> ElementTypeDef:
+	if type_key not in ELEMENT_TYPE_REGISTRY:
+		log.warning(f"未注册的类型键: {type_key}")
 	return ELEMENT_TYPE_REGISTRY[type_key]
 
 def get_types_by_category(cat: ElementCategory) -> list[ElementTypeDef]:
@@ -44,4 +51,5 @@ def get_type_key(elem: Element) -> str:
 		return elem.effect_type.value
 	if isinstance(elem, CompositeElement):
 		return elem.composite_type.value
+	log.error(f"未知元素类型: {type(elem)}")
 	raise ValueError(f"Unknown element type: {type(elem)}")

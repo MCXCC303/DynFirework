@@ -10,10 +10,13 @@ from dyn.components.base.browser_model import (
 from dyn.components.df.property_panel.composites.composite_base import (
 	PROXY_DATA_PREFIX, PART_PRIMARY, PART_SECONDARY, PART_CLUSTER, PART_EXPANDING,
 )
+from dyn.logging_config import get_logger
 from dyn.models.df.base import ElementCategory, Element
 from dyn.models.df.composites import CompositeElement
 from dyn.models.df.registry import get_type_key, get_type_def
 from dyn.models.df.values import CompositeType
+
+log = get_logger(__name__)
 
 CATEGORY_DISPLAY: dict[ElementCategory, str] = {
 	ElementCategory.FIREWORK: "爆炸",
@@ -30,6 +33,7 @@ def _type_display_name(elem) -> str:
 			tk = get_type_key(elem)
 			return get_type_def(tk).display_name
 		except (KeyError, ValueError):
+			log.warning(f"未注册的类型键: {tk}")
 			return "?"
 	return "?"
 
@@ -66,6 +70,7 @@ class DfElementBrowserModel(BaseBrowserModel):
 	def _category_for_element(elem) -> ElementCategory:
 		if isinstance(elem, Element):
 			return elem.category
+		log.warning(f"未知元素实例用于分类: {type(elem)}")
 		return ElementCategory.COMPOSITE
 
 	def data(self, index: QModelIndex, role: int = Qt.DisplayRole):
@@ -118,6 +123,7 @@ class DfElementBrowserModel(BaseBrowserModel):
 			return "集束烟花"
 		elif data == f"{PROXY_DATA_PREFIX}expanding":
 			return "膨胀球"
+		log.warning(f"未注册的代理类型前缀: {data}")
 		return "?"
 
 	def _change_key_column(self, key: str) -> int:
@@ -137,6 +143,7 @@ class DfElementBrowserModel(BaseBrowserModel):
 					ProxyNode("膨胀球", data=f"{PROXY_DATA_PREFIX}{PART_EXPANDING}", parent=node),
 				]
 			else:
+				log.warning(f"未知复合类型: {elem.composite_type}, id={elem.id}")
 				return
 			parent_idx = self._index_for_node(node)
 			self.beginInsertRows(parent_idx, 0, len(children) - 1)

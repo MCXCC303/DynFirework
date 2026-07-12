@@ -36,8 +36,8 @@ def load_waveform_from_bytes(data: bytes, suffix: str = ".mp3") -> tuple[list[fl
 	finally:
 		try:
 			Path(tmp.name).unlink()
-		except OSError:
-			pass
+		except OSError as e:
+			log.warning(f"清理波形临时文件失败: {e}")
 
 def _read_waveform(path: str) -> tuple[list[float] | None, int]:
 	"""内部: 从路径读取波形，优先 soundfile，仅对 .wav 回退至 scipy."""

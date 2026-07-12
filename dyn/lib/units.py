@@ -1,8 +1,13 @@
 """单位转换工具."""
+import logging
 import math
 from dataclasses import dataclass
 
+log = logging.getLogger(__name__)
+
 def seconds_to_tick(seconds: float) -> int:
+	if seconds < 0:
+		log.warning(f"负值时间转换: {seconds}")
 	return int(seconds * 20)
 
 def tick_to_seconds(tick: int) -> float:
@@ -144,7 +149,8 @@ class MinecraftTick:
 			try:
 				self.tick = self.time * 20
 				return
-			except:
+			except Exception as e:
+				log.error(f"时间转换失败: {e}", exc_info=True)
 				raise ValueError("At least 1 time unit provide needed.")
 		if self.tick and self.time and self.to_time == self.time:
 			return

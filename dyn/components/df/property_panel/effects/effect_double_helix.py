@@ -96,10 +96,14 @@ class DoubleHelixForm(EffectBase):
 		if self._loading or self._element is None:
 			return
 		e = self._element
-		c = self._cp_color1_begin.color; e.dh_color1.start = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_color1_end.color; e.dh_color1.end = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_color2_begin.color; e.dh_color2.start = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_color2_end.color; e.dh_color2.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color1_begin.color;
+		e.dh_color1.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color1_end.color;
+		e.dh_color1.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color2_begin.color;
+		e.dh_color2.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color2_end.color;
+		e.dh_color2.end = ColorRGB(r=c.r, g=c.g, b=c.b)
 		e.dh_color1.use_gradient = self._chk_color1_grad.isChecked()
 		e.dh_color2.use_gradient = self._chk_color2_grad.isChecked()
 		e.dh_radius = self._spin_dh_radius.value()

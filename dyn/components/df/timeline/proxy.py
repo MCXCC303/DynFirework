@@ -3,9 +3,12 @@ from __future__ import annotations
 
 from enum import Enum
 
+from dyn.logging_config import get_logger
 from dyn.models.cb.base import Element as CbElement
 from dyn.models.cb.composites import TrajFireworkElement
 from dyn.models.df.base import Element
+
+log = get_logger(__name__)
 
 class _ElementView:
 	"""秒单位视图，封装 cb/df 元素，统一 start_time/duration 接口.
@@ -151,6 +154,8 @@ def create_track_views(elements: list) -> dict[str, list[_ElementView]]:
 			elif cat == ElementCategory.COMPOSITE:
 				views["composite"].append(_ElementView(elem))
 				_append_composite_parts(views, elem)
+			else:
+				log.warning(f"跳过非标准元素: {type(elem)}")
 	return views
 
 def _append_composite_parts(views: dict, elem) -> None:
@@ -166,3 +171,5 @@ def _append_composite_parts(views: dict, elem) -> None:
 	elif ct == "combo_ec":
 		views["fw"].append(_ElementView(elem, "clustered"))
 		views["fw"].append(_ElementView(elem, "expanding"))
+	else:
+		log.warning(f"未知复合类型用于代理: {elem.composite_type}")

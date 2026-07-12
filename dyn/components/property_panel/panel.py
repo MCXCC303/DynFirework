@@ -123,6 +123,7 @@ class PropertyPanel(QScrollArea):
 			return
 		new_type = self._combo_type.itemData(idx)
 		if new_type is None:
+			log.warning("类型切换: 无效索引")
 			return
 		old_key = get_type_key(self._current_element)
 		if new_type == old_key:
@@ -134,18 +135,21 @@ class PropertyPanel(QScrollArea):
 
 	def _set_element_type(self, type_key: str) -> None:
 		e = self._current_element
-		if isinstance(e, FireworkElement):
-			from dyn.models.df.values import FireworkType
-			e.fw_type = FireworkType(type_key)
-		elif isinstance(e, TrajectoryElement):
-			from dyn.models.df.values import TrajectoryType
-			e.traj_type = TrajectoryType(type_key)
-		elif isinstance(e, EffectElement):
-			from dyn.models.df.values import EffectType
-			e.effect_type = EffectType(type_key)
-		elif isinstance(e, CompositeElement):
-			from dyn.models.df.values import CompositeType
-			e.composite_type = CompositeType(type_key)
+		try:
+			if isinstance(e, FireworkElement):
+				from dyn.models.df.values import FireworkType
+				e.fw_type = FireworkType(type_key)
+			elif isinstance(e, TrajectoryElement):
+				from dyn.models.df.values import TrajectoryType
+				e.traj_type = TrajectoryType(type_key)
+			elif isinstance(e, EffectElement):
+				from dyn.models.df.values import EffectType
+				e.effect_type = EffectType(type_key)
+			elif isinstance(e, CompositeElement):
+				from dyn.models.df.values import CompositeType
+				e.composite_type = CompositeType(type_key)
+		except ValueError:
+			log.warning(f"无效的类型枚举值: {type_key} for {type(e).__name__}")
 
 	def _swap_form(self, type_key: str) -> None:
 		if self._active_form:
@@ -197,46 +201,50 @@ class PropertyPanel(QScrollArea):
 		self.setEnabled(True)
 		self._block_all(True)
 
-		self._edit_name.setText(elem.name)
-		self._spin_start_time.setValue(elem.start_time)
-		self._spin_duration.setValue(elem.duration)
-		self._chk_enabled.setChecked(elem.enabled)
-		self._group_common.show()
+		try:
+			self._edit_name.setText(elem.name)
+			self._spin_start_time.setValue(elem.start_time)
+			self._spin_duration.setValue(elem.duration)
+			self._chk_enabled.setChecked(elem.enabled)
+			self._group_common.show()
 
-		if self._active_form:
-			if hasattr(self._active_form, 'clear_form'):
-				self._active_form.clear_form()
-			self._active_form.hide()
-			self._active_form = None
+			if self._active_form:
+				if hasattr(self._active_form, 'clear_form'):
+					self._active_form.clear_form()
+				self._active_form.hide()
+				self._active_form = None
 
-		is_composite_sub = False
-		if isinstance(elem, CompositeElement) and part in PART_TO_TYPE_KEY:
-			type_key = PART_TO_TYPE_KEY[part]
-			is_composite_sub = True
-		else:
-			type_key = get_type_key(elem)
+			is_composite_sub = False
+			if isinstance(elem, CompositeElement) and part in PART_TO_TYPE_KEY:
+				type_key = PART_TO_TYPE_KEY[part]
+				is_composite_sub = True
+			else:
+				type_key = get_type_key(elem)
 
-		cat = elem.category
-		types = get_types_by_category(cat)
+			cat = elem.category
+			types = get_types_by_category(cat)
 
-		self._lbl_type.setText(_CAT_LABELS.get(cat, "类型:"))
-		self._combo_type.blockSignals(True)
-		self._combo_type.clear()
-		for td in types:
-			self._combo_type.addItem(td.display_name, td.type_key)
-		idx = self._combo_type.findData(type_key)
-		if idx >= 0:
-			self._combo_type.setCurrentIndex(idx)
-		self._combo_type.blockSignals(False)
-		if is_composite_sub:
-			self._lbl_type.hide()
-			self._combo_type.hide()
-		else:
-			self._lbl_type.show()
-			self._combo_type.show()
+			self._lbl_type.setText(_CAT_LABELS.get(cat, "类型:"))
+			self._combo_type.blockSignals(True)
+			self._combo_type.clear()
+			for td in types:
+				self._combo_type.addItem(td.display_name, td.type_key)
+			idx = self._combo_type.findData(type_key)
+			if idx >= 0:
+				self._combo_type.setCurrentIndex(idx)
+			self._combo_type.blockSignals(False)
+			if is_composite_sub:
+				self._lbl_type.hide()
+				self._combo_type.hide()
+			else:
+				self._lbl_type.show()
+				self._combo_type.show()
 
-		self._swap_form(type_key)
-		self._block_all(False)
+			self._swap_form(type_key)
+		except Exception as e:
+			log.error(f"加载元素失败: {e}", exc_info=True)
+		finally:
+			self._block_all(False)
 
 	def _hide_all(self) -> None:
 		self._group_common.hide()

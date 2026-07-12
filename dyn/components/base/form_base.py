@@ -1,11 +1,15 @@
 """属性表单共享基类, DynFirework Mod 适配秒单位."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtWidgets import (
 	QWidget, QHBoxLayout, QLabel, QSpinBox, QDoubleSpinBox,
 	QComboBox, QPushButton, QFormLayout, QDial, QCheckBox, QLineEdit,
 	QGroupBox,
 )
+
+log = logging.getLogger(__name__)
 
 class FormBase(QWidget):
 	"""提供 _add_row / reset / block 等共享工具的表单基类."""
@@ -70,6 +74,8 @@ class FormBase(QWidget):
 			idx = widget.findData(default)
 			if idx >= 0:
 				widget.setCurrentIndex(idx)
+		else:
+			log.debug(f"不支持的重置控件类型: {type(widget)}")
 
 	def _update_reset_buttons(self) -> None:
 		for key, (lbl, widget, btn, default) in self._w.items():

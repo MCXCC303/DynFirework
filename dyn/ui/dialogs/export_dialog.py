@@ -1,22 +1,30 @@
 """导出数据包对话框 按 MC 版本自动选择 pack_format."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtWidgets import (
 	QDialog, QFormLayout, QLineEdit, QSpinBox, QLabel, QDialogButtonBox,
 )
 
+log = logging.getLogger(__name__)
+
 _MC_TO_PACK_FORMAT: dict[str, int] = {
 	# 数据包格式号参考 minecraft.wiki/w/Pack_format
-	"1.12.2": 3,    # 1.11-1.12.2 函数系统 (预数据包)
-	"1.16.5": 6,    # 1.16.2-1.16.5
-	"1.20.1": 15,   # 1.20-1.20.1
-	"1.20.4": 22,   # 1.20.3-1.20.4
-	"1.21": 48,     # 1.21-1.21.1
-	"1.21.8": 57,   # 1.21.2+ (Fabric 1.21.8 兼容)
+	"1.12.2": 3,  # 1.11-1.12.2 函数系统 (预数据包)
+	"1.16.5": 6,  # 1.16.2-1.16.5
+	"1.20.1": 15,  # 1.20-1.20.1
+	"1.20.4": 22,  # 1.20.3-1.20.4
+	"1.21": 48,  # 1.21-1.21.1
+	"1.21.8": 57,  # 1.21.2+ (Fabric 1.21.8 兼容)
 }
 
 def _resolve_pack_format(mc_version: str) -> int:
-	return _MC_TO_PACK_FORMAT.get(mc_version, 48)
+	fmt = _MC_TO_PACK_FORMAT.get(mc_version)
+	if fmt is None:
+		log.warning(f"未知 MC 版本: {mc_version}, 使用默认 pack_format")
+		return 48
+	return fmt
 
 class ExportDialog(QDialog):
 	"""收集数据包导出参数."""
@@ -54,6 +62,16 @@ class ExportDialog(QDialog):
 		btns.accepted.connect(self.accept)
 		btns.rejected.connect(self.reject)
 		form.addRow(btns)
+
+		log.debug("打开导出对话框")
+
+	def accept(self) -> None:
+		log.debug("导出对话框: 用户确认")
+		super().accept()
+
+	def reject(self) -> None:
+		log.debug("导出对话框: 用户取消")
+		super().reject()
 
 	@property
 	def pack_name(self) -> str: return self.edit_name.text().strip()

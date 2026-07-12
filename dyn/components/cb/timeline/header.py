@@ -7,7 +7,10 @@ from PySide6.QtCore import Qt, QRect, QEvent
 from PySide6.QtGui import QPainter, QPen, QFont
 from PySide6.QtWidgets import QWidget
 
+from dyn.logging_config import get_logger
 from .theme import palette_colors, HEADER_HEIGHT, TRACK_LABEL_WIDTH
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
 	from .timeline_widget import ParticleexTimelineWidget
@@ -47,5 +50,7 @@ class _HeaderWidget(QWidget):
 						x = int(tl.tick_to_x(tick))
 						p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, str(tick))
 					tick += 20
+			else:
+				log.warning("时间线头: 时间线引用为空, 跳过绘制")
 		finally:
 			p.end()

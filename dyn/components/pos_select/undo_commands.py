@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtGui import QUndoCommand
 
 from dyn.lib.units import MinecraftPosition
+
+log = logging.getLogger(__name__)
 
 class AddPointCommand(QUndoCommand):
 	"""添加点."""
@@ -22,7 +26,10 @@ class AddPointCommand(QUndoCommand):
 		self._point = point
 
 	def undo(self) -> None:
-		self._point_list.remove(self._point)
+		try:
+			self._point_list.remove(self._point)
+		except ValueError:
+			log.error(f"撤销添加点失败: 点不存在 ({self._point.x}, {self._point.y}, {self._point.z})")
 		self._fastsearch.discard((self._point.x, self._point.z))
 
 	def redo(self) -> None:
@@ -49,7 +56,10 @@ class RemovePointCommand(QUndoCommand):
 		self._fastsearch.add((self._point.x, self._point.z))
 
 	def redo(self) -> None:
-		self._point_list.remove(self._point)
+		try:
+			self._point_list.remove(self._point)
+		except ValueError:
+			log.error(f"重做删除点失败: 点不存在 ({self._point.x}, {self._point.y}, {self._point.z})")
 		self._fastsearch.discard((self._point.x, self._point.z))
 
 class EditPointCommand(QUndoCommand):
@@ -76,6 +86,7 @@ class EditPointCommand(QUndoCommand):
 		self._apply(self._new_vals)
 
 	def _apply(self, vals: dict) -> None:
+		log.debug(f"编辑位置点应用: {vals}")
 		if self._fastsearch is not None:
 			self._fastsearch.discard((int(self._point.x), int(self._point.z)))
 		if "x" in vals:

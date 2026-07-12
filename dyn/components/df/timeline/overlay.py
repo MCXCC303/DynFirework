@@ -7,7 +7,10 @@ from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
+from dyn.logging_config import get_logger
 from .theme import palette_colors, TRACK_LABEL_WIDTH
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
 	from .timeline_widget import DFTimelineWidget
@@ -31,6 +34,7 @@ class _CursorOverlayWidget(QWidget):
 
 	def paintEvent(self, event) -> None:
 		if not self._timeline:
+			log.warning("overlay paintEvent: timeline 未设置")
 			return
 		tl = self._timeline
 		p = QPainter(self)
@@ -38,7 +42,7 @@ class _CursorOverlayWidget(QWidget):
 		try:
 			tl.paint_time_marks(p)
 			for i, track in enumerate([
-					tl.fw_track, tl.traj_track, tl.effect_track, tl.composite_track,
+				tl.fw_track, tl.traj_track, tl.effect_track, tl.composite_track,
 			]):
 				if i > 0:
 					geo = track.geometry()

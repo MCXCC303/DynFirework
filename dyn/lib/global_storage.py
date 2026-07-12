@@ -25,18 +25,27 @@ project_dir = str(Path(__file__).parent.parent.parent)
 def update_max_tick(tick):
 	global MAX_TICK
 	if tick > MAX_TICK:
+		old = MAX_TICK
 		MAX_TICK = tick
+		log.debug(f"MAX_TICK 更新: {old} -> {tick}")
+
+_command_counter = 0
 
 def add_command(tick, command):
+	global _command_counter
 	update_max_tick(tick)
 	if tick not in commands_by_tick:
 		commands_by_tick[tick] = []
 	commands_by_tick[tick].append(command)
+	_command_counter += 1
+	if _command_counter % 500 == 0:
+		log.debug(f"累计添加命令: {_command_counter} 条")
 
 def reset_storage():
 	"""清空全局命令存储."""
-	global commands_by_tick, MAX_TICK
+	global commands_by_tick, MAX_TICK, _command_counter
 	count = sum(len(v) for v in commands_by_tick.values())
 	log.debug(f"清空命令存储: {count} 条命令, MAX_TICK={MAX_TICK}")
 	commands_by_tick = {}
 	MAX_TICK = 0
+	_command_counter = 0

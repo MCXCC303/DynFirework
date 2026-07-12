@@ -7,8 +7,11 @@ from dyn.components.base.browser_model import (
 	BaseBrowserModel, GroupNode, ElementNode, ProxyNode,
 	format_cb_time,
 )
+from dyn.logging_config import get_logger
 from dyn.models.cb.base import ElementType
 from dyn.models.cb.composites import TrajFireworkElement
+
+log = get_logger(__name__)
 
 class _CB_Category:
 	TRAJECTORY = "trajectory"
@@ -102,7 +105,9 @@ class CbElementBrowserModel(BaseBrowserModel):
 			self._element_nodes[elem.id + "::traj"] = node
 			self._element_nodes[elem.id + "::fw"] = node
 			self.endInsertRows()
+		log.debug(f"为 TF 元素创建代理节点: id={elem.id}")
 
 	def _cleanup_extra_nodes(self, element_id: str) -> None:
+		log.debug(f"清理 TF 代理节点: id={element_id}")
 		for suffix in ("::traj", "::fw"):
 			self._element_nodes.pop(element_id + suffix, None)

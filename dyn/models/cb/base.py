@@ -5,6 +5,10 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from uuid import uuid4
 
+from dyn.logging_config import get_logger
+
+log = get_logger(__name__)
+
 class ElementType(Enum):
 	TRAJECTORY = auto()
 	FIREWORK = auto()
@@ -39,8 +43,12 @@ class Element:
 
 	@classmethod
 	def _from_json_base(cls, data: dict) -> dict:
+		elem_id = data.get("id")
+		if elem_id is None:
+			elem_id = str(uuid4())
+			log.warning(f"Element._from_json_base 缺少 id，已自动生成: {elem_id}")
 		return {
-			"id": data.get("id", str(uuid4())),
+			"id": elem_id,
 			"name": data.get("name", "New Element"),
 			"start_tick": data.get("start_tick", 0),
 			"duration_ticks": data.get("duration_ticks", 20),

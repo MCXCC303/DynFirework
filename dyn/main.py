@@ -126,6 +126,7 @@ class MainWin(QMainWindow):
 	def _activate_backend(self, backend: Backend) -> None:
 		"""根据后端初始化/切换整个 UI 组件树."""
 		if self._backend == backend and self._controller is not None:
+			log.debug("_activate_backend: 已激活,跳过")
 			return
 		log.debug(f"激活后端: {backend.value}")
 
@@ -148,23 +149,24 @@ class MainWin(QMainWindow):
 
 	def _deactivate_current_backend(self) -> None:
 		"""清理当前后端的所有信号和组件."""
+		log.debug(f"停用当前后端: {self._backend}")
 		if self._controller:
 			try:
 				self._controller.element_added.disconnect()
 				self._controller.element_removed.disconnect()
 				self._controller.element_changed.disconnect()
 				self._controller.selection_changed.disconnect()
-			except (RuntimeError, TypeError):
-				pass
+			except (RuntimeError, TypeError) as e:
+				log.warning(f"信号断开失败: {e}")
 		try:
 			self._playback.position_changed.disconnect()
-		except (RuntimeError, TypeError):
-			pass
+		except (RuntimeError, TypeError) as e:
+			log.warning(f"信号断开失败: {e}")
 		if self._timeline:
 			try:
 				self._timeline.playback_cursor_changed.disconnect()
-			except (RuntimeError, TypeError):
-				pass
+			except (RuntimeError, TypeError) as e:
+				log.warning(f"信号断开失败: {e}")
 		self.setCentralWidget(None)
 		self._timeline = None
 		self._property_panel = None
@@ -173,23 +175,31 @@ class MainWin(QMainWindow):
 
 	def _init_cb_ui(self) -> None:
 		"""初始化 ColorBlock 后端 UI 组件."""
+		log.debug("初始化 CB UI 组件")
 		self._element_browser_model = CbElementBrowserModel()
 		self._element_browser_model.set_controller(self._controller)
+		log.debug("CB 元素浏览器模型已创建")
 
 		self._timeline = ParticleexTimelineWidget()
 		self._timeline.set_controller(self._controller)
+		log.debug("CB 时间线已创建")
 
 		self._property_panel = CbPropertyPanel(self._controller)
+		log.debug("CB 属性面板已创建")
 
 	def _init_df_ui(self) -> None:
 		"""初始化 DynFirework 后端 UI 组件."""
+		log.debug("初始化 DF UI 组件")
 		self._element_browser_model = ElementBrowserModel()
 		self._element_browser_model.set_controller(self._controller)
+		log.debug("DF 元素浏览器模型已创建")
 
 		self._timeline = DFTimelineWidget()
 		self._timeline.set_controller(self._controller)
+		log.debug("DF 时间线已创建")
 
 		self._property_panel = PropertyPanel(self._controller)
+		log.debug("DF 属性面板已创建")
 
 	# Menu
 
@@ -326,6 +336,7 @@ class MainWin(QMainWindow):
 	# Layout
 
 	def _setup_layout(self) -> None:
+		log.debug("重建窗口布局")
 		central = QWidget()
 		self.setCentralWidget(central)
 		root_layout = QVBoxLayout(central)
@@ -401,6 +412,7 @@ class MainWin(QMainWindow):
 	# Shared Signals
 
 	def _connect_shared_signals(self) -> None:
+		log.debug("连接共享信号")
 		self._export_service.export_finished.connect(self._on_export_finished)
 		self._export_service.export_progress.connect(
 			lambda p: self.statusBar().showMessage(f"导出中... {p}%")
@@ -410,6 +422,7 @@ class MainWin(QMainWindow):
 
 	def _connect_backend_signals(self) -> None:
 		"""连接后端特定的信号 (切换后端后重新连接)."""
+		log.debug(f"连接 {self._backend} 后端信号")
 		ct = self._controller
 
 		# 通用 Controller 信号
@@ -483,6 +496,7 @@ class MainWin(QMainWindow):
 
 		dlg = ProjectCreationDialog(self)
 		if dlg.exec() != QDialog.DialogCode.Accepted:
+			log.debug("用户取消新建项目")
 			return
 
 		proj = self._project_manager.new_project(
@@ -497,6 +511,7 @@ class MainWin(QMainWindow):
 		self._inspector.clear()
 		self._playback.stop()
 		self._transport_bar.set_bpm(proj.bpm)
+		log.info(f"新建项目: name={proj.name}, backend={proj.backend.value}, bpm={proj.bpm}, mc={proj.mc_version}")
 		self.setWindowTitle(f"DynFirework   {proj.name}")
 		self.statusBar().showMessage(f"已创建: {proj.name} | BPM: {proj.bpm:.0f} | MC {proj.mc_version}")
 
@@ -513,6 +528,7 @@ class MainWin(QMainWindow):
 			self, "打开项目", "", "DynFirework 项目 (*.dyn);;所有文件 (*.*)"
 		)
 		if not path:
+			log.debug("用户取消打开项目")
 			return
 		try:
 			log.debug(f"打开项目: {path}")
@@ -572,12 +588,14 @@ class MainWin(QMainWindow):
 		self._controller.to_project(self._project_manager.project)
 		self._sync_positions_to_project()
 		if not self._project_manager.has_file:
+			log.debug("无文件路径, 转入另存为")
 			self._on_save_as_project()
 			return
 		log.debug(f"保存项目: {self._project_manager.file_path}")
 		if self._project_manager.save_project():
 			self.statusBar().showMessage(f"已保存: {self._project_manager.file_path}")
 		else:
+			log.error("保存项目失败")
 			QMessageBox.warning(self, "保存失败", "无法保存项目。")
 
 	def _on_save_as_project(self) -> None:
@@ -585,6 +603,7 @@ class MainWin(QMainWindow):
 			self, "另存为", "untitled.dyn", "DynFirework 项目 (*.dyn)"
 		)
 		if not path:
+			log.debug("用户取消另存为")
 			return
 		log.debug(f"另存为: {path}")
 		self._controller.to_project(self._project_manager.project)
@@ -592,6 +611,7 @@ class MainWin(QMainWindow):
 		if self._project_manager.save_project(path):
 			self.statusBar().showMessage(f"已保存: {path}")
 		else:
+			log.error("另存为失败")
 			QMessageBox.warning(self, "保存失败", "无法保存项目。")
 
 	def _on_import_music(self) -> None:
@@ -621,16 +641,19 @@ class MainWin(QMainWindow):
 		log.debug(f"导出数据包: {len(elements)} 个元素")
 		if not elements:
 			QMessageBox.warning(self, "无元素", "请先创建至少一个元素。")
+			log.warning("导出取消: 无元素可导出")
 			return
 
 		proj = self._project_manager.project
 		dlg = ExportDialog(proj.name, proj.mc_version, self)
 		if dlg.exec() != QDialog.DialogCode.Accepted:
+			log.debug("用户取消导出")
 			return
 
 		ns = dlg.namespace
 		if not re.match(r'^[a-z0-9_\.]+$', ns):
 			QMessageBox.warning(self, "无效命名空间", "命名空间仅限小写字母、数字、下划线和点。")
+			log.warning(f"无效命名空间: {ns}")
 			return
 
 		output_dir = QFileDialog.getExistingDirectory(self, "选择输出目录")
@@ -691,6 +714,7 @@ class MainWin(QMainWindow):
 	def _on_delete_selected(self) -> None:
 		eid = self._controller.selected_id
 		if not eid:
+			log.debug("删除取消: 无选中元素")
 			return
 		elem = self._controller.get_element(eid)
 		log.debug(f"删除元素: {_elem_info(elem)}")
@@ -959,6 +983,8 @@ class MainWin(QMainWindow):
 		is_complex = self._controller.apply_property_change(element_id, key, value, old_value)
 		if not is_complex:
 			self._undo_manager.push_property_change(element_id, key, old_value, value)
+		else:
+			log.debug(f"复杂属性变更: id={element_id}, key={key}")
 		self._inspector.refresh(elem)
 		self._project_manager.mark_modified()
 
@@ -973,7 +999,10 @@ class MainWin(QMainWindow):
 		log.debug(f"位置已选择: ({point.x}, {point.y}, {point.z}), target={self._pending_position_target}")
 		which = getattr(self, '_pending_position_target', 'position')
 		eid = self._controller.selected_id
-		if not eid or not self._controller.set_position(eid, which, point.x, point.y, point.z):
+		if not eid:
+			return
+		if not self._controller.set_position(eid, which, point.x, point.y, point.z):
+			log.warning(f"设置位置失败: eid={eid}, target={which}")
 			return
 		elem = self._controller.selected_element
 		self._property_panel.load_element(elem)

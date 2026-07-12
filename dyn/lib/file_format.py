@@ -67,88 +67,93 @@ def write_project_archive(
 	filepath = Path(filepath)
 	now = datetime.now(timezone.utc).isoformat()
 
-	# 构建元素清单
-	element_manifest: list[dict[str, str]] = []
-	member_files: dict[str, bytes] = {}
+	try:
+		# 构建元素清单
+		element_manifest: list[dict[str, str]] = []
+		member_files: dict[str, bytes] = {}
 
-	# 按类型统计元素
-	type_counts: dict[str, int] = {}
-	for elem in elements:
-		etype = elem["type"]
-		type_counts[etype] = type_counts.get(etype, 0) + 1
-	log.debug(f"写入 {len(elements)} 条元素 ({', '.join(f'{k}={v}' for k, v in type_counts.items())})")
-	for elem in elements:
-		etype = elem["type"]
-		eid = elem["id"]
-		filename = f"{_ELEMENTS_DIR}/{eid}.json"
-		element_manifest.append({"type": etype, "id": eid, "file": filename})
-		member_files[filename] = json.dumps(
-			elem["data"], ensure_ascii=False, indent=2
-		).encode("utf-8")
+		# 按类型统计元素
+		type_counts: dict[str, int] = {}
+		for elem in elements:
+			etype = elem["type"]
+			type_counts[etype] = type_counts.get(etype, 0) + 1
+		log.debug(f"写入 {len(elements)} 条元素 ({', '.join(f'{k}={v}' for k, v in type_counts.items())})")
+		for elem in elements:
+			etype = elem["type"]
+			eid = elem["id"]
+			filename = f"{_ELEMENTS_DIR}/{eid}.json"
+			element_manifest.append({"type": etype, "id": eid, "file": filename})
+			member_files[filename] = json.dumps(
+				elem["data"], ensure_ascii=False, indent=2
+			).encode("utf-8")
 
-	# 位置的 JSON
-	pos_bytes = json.dumps(positions, ensure_ascii=False, indent=2).encode("utf-8")
-	member_files[_POSITIONS_MEMBER] = pos_bytes
+		# 位置的 JSON
+		pos_bytes = json.dumps(positions, ensure_ascii=False, indent=2).encode("utf-8")
+		member_files[_POSITIONS_MEMBER] = pos_bytes
 
-	# 时间线状态的 JSON
-	ts_bytes = json.dumps(timeline_state, ensure_ascii=False, indent=2).encode("utf-8")
-	member_files[_TIMELINE_STATE_MEMBER] = ts_bytes
+		# 时间线状态的 JSON
+		ts_bytes = json.dumps(timeline_state, ensure_ascii=False, indent=2).encode("utf-8")
+		member_files[_TIMELINE_STATE_MEMBER] = ts_bytes
 
-	# 音乐资源
-	music_info: dict[str, Any] | None = None
-	if music_data is not None:
-		member_files[_MUSIC_MEMBER] = music_data
-		music_info = {
-			"original_name": music_original_name,
-			"size": len(music_data),
+		# 音乐资源
+		music_info: dict[str, Any] | None = None
+		if music_data is not None:
+			member_files[_MUSIC_MEMBER] = music_data
+			music_info = {
+				"original_name": music_original_name,
+				"size": len(music_data),
+			}
+
+		# 计算所有成员文件的校验和
+		file_checksums: dict[str, str] = {}
+		for name in sorted(member_files):
+			file_checksums[name] = bytes_sha256(member_files[name])
+
+		# 构建 manifest（不含 checksums 键）
+		manifest_body: dict[str, Any] = {
+			"format_version": FORMAT_VERSION,
+			"backend": backend,
+			"project": manifest_data,
+			"music": music_info,
+			"elements": element_manifest,
+			"created_at": now,
+			"updated_at": now,
 		}
 
-	# 计算所有成员文件的校验和
-	file_checksums: dict[str, str] = {}
-	for name in sorted(member_files):
-		file_checksums[name] = bytes_sha256(member_files[name])
+		# 计算 manifest 主体自身的校验和
+		manifest_body_bytes = json.dumps(
+			manifest_body, ensure_ascii=False, indent=2
+		).encode("utf-8")
+		manifest_hash = bytes_sha256(manifest_body_bytes)
 
-	# 构建 manifest（不含 checksums 键）
-	manifest_body: dict[str, Any] = {
-		"format_version": FORMAT_VERSION,
-		"backend": backend,
-		"project": manifest_data,
-		"music": music_info,
-		"elements": element_manifest,
-		"created_at": now,
-		"updated_at": now,
-	}
+		# 组装完整 manifest
+		manifest: dict[str, Any] = {**manifest_body}
+		manifest["checksums"] = {
+			"algorithm": "sha256",
+			"manifest_body": manifest_hash,
+			"files": file_checksums,
+		}
 
-	# 计算 manifest 主体自身的校验和
-	manifest_body_bytes = json.dumps(
-		manifest_body, ensure_ascii=False, indent=2
-	).encode("utf-8")
-	manifest_hash = bytes_sha256(manifest_body_bytes)
+		manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
 
-	# 组装完整 manifest
-	manifest: dict[str, Any] = {**manifest_body}
-	manifest["checksums"] = {
-		"algorithm": "sha256",
-		"manifest_body": manifest_hash,
-		"files": file_checksums,
-	}
+		# 写入 tar.gz
+		with tarfile.open(filepath, mode="w:gz") as tar:
+			# manifest.json 必须第一个写入
+			info = tarfile.TarInfo(name=_MANIFEST_MEMBER)
+			info.size = len(manifest_bytes)
+			tar.addfile(info, io.BytesIO(manifest_bytes))
 
-	manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
+			for name in sorted(member_files):
+				data = member_files[name]
+				info = tarfile.TarInfo(name=name)
+				info.size = len(data)
+				tar.addfile(info, io.BytesIO(data))
 
-	# 写入 tar.gz
-	with tarfile.open(filepath, mode="w:gz") as tar:
-		# manifest.json 必须第一个写入
-		info = tarfile.TarInfo(name=_MANIFEST_MEMBER)
-		info.size = len(manifest_bytes)
-		tar.addfile(info, io.BytesIO(manifest_bytes))
+		log.debug(f"写入项目归档: {filepath} ({len(member_files)} 个成员文件)")
 
-		for name in sorted(member_files):
-			data = member_files[name]
-			info = tarfile.TarInfo(name=name)
-			info.size = len(data)
-			tar.addfile(info, io.BytesIO(data))
-
-	log.debug(f"写入项目归档: {filepath} ({len(member_files)} 个成员文件)")
+	except Exception as e:
+		log.error(f"写入归档失败 {filepath}: {e}", exc_info=True)
+		raise
 
 # 读取
 
@@ -188,8 +193,12 @@ def read_project_archive(filepath: str | Path) -> ArchiveReadResult:
 		ValueError: 文件格式无法识别
 	"""
 	filepath = Path(filepath)
-	with open(filepath, "rb") as f:
-		header = f.read(2)
+	try:
+		with open(filepath, "rb") as f:
+			header = f.read(2)
+	except (FileNotFoundError, PermissionError) as e:
+		log.error(f"无法打开项目文件 {filepath}: {e}")
+		raise
 	if header != GZIP_MAGIC:
 		raise ValueError(f"无法识别的文件格式: {filepath}")
 	return _read_tar_gz(filepath)
@@ -206,19 +215,25 @@ def _read_tar_gz(filepath: Path) -> ArchiveReadResult:
 
 	member_bytes: dict[str, bytes] = {}
 
-	with tarfile.open(filepath, mode="r:gz") as tar:
-		for member in tar.getmembers():
-			if not member.isfile():
-				continue
-			f = tar.extractfile(member)
-			if f is None:
-				continue
-			data = f.read()
-			member_bytes[member.name] = data
+	try:
+		with tarfile.open(filepath, mode="r:gz") as tar:
+			for member in tar.getmembers():
+				if not member.isfile():
+					continue
+				f = tar.extractfile(member)
+				if f is None:
+					continue
+				data = f.read()
+				member_bytes[member.name] = data
+	except (tarfile.TarError, OSError) as e:
+		errors.append(f"归档读取失败: {e}")
+		log.error(f"归档文件损坏 {filepath}: {e}", exc_info=True)
+		return ArchiveReadResult({}, [], [], {}, None, errors)
 
 	# 验证 manifest 是否存在
 	if _MANIFEST_MEMBER not in member_bytes:
 		errors.append(f"缺少 {_MANIFEST_MEMBER} ，归档已损坏")
+		log.warning(f"缺少 {_MANIFEST_MEMBER} ，归档已损坏")
 		return ArchiveReadResult({}, [], [], {}, None, errors)
 
 	# 解析 manifest
@@ -226,6 +241,7 @@ def _read_tar_gz(filepath: Path) -> ArchiveReadResult:
 		manifest = json.loads(member_bytes[_MANIFEST_MEMBER].decode("utf-8"))
 	except (json.JSONDecodeError, UnicodeDecodeError) as e:
 		errors.append(f"manifest.json 解析失败: {e}")
+		log.warning(f"manifest.json 解析失败: {e}")
 		return ArchiveReadResult({}, [], [], {}, None, errors)
 
 	# 验证格式版本
@@ -293,6 +309,7 @@ def _read_tar_gz(filepath: Path) -> ArchiveReadResult:
 			errors.append(
 				f"Music size mismatch: expect {expected_size}, read {actual_size}"
 			)
+			log.warning(f"音乐文件大小不匹配: expected={expected_size}, actual={actual_size}")
 		music_data = member_bytes[_MUSIC_MEMBER]
 
 	if errors:
@@ -327,6 +344,7 @@ def _validate_manifest_integrity(
 
 	if expected_hash:
 		if not _timing_safe_eq(expected_hash, actual_hash):
+			log.warning(f"manifest 校验和不匹配: expected={expected_hash[:16]}..., actual={actual_hash[:16]}...")
 			errors.append("manifest 完整性校验失败")
 	else:
 		errors.append("缺少 manifest_body 校验和")

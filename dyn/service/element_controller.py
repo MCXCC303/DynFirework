@@ -117,9 +117,11 @@ class ElementController(QObject):
 		return self._backend
 
 	def set_backend(self, backend: Backend) -> None:
+		old_count = len(self._elements)
 		self._backend = backend
 		self._elements.clear()
 		self._selected_id = ""
+		log.info(f"切换后端: -> {backend.value}, 已丢弃 {old_count} 个元素")
 
 	@property
 	def category_display(self) -> dict:
@@ -193,9 +195,11 @@ class ElementController(QObject):
 
 	def select_element(self, element_id: str) -> None:
 		self._selected_id = element_id
+		log.debug(f"选中元素: {element_id}")
 		self.selection_changed.emit(element_id)
 
 	def clear_selection(self) -> None:
+		log.debug("清除选中")
 		self._selected_id = ""
 		self.selection_changed.emit("")
 
@@ -217,8 +221,11 @@ class ElementController(QObject):
 		start_time: DF 为秒(float)，CB 为 tick(int)
 		"""
 		if self._backend == Backend.CB:
-			return self._create_cb_element(category, type_key, name, int(start_time))
-		return self._create_df_element(category, type_key, name, start_time)
+			elem = self._create_cb_element(category, type_key, name, int(start_time))
+		else:
+			elem = self._create_df_element(category, type_key, name, start_time)
+		log.debug(f"创建元素: id={elem.id}, name={elem.name}, category={category}")
+		return elem
 
 	def _create_df_element(
 			self, category: ElementCategory, type_key: str,
@@ -257,6 +264,7 @@ class ElementController(QObject):
 		else:
 			raise ValueError(f"Unknown category: {category}")
 
+		log.debug(f"创建 DF 元素: id={elem.id}, name={elem.name}, type_key={type_key}")
 		return elem
 
 	def _create_cb_element(
@@ -292,6 +300,7 @@ class ElementController(QObject):
 		else:
 			raise ValueError(f"Unknown element type: {element_type}")
 
+		log.debug(f"创建 CB 元素: id={elem.id}, name={elem.name}, type={element_type}")
 		return elem
 
 	# 删除
@@ -310,6 +319,7 @@ class ElementController(QObject):
 
 	def remove_selected(self) -> Any:
 		if not self._selected_id:
+			log.debug("remove_selected: 无选中元素")
 			return None
 		return self.remove_element(self._selected_id)
 
@@ -336,6 +346,7 @@ class ElementController(QObject):
 		"""设置元素的位置字段 按类型自动分发到正确的属性."""
 		elem = self._elements.get(element_id)
 		if elem is None:
+			log.warning(f"set_position 失败: 元素不存在 id={element_id}")
 			return False
 
 		if self._backend == Backend.CB:
@@ -374,6 +385,7 @@ class ElementController(QObject):
 					elem.position = pos
 
 		self.element_changed.emit(element_id, "position", pos)
+		log.debug(f"设置位置: eid={element_id}, {which}=({x},{y},{z})")
 		return True
 
 	# 属性变更协调 区分复杂类型(面板已直接赋值)和简单类型(需undo)
@@ -382,7 +394,9 @@ class ElementController(QObject):
 	                          value: object, old_value: object) -> bool:
 		"""应用属性变更 复杂类型(面板已直改)返回True，简单类型执行 set_property 返回False(需undo)."""
 		if key in _COMPLEX_KEYS:
+			log.info(f"应用属性变更(复杂): id={element_id}, key={key}")
 			return True
+		log.debug(f"应用属性变更: id={element_id}, key={key}")
 		self.set_property(element_id, key, value)
 		return False
 
@@ -399,10 +413,12 @@ class ElementController(QObject):
 	def clone_element(self, element_id: str) -> Any:
 		elem = self._elements.get(element_id)
 		if elem is None:
+			log.warning(f"克隆失败: 元素不存在 id={element_id}")
 			return None
 		cloned = copy.deepcopy(elem)
 		cloned.id = str(uuid4())
 		cloned.name = f"{elem.name} (副本)"
+		log.debug(f"克隆成功: {elem.name} -> {cloned.name}")
 		return cloned
 
 	# 项目同步
@@ -415,7 +431,9 @@ class ElementController(QObject):
 
 		for e in project.elements:
 			self._elements[e.id] = e
+		log.info(f"从项目加载: backend={project.backend.value}, {len(project.elements)} 个元素")
 
 	def to_project(self, project) -> None:
 		"""将元素写回 Project 单列表."""
 		project.elements = list(self._elements.values())
+		log.debug(f"元素写入项目: {len(project.elements)} 个")

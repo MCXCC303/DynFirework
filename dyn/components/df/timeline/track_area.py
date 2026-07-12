@@ -117,6 +117,7 @@ class _TrackArea(QWidget):
 	def _compute(self) -> None:
 		self._blocks.clear()
 		if not self._views:
+			log.debug(f"轨道 '{self._label}' 无元素视图")
 			self._content_height = 60
 			self.update()
 			return
@@ -284,6 +285,7 @@ class _TrackArea(QWidget):
 			use_grad = False
 			layers = 1
 		else:
+			log.warning(f"未知元素类型: {type(elem)}")
 			c_start = c_end = ColorRGB(128, 128, 128)
 			use_grad = False
 			layers = 1

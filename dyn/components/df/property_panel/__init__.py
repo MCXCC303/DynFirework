@@ -1,17 +1,21 @@
 """DynFireworkMod v2.0 属性表单 秒单位."""
 from __future__ import annotations
 
+from dyn.logging_config import get_logger
 from .composites.composite_base import CompositeBase
 from .effects.effect_base import EffectBase
 from .fw.fw_base import FwBase
 from .traj.traj_base import TrajBase
 
 # 注册表: type_key -> form_class
+log = get_logger(__name__)
+
 FORM_REGISTRY: dict[str, type] = {}
 
 def _init_form_registry() -> None:
 	# 初始化表单
 	if FORM_REGISTRY:
+		log.debug("表单注册表已初始化, 跳过")
 		return
 	from .fw.fw_single_layer import SingleLayerForm
 	from .fw.fw_double_layer import DoubleLayerForm
@@ -62,6 +66,7 @@ def get_form(type_key: str):
 	_init_form_registry()
 	cls = FORM_REGISTRY.get(type_key)
 	if cls is None:
+		log.warning(f"未找到表单: type_key={type_key}")
 		return None
 	return cls()
 

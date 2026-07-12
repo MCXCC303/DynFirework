@@ -1,9 +1,12 @@
 """导出参数构建 + 元素类型到导出函数映射 供 CLI 和 ExportService 共用."""
 from __future__ import annotations
 
+import logging
 from typing import Callable
 
 from dyn.models.df.base import ElementCategory
+
+log = logging.getLogger(__name__)
 
 def _build_fw_dispatch() -> dict[str, Callable]:
 	from dyn.lib.df import fireworks as _fw
@@ -53,34 +56,47 @@ def _init_maps() -> None:
 	TRAJ_FUNC_MAP.update(_build_traj_dispatch())
 	EFFECT_FUNC_MAP.update(_build_effect_dispatch())
 	COMPOSITE_FUNC_MAP.update(_build_composite_dispatch())
+	log.info("初始化 DF 导出映射")
 
 def export_firework(elem) -> None:
 	_init_maps()
 	from dyn.models.df.registry import get_type_key
-	func = FW_FUNC_MAP.get(get_type_key(elem))
+	type_key = get_type_key(elem)
+	func = FW_FUNC_MAP.get(type_key)
 	if func:
 		func(elem)
+	else:
+		log.warning(f"未找到导出处理函数: type_key={type_key}")
 
 def export_trajectory(elem) -> None:
 	_init_maps()
 	from dyn.models.df.registry import get_type_key
-	func = TRAJ_FUNC_MAP.get(get_type_key(elem))
+	type_key = get_type_key(elem)
+	func = TRAJ_FUNC_MAP.get(type_key)
 	if func:
 		func(elem)
+	else:
+		log.warning(f"未找到导出处理函数: type_key={type_key}")
 
 def export_effect(elem) -> None:
 	_init_maps()
 	from dyn.models.df.registry import get_type_key
-	func = EFFECT_FUNC_MAP.get(get_type_key(elem))
+	type_key = get_type_key(elem)
+	func = EFFECT_FUNC_MAP.get(type_key)
 	if func:
 		func(elem)
+	else:
+		log.warning(f"未找到导出处理函数: type_key={type_key}")
 
 def export_composite(elem) -> None:
 	_init_maps()
 	from dyn.models.df.registry import get_type_key
-	func = COMPOSITE_FUNC_MAP.get(get_type_key(elem))
+	type_key = get_type_key(elem)
+	func = COMPOSITE_FUNC_MAP.get(type_key)
 	if func:
 		func(elem)
+	else:
+		log.warning(f"未找到导出处理函数: type_key={type_key}")
 
 EXPORT_DISPATCH: dict[ElementCategory, Callable] = {
 	ElementCategory.FIREWORK: export_firework,
@@ -93,6 +109,8 @@ def export_element(elem) -> None:
 	handler = EXPORT_DISPATCH.get(elem.category)
 	if handler:
 		handler(elem)
+	else:
+		log.warning(f"未识别的元素类别: {elem.category}")
 
 # CB 导出调度 按 cb ElementType 分发到 lib/cb/ 函数
 
@@ -140,6 +158,8 @@ def _export_cb_firework(elem) -> None:
 		_fw.expanding_sphere_firework(
 			tick, x, y, z, inner_start, inner_end,
 			elem.radius, elem.track_count, elem.radial_speed, lifetime)
+	else:
+		log.warning(f"未知 CB 烟花类型: {fw_type}")
 
 def _export_cb_trajectory(elem) -> None:
 	from dyn.lib.cb import trajectories as _traj
@@ -192,6 +212,8 @@ def _export_cb_trajectory(elem) -> None:
 		_traj.expanding_trajectory_with_random_offset(
 			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
 			k, m0, duration, lifetime, iv, ppt, rx, ry, rz, pc, sf)
+	else:
+		log.warning(f"未知 CB 轨迹类型: {traj_type}")
 
 def _export_cb_traj_firework(elem) -> None:
 	_export_cb_trajectory(elem)
@@ -217,3 +239,5 @@ def export_cb_element(elem) -> None:
 	handler = CB_EXPORT_DISPATCH.get(elem.element_type)
 	if handler:
 		handler(elem)
+	else:
+		log.warning(f"未识别的 CB 元素类型: {elem.element_type}")

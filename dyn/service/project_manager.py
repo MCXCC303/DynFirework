@@ -69,7 +69,11 @@ class ProjectManager(QObject):
 	def open_project(self, path: str | Path) -> Project:
 		log.debug(f"打开项目: {path}")
 		self._cleanup_music_temp()
-		self._project = Project.from_file(path)
+		try:
+			self._project = Project.from_file(path)
+		except Exception as e:
+			log.error(f"无法打开项目 {path}: {e}", exc_info=True)
+			raise
 		self._file_path = str(path)
 		self._is_modified = False
 		self.project_opened.emit(self._project)
@@ -89,6 +93,7 @@ class ProjectManager(QObject):
 			return False
 		self._is_modified = False
 		self.project_saved.emit(self._file_path)
+		log.debug(f"项目已保存: {self._file_path}")
 		return True
 
 	def set_music(self, filepath: str | Path) -> bool:
@@ -170,7 +175,7 @@ def _cleanup_all_temp() -> None:
 	for f in tmp_dir.glob("dyn_music_*"):
 		try:
 			f.unlink()
-		except OSError:
-			pass
+		except OSError as e:
+			log.warning(f"清理临时文件失败: {f}")
 
 atexit.register(_cleanup_all_temp)

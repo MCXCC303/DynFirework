@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from dyn.logging_config import get_logger
 from .base import Element, ElementCategory
+
+log = get_logger(__name__)
 from .values import GradientColor, Position, EffectType
 
 @dataclass
@@ -114,9 +117,14 @@ class EffectElement(Element):
 	@classmethod
 	def from_json(cls, data: dict) -> EffectElement:
 		base = cls._from_json_base(data)
+		try:
+			effect_type = EffectType(data.get("type", "beam"))
+		except ValueError:
+			log.warning(f"未知 EffectType: {data.get('type')}，使用默认 BEAM")
+			effect_type = EffectType.BEAM
 		return cls(
 			**base,
-			effect_type=EffectType(data.get("type", "beam")),
+			effect_type=effect_type,
 			position=Position.from_json(data.get("position", {})),
 			# Beam
 			beam_start_color=GradientColor.from_json(data.get("beam_start_color", {})),

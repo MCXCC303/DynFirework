@@ -4,6 +4,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from dyn.logging_config import get_logger
+
+log = get_logger(__name__)
+
 class FireworkType(Enum):
 	SINGLE_LAYER = "single_layer"
 	DOUBLE_LAYER = "double_layer"
@@ -42,7 +46,11 @@ class ColorRGB:
 
 	@classmethod
 	def from_json(cls, data: dict) -> ColorRGB:
-		return cls(r=data["r"], g=data["g"], b=data["b"])
+		try:
+			return cls(r=data["r"], g=data["g"], b=data["b"])
+		except KeyError:
+			log.warning(f"ColorRGB.from_json 缺少键: {list(data.keys())}")
+			raise
 
 @dataclass
 class Position:
@@ -58,7 +66,11 @@ class Position:
 
 	@classmethod
 	def from_json(cls, data: dict) -> Position:
-		return cls(x=data["x"], y=data["y"], z=data["z"])
+		try:
+			return cls(x=data["x"], y=data["y"], z=data["z"])
+		except KeyError:
+			log.warning(f"Position.from_json 缺少键: {list(data.keys())}")
+			raise
 
 @dataclass
 class GradientColor:
@@ -75,8 +87,14 @@ class GradientColor:
 
 	@classmethod
 	def from_json(cls, data: dict) -> GradientColor:
+		try:
+			start = ColorRGB.from_json(data["start"])
+			end = ColorRGB.from_json(data["end"])
+		except KeyError:
+			log.warning(f"GradientColor.from_json 缺少键: {list(data.keys())}")
+			raise
 		return cls(
-			start=ColorRGB.from_json(data["start"]),
-			end=ColorRGB.from_json(data["end"]),
+			start=start,
+			end=end,
 			use_gradient=data.get("use_gradient", False),
 		)

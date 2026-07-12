@@ -83,8 +83,10 @@ class RotatingRingForm(EffectBase):
 		if self._loading or self._element is None:
 			return
 		e = self._element
-		c = self._cp_color_begin.color; e.rr_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_color_end.color; e.rr_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color_begin.color;
+		e.rr_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color_end.color;
+		e.rr_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
 		e.rr_color.use_gradient = self._chk_color_grad.isChecked()
 		e.rr_ring_radius = self._spin_rr_ring_radius.value()
 		e.rr_tube_radius = self._spin_rr_tube_radius.value()

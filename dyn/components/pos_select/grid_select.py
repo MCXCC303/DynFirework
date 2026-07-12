@@ -169,6 +169,7 @@ class _BaseGraphWidget(QWidget):
 	def _handle_left_click(self, gx: int, gz: int) -> None:
 		log.debug(f"点击: grid=({gx}, {gz})")
 		if (gx, gz) in self.stored_pix_fastsearch:
+			log.debug(f"重复位置: ({gx},{gz}), 选取第一个")
 			for pt in self.stored_pix_list:
 				if int(pt.x) == gx and int(pt.z) == gz:
 					log.debug(f"选中点: ({pt.x:.2f}, {pt.y:.2f}, {pt.z:.2f}), label={pt.label}")

@@ -28,7 +28,7 @@ def beam_effect(elem) -> None:
 		lifetime=elem.beam_lifetime,
 	)
 	global_storage.add_command(tick, cmd)
-	log.debug(f"beam_effect: tick={tick}, pos=({pos.x:.1f},{pos.y:.1f},{pos.z:.1f})")
+	log.debug(f"beam_effect: elem={elem.id}({elem.name}), tick={tick}, pos=({pos.x:.1f},{pos.y:.1f},{pos.z:.1f}), count={elem.beam_count}, spread={elem.beam_spread_angle}")
 
 def spray_effect(elem) -> None:
 	"""持续喷射 - /df spray."""
@@ -48,7 +48,7 @@ def spray_effect(elem) -> None:
 		particle_lifetime_ticks=elem.spray_particle_lifetime_ticks,
 	)
 	global_storage.add_command(tick, cmd)
-	log.debug(f"spray_effect: tick={tick}")
+	log.debug(f"spray_effect: elem={elem.id}({elem.name}), tick={tick}, duration_ticks={elem.spray_duration_ticks}, particles_per_tick={elem.spray_particles_per_tick}")
 
 def double_helix_effect(elem) -> None:
 	"""双螺旋 - /df doublehelix."""
@@ -64,7 +64,7 @@ def double_helix_effect(elem) -> None:
 		c2r2=elem.dh_color2.end.r, c2g2=elem.dh_color2.end.g, c2b2=elem.dh_color2.end.b,
 	)
 	global_storage.add_command(tick, cmd)
-	log.debug(f"double_helix_effect: tick={tick}")
+	log.debug(f"double_helix_effect: elem={elem.id}({elem.name}), tick={tick}, radius={elem.dh_radius}, rotation_speed={elem.dh_rotation_speed}")
 
 def rotating_ring_effect(elem) -> None:
 	"""旋转环 - /df rotatingring."""
@@ -80,4 +80,4 @@ def rotating_ring_effect(elem) -> None:
 		r2=elem.rr_color.end.r, g2=elem.rr_color.end.g, b2=elem.rr_color.end.b,
 	)
 	global_storage.add_command(tick, cmd)
-	log.debug(f"rotating_ring_effect: tick={tick}")
+	log.debug(f"rotating_ring_effect: elem={elem.id}({elem.name}), tick={tick}, ring_radius={elem.rr_ring_radius}, rotation_speed={elem.rr_rotation_speed}")

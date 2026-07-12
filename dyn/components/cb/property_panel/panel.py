@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from dyn.logging_config import get_logger
-from dyn.models.cb import Element, ElementType, TrajectoryElement, FireworkElement, TrajFireworkElement
+from dyn.models.cb import Element, ElementType, TrajectoryElement, TrajFireworkElement
 from dyn.service.element_controller import ElementController
 
 log = get_logger(__name__)
@@ -197,6 +197,8 @@ class CbPropertyPanel(QScrollArea):
 	def load_element(self, elem: Element | None, part: str = "") -> None:
 		if self._loading:
 			return
+		log.debug(f"加载元素: type={type(elem).__name__ if elem else 'None'}, "
+		          f"name={getattr(elem, 'name', 'N/A') if elem else 'N/A'}, part={part}")
 		self._loading = True
 		try:
 			self._do_load_element(elem, part)
@@ -232,30 +234,33 @@ class CbPropertyPanel(QScrollArea):
 			self._active_form = None
 
 		# 按 element 类型 + part 确定显示轨迹还是烟花类型
-		if isinstance(elem, TrajFireworkElement) and part == "traj":
-			type_key = elem.traj_type
-			cat = ElementType.TRAJECTORY
-		elif isinstance(elem, TrajectoryElement):
-			type_key = elem.traj_type
-			cat = ElementType.TRAJECTORY
-		else:
-			type_key = elem.fw_type if hasattr(elem, 'fw_type') else "single_layer"
-			cat = ElementType.FIREWORK
-		types = _TRAJ_TYPES if cat == ElementType.TRAJECTORY else _FW_TYPES
+		try:
+			if isinstance(elem, TrajFireworkElement) and part == "traj":
+				type_key = elem.traj_type
+				cat = ElementType.TRAJECTORY
+			elif isinstance(elem, TrajectoryElement):
+				type_key = elem.traj_type
+				cat = ElementType.TRAJECTORY
+			else:
+				type_key = elem.fw_type if hasattr(elem, 'fw_type') else "single_layer"
+				cat = ElementType.FIREWORK
+			types = _TRAJ_TYPES if cat == ElementType.TRAJECTORY else _FW_TYPES
 
-		self._lbl_type.setText("轨迹类型:" if cat == ElementType.TRAJECTORY else "烟花类型:")
-		self._combo_type.blockSignals(True)
-		self._combo_type.clear()
-		for key, display in types:
-			self._combo_type.addItem(display, key)
-		idx = self._combo_type.findData(type_key)
-		if idx >= 0:
-			self._combo_type.setCurrentIndex(idx)
-		self._combo_type.blockSignals(False)
-		self._lbl_type.show()
-		self._combo_type.show()
+			self._lbl_type.setText("轨迹类型:" if cat == ElementType.TRAJECTORY else "烟花类型:")
+			self._combo_type.blockSignals(True)
+			self._combo_type.clear()
+			for key, display in types:
+				self._combo_type.addItem(display, key)
+			idx = self._combo_type.findData(type_key)
+			if idx >= 0:
+				self._combo_type.setCurrentIndex(idx)
+			self._combo_type.blockSignals(False)
+			self._lbl_type.show()
+			self._combo_type.show()
 
-		self._swap_form(type_key)
+			self._swap_form(type_key)
+		except Exception:
+			log.error(f"加载元素类型分发失败: elem={elem}, part={part}", exc_info=True)
 		self._block_all(False)
 
 	def _current_type_key(self, elem: Element) -> str:

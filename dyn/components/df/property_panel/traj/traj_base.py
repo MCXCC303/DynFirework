@@ -9,8 +9,11 @@ from PySide6.QtWidgets import (
 
 from dyn.components.base.color_picker import ColorPicker
 from dyn.components.base.form_base import FormBase
+from dyn.logging_config import get_logger
 from dyn.models.df.trajectories import TrajectoryElement
 from dyn.models.df.values import Position, ColorRGB
+
+log = get_logger(__name__)
 
 class TrajBase(FormBase):
 	"""df 轨迹表单共享基类 子类只需在 _setup_type_params 中添加类型专属参数."""
@@ -60,6 +63,7 @@ class TrajBase(FormBase):
 	def _on_pos_changed(self) -> None:
 		if self._loading or self._element is None:
 			return
+		log.debug(f"轨迹起始位置变更: id={self._element.id[:8]}")
 		pos = Position(x=self._spin_pos_x.value(), y=self._spin_pos_y.value(), z=self._spin_pos_z.value())
 		self._element.start_position = pos
 		self._emit("start_position", None)
@@ -89,6 +93,7 @@ class TrajBase(FormBase):
 	def _on_end_pos_changed(self) -> None:
 		if self._loading or self._element is None:
 			return
+		log.debug(f"轨迹结束位置变更: id={self._element.id[:8]}")
 		pos = Position(x=self._spin_end_x.value(), y=self._spin_end_y.value(), z=self._spin_end_z.value())
 		self._element.end_position = pos
 		self._emit("end_position", None)
@@ -117,6 +122,7 @@ class TrajBase(FormBase):
 			grp.hide()
 
 	def load(self, elem: TrajectoryElement) -> None:
+		log.debug(f"加载轨迹表单: name={elem.name}, traj_type={elem.traj_type}")
 		self._loading = True
 		self._element = elem
 		self.block_signals(True)

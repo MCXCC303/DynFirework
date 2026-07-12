@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from dyn.logging_config import get_logger
 from .base import Element, ElementCategory
+
+log = get_logger(__name__)
 from .values import GradientColor, Position, CompositeType, FireworkType
 
 @dataclass
@@ -106,14 +109,27 @@ class CompositeElement(Element):
 	@classmethod
 	def from_json(cls, data: dict) -> CompositeElement:
 		base = cls._from_json_base(data)
+
+		try:
+			composite_type = CompositeType(data.get("type", "secondary_explosion"))
+		except ValueError:
+			log.warning(f"未知 CompositeType: {data.get('type')}，使用默认 SECONDARY_EXPLOSION")
+			composite_type = CompositeType.SECONDARY_EXPLOSION
+
+		try:
+			se_primary_type = FireworkType(data.get("se_primary_type", "single_layer"))
+		except ValueError:
+			log.warning(f"未知 FireworkType: {data.get('se_primary_type')}，使用默认 SINGLE_LAYER")
+			se_primary_type = FireworkType.SINGLE_LAYER
+
 		return cls(
 			**base,
-			composite_type=CompositeType(data.get("type", "secondary_explosion")),
+			composite_type=composite_type,
 			position=Position.from_json(data.get("position", {})),
 			# Secondary explosion
 			se_start_position=Position.from_json(data.get("se_start_position", {})),
 			se_mid_position=Position.from_json(data.get("se_mid_position", {})),
-			se_primary_type=FireworkType(data.get("se_primary_type", "single_layer")),
+			se_primary_type=se_primary_type,
 			se_primary_color=GradientColor.from_json(data.get("se_primary_color", {})),
 			se_primary_speed=data.get("se_primary_speed", 10.0),
 			se_primary_count=data.get("se_primary_count", 100),

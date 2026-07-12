@@ -9,8 +9,11 @@ from PySide6.QtWidgets import (
 
 from dyn.components.base.color_picker import ColorPicker
 from dyn.components.base.form_base import FormBase
+from dyn.logging_config import get_logger
 from dyn.models.df.fireworks import FireworkElement
 from dyn.models.df.values import Position, ColorRGB
+
+log = get_logger(__name__)
 
 class FwBase(FormBase):
 	"""df 烟花表单共享基类 子类实现 _setup_type_sections 和 _load_type_sections."""
@@ -62,6 +65,7 @@ class FwBase(FormBase):
 	def _on_pos_changed(self) -> None:
 		if self._loading or self._element is None:
 			return
+		log.debug(f"烟花位置变更: id={self._element.id[:8]}")
 		pos = Position(x=self._spin_pos_x.value(), y=self._spin_pos_y.value(), z=self._spin_pos_z.value())
 		self._element.position = pos
 		self._emit("position", None)
@@ -161,6 +165,7 @@ class FwBase(FormBase):
 			grp.hide()
 
 	def load(self, elem: FireworkElement) -> None:
+		log.debug(f"加载烟花表单: name={elem.name}, fw_type={elem.fw_type}")
 		self._loading = True
 		self._element = elem
 		self.block_signals(True)
@@ -218,7 +223,11 @@ class FwBase(FormBase):
 		elif key == "outer_color_end":
 			old_value = e.outer_color.end
 			e.outer_color.end = value
-		elif key in ("position", "extra"):
+		elif key == "position":
+			pass
+		elif key == "extra":
+			log.debug(f"烟花额外属性变更: key={key}, value={value}")
+		else:
 			pass
 
 		self.property_changed.emit(e.id, key, value, old_value)

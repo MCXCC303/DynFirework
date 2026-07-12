@@ -47,7 +47,11 @@ class _TFProxy(Element):
 		if self._part == "traj":
 			self._parent.start_tick = v
 		else:
-			self._parent.traj_duration_ticks = max(1, v - self._parent.start_tick)
+			raw_value = v - self._parent.start_tick
+			clamped = max(1, raw_value)
+			if raw_value != clamped:
+				log.debug(f"TF代理 start_tick 限制: {raw_value} -> {clamped}")
+			self._parent.traj_duration_ticks = clamped
 
 	@property
 	def duration_ticks(self) -> int:
@@ -57,10 +61,13 @@ class _TFProxy(Element):
 
 	@duration_ticks.setter
 	def duration_ticks(self, v: int) -> None:
+		clamped = max(1, v)
+		if v != clamped:
+			log.debug(f"TF代理 duration_ticks 限制: {v} -> {clamped}")
 		if self._part == "traj":
-			self._parent.traj_duration_ticks = max(1, v)
+			self._parent.traj_duration_ticks = clamped
 		else:
-			self._parent.fw_duration_ticks = max(1, v)
+			self._parent.fw_duration_ticks = clamped
 
 	def to_json(self) -> dict:
 		return self._parent.to_json()
@@ -258,6 +265,7 @@ class _TrackArea(QWidget):
 			c_outer_start = elem.outer_color.start
 			c_outer_end = elem.outer_color.end
 		else:
+			log.warning(f"未知元素类型用于渐变绘制: {type(elem)}")
 			c_start = c_end = ColorRGB(128, 128, 128)
 			use_grad = False
 			layers = 1

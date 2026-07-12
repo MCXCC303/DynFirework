@@ -84,11 +84,29 @@ class ParticleexTimelineWidget(QWidget):
 		super().changeEvent(event)
 
 	def set_controller(self, controller: ElementController) -> None:
+		if self._controller:
+			try:
+				self._controller.element_added.disconnect(self._on_elements_changed)
+			except (TypeError, RuntimeError):
+				pass
+			try:
+				self._controller.element_removed.disconnect(self._on_elements_changed)
+			except (TypeError, RuntimeError):
+				pass
+			try:
+				self._controller.element_changed.disconnect(self._on_element_updated)
+			except (TypeError, RuntimeError):
+				pass
+			try:
+				self._controller.selection_changed.disconnect(self._on_selection_changed)
+			except (TypeError, RuntimeError):
+				pass
 		self._controller = controller
 		controller.element_added.connect(self._on_elements_changed)
 		controller.element_removed.connect(self._on_elements_changed)
 		controller.element_changed.connect(self._on_element_updated)
 		controller.selection_changed.connect(self._on_selection_changed)
+		log.debug("已连接 CB 控制器信号")
 
 	def set_pixels_per_tick(self, ppt: float) -> None:
 		self._pixels_per_tick = max(0.5, min(20.0, ppt))
@@ -304,6 +322,7 @@ class ParticleexTimelineWidget(QWidget):
 			else:
 				self.set_pixels_per_tick(old / factor)
 			self._scroll_offset = max(0, self._playback_tick * (self._pixels_per_tick - old) + self._scroll_offset)
+			log.debug(f"时间线缩放: ppt={self._pixels_per_tick:.2f}")
 			self._refresh_tracks()
 			self.view_changed.emit()
 			self.update()
@@ -312,7 +331,8 @@ class ParticleexTimelineWidget(QWidget):
 
 	def keyPressEvent(self, event: QKeyEvent) -> None:
 		if event.key() == Qt.Key_Delete and self._selected_id and self._controller:
-			log.debug(f"时间线按键删除: id={self._selected_id}")
+			elem_name = next((getattr(e, 'name', '?') for e in self._elements if e.id == self._selected_id), '?')
+			log.debug(f"时间线按键删除: id={self._selected_id}, name={elem_name}")
 			self._controller.remove_element(self._selected_id)
 		super().keyPressEvent(event)
 
@@ -340,6 +360,7 @@ class ParticleexTimelineWidget(QWidget):
 		self.element_selected.emit(element_id)
 
 	def _on_track_moved(self, eid: str, tick: int) -> None:
+		log.debug(f"轨道移动: id={eid}, new_start_tick={tick}")
 		self.element_moved.emit(eid, tick)
 
 	def _on_track_resized(self, eid: str, dur: int) -> None:

@@ -73,9 +73,11 @@ class AddElementCommand(QUndoCommand):
 		self._element = element
 
 	def undo(self) -> None:
+		log.debug(f"撤销添加: 移除元素 {self._element.id}")
 		self._controller.remove_element(self._element.id)
 
 	def redo(self) -> None:
+		log.debug(f"重做添加: 恢复元素 {self._element.id}")
 		self._controller.add_element(self._element)
 
 class RemoveElementCommand(QUndoCommand):
@@ -86,9 +88,11 @@ class RemoveElementCommand(QUndoCommand):
 		self._element = element
 
 	def undo(self) -> None:
+		log.debug(f"撤销移除: 恢复元素 {self._element.id}")
 		self._controller.add_element(self._element)
 
 	def redo(self) -> None:
+		log.debug(f"重做移除: 移除元素 {self._element.id}")
 		self._controller.remove_element(self._element.id)
 
 class UndoManager(QObject):
@@ -126,9 +130,11 @@ class UndoManager(QObject):
 			description=f"修改 {key}"))
 
 	def push_add_element(self, element) -> None:
+		log.debug(f"压入添加撤销: id={element.id}, name={element.name}")
 		self._stack.push(AddElementCommand(self._controller, element))
 
 	def push_remove_element(self, element) -> None:
+		log.debug(f"压入移除撤销: id={element.id}, name={element.name}")
 		self._stack.push(RemoveElementCommand(self._controller, element))
 
 	def begin_macro(self, name: str) -> None:
@@ -162,5 +168,5 @@ class UndoManager(QObject):
 		log.debug(f"重做完成: '{text}' | 执行后元素状态: {list(elems_after.values())}")
 
 	def clear(self) -> None:
-		log.debug("清空撤销栈")
+		log.info("清空撤销栈")
 		self._stack.clear()

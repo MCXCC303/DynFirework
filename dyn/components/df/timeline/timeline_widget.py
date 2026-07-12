@@ -1,7 +1,6 @@
 """时间线编辑器 音频波形 + 烟花/轨迹/效果/复合四轨道 (df, second-based)."""
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal, QEvent
@@ -11,6 +10,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget
 
+from dyn.logging_config import get_logger
 from dyn.models.df.base import Element as DfElement
 from dyn.service.element_controller import ElementController
 from .header import _HeaderWidget
@@ -25,7 +25,7 @@ from .theme import (
 from .track_area import _TrackArea
 from ...timeline.waveform import _WaveformWidget
 
-log = logging.getLogger("dyn.components.timeline")
+log = get_logger(__name__)
 
 class DFTimelineWidget(QWidget):
 	"""时间线编辑器 音频波形 + 烟花/轨迹/效果/复合四轨道 (df)."""
@@ -140,11 +140,20 @@ class DFTimelineWidget(QWidget):
 		super().changeEvent(event)
 
 	def set_controller(self, controller: ElementController) -> None:
+		if self._controller is not None:
+			try:
+				self._controller.element_added.disconnect(self.on_elements_changed)
+				self._controller.element_removed.disconnect(self.on_elements_changed)
+				self._controller.element_changed.disconnect(self._on_element_updated)
+				self._controller.selection_changed.disconnect(self._on_selection_changed)
+			except (TypeError, RuntimeError):
+				pass
 		self._controller = controller
 		controller.element_added.connect(self.on_elements_changed)
 		controller.element_removed.connect(self.on_elements_changed)
 		controller.element_changed.connect(self._on_element_updated)
 		controller.selection_changed.connect(self._on_selection_changed)
+		log.debug("已连接 DF 控制器信号")
 
 	def set_pixels_per_second(self, pps: float) -> None:
 		self._pixels_per_second = max(10.0, min(400.0, pps))
@@ -349,6 +358,7 @@ class DFTimelineWidget(QWidget):
 				self.set_pixels_per_second(old * factor)
 			else:
 				self.set_pixels_per_second(old / factor)
+			log.debug(f"缩放: pps {old:.1f} -> {self._pixels_per_second:.1f}")
 			self._scroll_offset = max(0, self._playback_time * (self._pixels_per_second - old) + self._scroll_offset)
 			self._refresh_tracks()
 			self.view_changed.emit()
@@ -383,6 +393,7 @@ class DFTimelineWidget(QWidget):
 		self.element_selected.emit(element_id)
 
 	def _on_track_moved(self, eid: str, new_start: float, old_start: float) -> None:
+		log.debug(f"轨道移动: id={eid[:8]}, {old_start:.2f}s -> {new_start:.2f}s")
 		self.element_moved.emit(eid, new_start, old_start)
 
 	def _on_track_resized(self, eid: str, new_dur: float, old_dur: float) -> None:

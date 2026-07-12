@@ -61,8 +61,13 @@ def basic_single_layer_firework(tick, x, y, z, start_color, end_color, speed, ho
 
 				t += t_step
 				n_tick += 1  # 增加n_tick
+	total_particles = horizontal_angles * vertical_angles
+	log.debug(f"basic_single_layer_firework: 生成粒子总数={total_particles}, duration={duration:.2f}s")
 
 def calculate_inner_angle_steps(outer_horizontal_angle_step, outer_vertical_angle_step, inner_speed, outer_speed):
+	if inner_speed == 0:
+		log.warning("calculate_inner_angle_steps: inner_speed为0，返回默认角度步长")
+		return outer_horizontal_angle_step, outer_vertical_angle_step
 	# 内外层的半径比例
 	radius_ratio = outer_speed / inner_speed
 
@@ -144,6 +149,7 @@ def directional_firework(tick, x, y, z, start_color, end_color, speed,
 
 def clustered_firework(tick, x, y, z, start_color, end_color, speed, horizontal_angle_step, vertical_angle_step,
                        track_count, spread_angle, duration, lifetime):
+	log.debug(f"clustered_firework: tick={tick}, pos=({x:.1f},{y:.1f},{z:.1f}), h_angles={int(360 / horizontal_angle_step)}, v_angles={int(180 / vertical_angle_step)}, tracks={track_count}")
 	horizontal_angles = int(360 / horizontal_angle_step)
 	vertical_angles = int(180 / vertical_angle_step)
 	for i in range(horizontal_angles):
@@ -175,6 +181,7 @@ def expanding_sphere_firework(tick, x, y, z, start_color, end_color,
 		radial_speed: 沿位矢方向的扩散速度
 		lifetime: 粒子生命周期（ticks）
 	"""
+	log.debug(f"expanding_sphere_firework: tick={tick}, pos=({x:.1f},{y:.1f},{z:.1f}), radius={radius}, particles={particle_count}, radial_speed={radial_speed}")
 	# 黄金角（Golden Angle）约等于 2.39996 弧度
 	golden_angle = math.pi * (3.0 - math.sqrt(5.0))
 

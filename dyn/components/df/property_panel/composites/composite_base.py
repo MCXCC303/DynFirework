@@ -9,8 +9,11 @@ from PySide6.QtWidgets import (
 
 from dyn.components.base.color_picker import ColorPicker
 from dyn.components.base.form_base import FormBase
+from dyn.logging_config import get_logger
 from dyn.models.df.composites import CompositeElement
 from dyn.models.df.values import Position
+
+log = get_logger(__name__)
 
 # 子元素 part 标识符 供浏览器 ProxyNode / 面板路由 / 主窗口选中共用
 PART_PRIMARY = "primary"
@@ -135,6 +138,8 @@ class CompositeBase(FormBase):
 		old = getattr(self._element, full, None)
 		if hasattr(self._element, full):
 			setattr(self._element, full, value)
+		else:
+			log.warning(f"CompositeBase._set: 属性不存在 {full} on {type(self._element).__name__}")
 		self.property_changed.emit(self._element.id, full, value, old)
 
 	def _add_color_group(self, title: str) -> tuple[QGroupBox, ColorPicker, ColorPicker, QCheckBox]:

@@ -48,9 +48,11 @@ class PlaybackController(QObject):
 		return self.player.playbackState() == QMediaPlayer.PlaybackState.StoppedState
 
 	def set_bpm(self, bpm: float) -> None:
+		log.debug(f"设置 BPM: {bpm}")
 		self._bpm = bpm
 
 	def set_ticks_per_beat(self, tpb: int) -> None:
+		log.debug(f"设置 TPB: {tpb}")
 		self._ticks_per_beat = tpb
 
 	def load_music(self, path: str | Path) -> bool:
@@ -65,6 +67,7 @@ class PlaybackController(QObject):
 		return True
 
 	def load_music_from_temp(self, temp_path: str) -> bool:
+		log.debug(f"从临时文件加载音乐: {temp_path}")
 		return self.load_music(temp_path)
 
 	def _on_media_loaded(self, status) -> None:
@@ -92,16 +95,20 @@ class PlaybackController(QObject):
 		self.position_sec_changed.emit(0.0)
 
 	def toggle_play_pause(self) -> None:
+		current_state = "playing" if self.is_playing else "paused" if self.is_paused else "stopped"
+		log.debug(f"切换播放/暂停: 当前={current_state}")
 		if self.is_playing:
 			self.pause()
 		else:
 			self.play()
 
 	def seek_to_tick(self, tick: int) -> None:
+		log.debug(f"跳转到 tick: {tick}")
 		ms = self._ticks_to_ms(tick)
 		self.player.setPosition(ms)
 
 	def seek_to_sec(self, sec: float) -> None:
+		log.debug(f"跳转到 秒: {sec}")
 		self.seek_to_tick(int(sec * 20))
 
 	def current_tick(self) -> int:
@@ -119,6 +126,7 @@ class PlaybackController(QObject):
 		pass
 
 	def _on_state_changed(self, state) -> None:
+		log.info(f"播放状态变更: {state}")
 		state_map = {
 			QMediaPlayer.PlaybackState.PlayingState: "playing",
 			QMediaPlayer.PlaybackState.PausedState: "paused",

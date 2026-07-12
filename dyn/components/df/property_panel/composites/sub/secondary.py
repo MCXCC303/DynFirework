@@ -5,9 +5,12 @@ from PySide6.QtWidgets import (
 	QFormLayout, QSpinBox, QDoubleSpinBox, QComboBox, QGroupBox,
 )
 
+from dyn.logging_config import get_logger
 from dyn.models.df.composites import CompositeElement
 from dyn.models.df.values import ColorRGB
 from ..composite_base import CompositeBase
+
+log = get_logger(__name__)
 
 class SubSecondaryForm(CompositeBase):
 	"""二级爆炸子表单 两种爆炸类型 expanding / single_layer 动态切换."""
@@ -94,6 +97,7 @@ class SubSecondaryForm(CompositeBase):
 		self._group_type_selector.show()
 		self._secondary_color_group.show()
 		st = self._combo_type.currentData()
+		log.debug(f"二级爆炸类型切换: {st}")
 		if st == "expanding":
 			self._group_exp.show()
 		elif st == "single_layer":
@@ -136,6 +140,7 @@ class SubSecondaryForm(CompositeBase):
 	def _on_extra_changed(self) -> None:
 		if self._loading or self._element is None:
 			return
+		log.debug(f"二级爆炸参数变更: type={self._combo_type.currentData()}")
 		e = self._element
 
 		c = e.se_secondary_color

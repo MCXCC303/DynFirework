@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from dyn.logging_config import get_logger
 from .base import Element, ElementCategory
+
+log = get_logger(__name__)
 from .values import ColorRGB, GradientColor, Position, TrajectoryType
 
 @dataclass
@@ -64,9 +67,22 @@ class TrajectoryElement(Element):
 	@classmethod
 	def from_json(cls, data: dict) -> TrajectoryElement:
 		base = cls._from_json_base(data)
+
+		try:
+			traj_type = TrajectoryType(data.get("type", "launch"))
+		except ValueError:
+			log.warning(f"未知 TrajectoryType: {data.get('type')}，使用默认 LAUNCH")
+			traj_type = TrajectoryType.LAUNCH
+
+		shell_data = data.get("shell_color", {})
+		if not shell_data:
+			shell_color = ColorRGB()
+		else:
+			shell_color = ColorRGB.from_json(shell_data)
+
 		return cls(
 			**base,
-			traj_type=TrajectoryType(data.get("type", "launch")),
+			traj_type=traj_type,
 			start_position=Position.from_json(data.get("start_position", {})),
 			end_position=Position.from_json(data.get("end_position", {})),
 			traj_color=GradientColor.from_json(data.get("traj_color", {})),
@@ -83,6 +99,6 @@ class TrajectoryElement(Element):
 			spiral_speed=data.get("spiral_speed", 3.0),
 			shrink_exponent=data.get("shrink_exponent", 1.0),
 			add_shell=data.get("add_shell", False),
-			shell_color=ColorRGB.from_json(data.get("shell_color", {})),
+			shell_color=shell_color,
 			shell_size=data.get("shell_size", 1.0),
 		)

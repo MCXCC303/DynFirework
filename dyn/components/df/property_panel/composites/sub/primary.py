@@ -5,9 +5,12 @@ from PySide6.QtWidgets import (
 	QFormLayout, QSpinBox, QDoubleSpinBox, QComboBox, QGroupBox,
 )
 
+from dyn.logging_config import get_logger
 from dyn.models.df.composites import CompositeElement
 from dyn.models.df.values import ColorRGB, FireworkType
 from ..composite_base import CompositeBase
+
+log = get_logger(__name__)
 
 class SubPrimaryForm(CompositeBase):
 	"""一级烟花子表单 类型 QComboBox + 6 套参数组动态切换."""
@@ -168,6 +171,7 @@ class SubPrimaryForm(CompositeBase):
 		self._group_type_selector.show()
 		self._primary_color_group.show()
 		ft = self._combo_type.currentData()
+		log.debug(f"一级烟花类型切换: {ft}")
 		self._show_group_for_type(ft)
 		if self._element is not None:
 			self._element.se_primary_type = ft
@@ -234,6 +238,7 @@ class SubPrimaryForm(CompositeBase):
 	def _on_extra_changed(self) -> None:
 		if self._loading or self._element is None:
 			return
+		log.debug(f"一级烟花参数变更: type={self._combo_type.currentData()}")
 		e = self._element
 
 		c = e.se_primary_color

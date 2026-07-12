@@ -10,7 +10,8 @@ class BeamForm(EffectBase):
 	"""光束效果表单."""
 
 	def _setup_type_params(self):
-		self._grp_beam_start, self._cp_beam_start_begin, self._cp_beam_start_end, self._chk_beam_start_grad = self._add_color_group("起始颜色")
+		self._grp_beam_start, self._cp_beam_start_begin, self._cp_beam_start_end, self._chk_beam_start_grad = self._add_color_group(
+			"起始颜色")
 		self._grp_beam_end, self._cp_beam_end_begin, self._cp_beam_end_end, self._chk_beam_end_grad = self._add_color_group("结束颜色")
 
 		self._grp_speed = QGroupBox("速度")
@@ -93,10 +94,14 @@ class BeamForm(EffectBase):
 		if self._loading or self._element is None:
 			return
 		e = self._element
-		c = self._cp_beam_start_begin.color; e.beam_start_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_beam_start_end.color; e.beam_start_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_beam_end_begin.color; e.beam_end_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
-		c = self._cp_beam_end_end.color; e.beam_end_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_beam_start_begin.color;
+		e.beam_start_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_beam_start_end.color;
+		e.beam_start_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_beam_end_begin.color;
+		e.beam_end_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_beam_end_end.color;
+		e.beam_end_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
 		e.beam_start_color.use_gradient = self._chk_beam_start_grad.isChecked()
 		e.beam_end_color.use_gradient = self._chk_beam_end_grad.isChecked()
 		e.beam_min_speed = self._spin_beam_min_speed.value()

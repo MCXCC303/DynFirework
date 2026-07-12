@@ -89,12 +89,18 @@ class TransportBar(QWidget):
 		self._label_music.setText(path if path else "")
 
 	def _setup_connections(self) -> None:
+		try:
+			self._controller.position_changed.disconnect(self._on_position_changed)
+			self._controller.state_changed.disconnect(self._on_state_changed)
+		except (TypeError, RuntimeError):
+			pass
 		self._btn_play.clicked.connect(self._on_play_pause)
 		self._btn_stop.clicked.connect(self._on_stop)
 		self._btn_start.clicked.connect(self._on_go_to_start)
 		self._slider_volume.valueChanged.connect(self._on_volume_changed)
 		self._controller.position_changed.connect(self._on_position_changed)
 		self._controller.state_changed.connect(self._on_state_changed)
+		log.debug("传输栏信号连接已建立")
 
 	@Slot()
 	def _on_play_pause(self) -> None:
@@ -117,15 +123,19 @@ class TransportBar(QWidget):
 		audio = self._controller.player.audioOutput()
 		if audio:
 			audio.setVolume(value / 100.0)
+		else:
+			log.warning("音量变更: audioOutput() 返回 None")
 
 	@Slot(int)
 	def _on_position_changed(self, tick: int) -> None:
+		log.debug(f"位置变更: tick={tick}")
 		seconds = tick / 20.0
 		self._label_time.setText(f"{seconds:.2f}s")
 		self._label_tick.setText(f"Tick: {tick}")
 
 	@Slot(str)
 	def _on_state_changed(self, state: str) -> None:
+		log.debug(f"播放状态变更: state={state}")
 		if state == "playing":
 			self._btn_play.setText("⏸")
 		else:

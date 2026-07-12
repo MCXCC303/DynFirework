@@ -1,11 +1,15 @@
 """项目设置对话框 按后端过滤可选 MC 版本."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtWidgets import (
 	QDialog, QFormLayout, QLineEdit, QDoubleSpinBox, QComboBox, QDialogButtonBox, QLabel,
 )
 
 from dyn.ui.dialogs.project_creation_dialog import BACKEND_MC_VERSIONS
+
+log = logging.getLogger(__name__)
 
 class ProjectSettingsDialog(QDialog):
 	"""编辑项目名称、BPM 和 Minecraft 版本 版本列表按后端过滤."""
@@ -40,6 +44,16 @@ class ProjectSettingsDialog(QDialog):
 		btns.accepted.connect(self.accept)
 		btns.rejected.connect(self.reject)
 		form.addRow(btns)
+
+		log.debug(f"打开项目设置: name={name}, bpm={bpm}")
+
+	def accept(self) -> None:
+		log.debug("项目设置对话框: 用户确认")
+		super().accept()
+
+	def reject(self) -> None:
+		log.debug("项目设置对话框: 用户取消")
+		super().reject()
 
 	@property
 	def project_name(self) -> str:

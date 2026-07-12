@@ -146,8 +146,8 @@ class PosSelectMainWindow(QMainWindow):
 			self._active_graph.point_renewed_sign.disconnect(self.pix_element_list.get_element_list)
 			self._active_graph.selection_changed.disconnect(self.pix_element_list.get_graph_selection)
 			self._active_graph.selection_changed.disconnect(self.get_chosen_point)
-		except (RuntimeError, TypeError):
-			pass
+		except (RuntimeError, TypeError) as e:
+			log.debug(f"信号断开异常: {e}")
 
 		self._mode = mode
 		if mode == "grid":
@@ -195,6 +195,7 @@ class PosSelectMainWindow(QMainWindow):
 		self.ui.listView_element.selectionModel().selectionChanged.connect(
 			self.pix_element_list.get_list_selection
 		)
+		log.debug("位置选择器信号已连接")
 
 	def _connect_graph(self, graph: _BaseGraphWidget) -> None:
 		graph.point_renewed_sign.connect(self.pix_element_list.get_element_list)

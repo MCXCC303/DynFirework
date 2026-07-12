@@ -34,6 +34,8 @@ def export_mcfunction(output_dir, namespace):
 					f.write(f'{cmd}\n')
 			total_commands += len(commands)
 			total_files += 1
+			if tick % 200 == 0 and tick > 0:
+				log.debug(f"导出进度: {tick}/{global_storage.MAX_TICK} tick, {total_commands} 条命令")
 		log.debug(f"导出完成: {total_files} 个 .mcfunction 文件, {total_commands} 条命令 -> {output_dir}")
 		return True
 	except Exception as e:
@@ -62,7 +64,7 @@ def generate_data_pack(datapack_name, datapack_namespace, datapack_desc):
 
 		# 确保目录存在
 		if not os.path.exists(output_dir):
-			os.makedirs(output_dir)
+			os.makedirs(output_dir, exist_ok=True)
 
 		# 创建pack.mcmeta文件
 		with open(os.path.join(datapack_dir, 'pack.mcmeta'), 'w', encoding='utf-8', newline='\n') as f:

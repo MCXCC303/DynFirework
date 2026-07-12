@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from dyn.logging_config import get_logger
 from .base import Element, ElementCategory
+
+log = get_logger(__name__)
 from .values import ColorRGB, GradientColor, Position, FireworkType
 
 @dataclass
@@ -68,9 +71,14 @@ class FireworkElement(Element):
 	@classmethod
 	def from_json(cls, data: dict) -> FireworkElement:
 		base = cls._from_json_base(data)
+		try:
+			fw_type = FireworkType(data.get("type", "single_layer"))
+		except ValueError:
+			log.warning(f"未知 FireworkType: {data.get('type')}，使用默认 SINGLE_LAYER")
+			fw_type = FireworkType.SINGLE_LAYER
 		return cls(
 			**base,
-			fw_type=FireworkType(data.get("type", "single_layer")),
+			fw_type=fw_type,
 			position=Position.from_json(data.get("position", {})),
 			inner_color=GradientColor.from_json(data.get("inner_color", {})),
 			outer_color=GradientColor.from_json(data.get("outer_color", {})),

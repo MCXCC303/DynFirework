@@ -14,7 +14,8 @@ from dyn.lib.global_storage import g
 log = logging.getLogger("dyn.lib.cb.trajectories")
 
 def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
-	t_step = 1.0 / 20  # 一秒20个tick
+	t_step = 1.0 / 20
+	log.debug(f"simulate_trajectory: start=({x0:.1f},{y0:.1f},{z0:.1f}), duration={duration:.2f}s")  # 一秒20个tick
 	t = 0
 	x, y, z = x0, y0, z0
 	vy = vy0  # Initialize vy to prevent UnboundLocalError
@@ -30,6 +31,7 @@ def simulate_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0):
 
 		t += t_step
 
+	log.debug(f"simulate_trajectory: endpoint=({x:.1f},{y:.1f},{z:.1f}), vy={vy:.2f}")
 	return x, y, z, vy
 
 def calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0):
@@ -39,7 +41,13 @@ def calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0
 
 	# 使用二分法寻找合适的初速度
 	precision = 0.01  # 精度要求
+	max_iterations = 200
+	iteration_count = 0
 	while vx_high - vx_low > precision or vy_high - vy_low > precision or vz_high - vz_low > precision:
+		iteration_count += 1
+		if iteration_count > max_iterations:
+			log.warning(f"calculate_initial_velocity_bisection: 未收敛，迭代次数={max_iterations}")
+			break
 		vx0 = (vx_low + vx_high) / 2
 		vy0 = (vy_low + vy_high) / 2
 		vz0 = (vz_low + vz_high) / 2
@@ -141,7 +149,8 @@ def launch_spark_trajectory(end_tick, x0, y0, z0, x1, y1, z1, duration, k, m0, l
 		n_tick += 1  # 增加n_tick
 
 def simulate_base_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0, points_per_tick):
-	t_step = 1.0 / 20 / points_per_tick  # 一秒20个tick
+	t_step = 1.0 / 20 / points_per_tick
+	log.debug(f"simulate_base_trajectory: start=({x0:.1f},{y0:.1f},{z0:.1f}), duration={duration:.2f}s, points_per_tick={points_per_tick}")  # 一秒20个tick
 	trajectory = []
 	t = 0
 
@@ -157,6 +166,7 @@ def simulate_base_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0, points_
 		trajectory.append((x, y, z))
 		t += t_step
 
+	log.debug(f"simulate_base_trajectory: 生成点数量={len(trajectory)}")
 	return trajectory
 
 def generate_random_offset_trajectory(base_trajectory, interval_ticks):
@@ -174,11 +184,15 @@ def generate_random_offset_trajectory(base_trajectory, interval_ticks):
 				random.uniform(-offset, offset)
 			]
 
-	tck, u = splprep([base_points[:, 0] + offsets[:, 0],
-	                  base_points[:, 1],
-	                  base_points[:, 2] + offsets[:, 2]], s=1)
-	u_fine = np.linspace(0, 1, num_base_points)
-	interpolated_points = splev(u_fine, tck)
+	try:
+		tck, u = splprep([base_points[:, 0] + offsets[:, 0],
+		                  base_points[:, 1],
+		                  base_points[:, 2] + offsets[:, 2]], s=1)
+		u_fine = np.linspace(0, 1, num_base_points)
+		interpolated_points = splev(u_fine, tck)
+	except Exception as e:
+		log.error(f"generate_random_offset_trajectory: splprep/splev 失败: {e}")
+		return base_trajectory
 
 	for x, y, z in zip(*interpolated_points):
 		offset_trajectory.append((x, y, z))
@@ -187,6 +201,7 @@ def generate_random_offset_trajectory(base_trajectory, interval_ticks):
 
 def trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, duration, lifetime, interval_ticks,
                                   points_per_tick):
+	log.debug(f"trajectory_with_random_offset: end_tick={end_tick}, duration={duration:.2f}s, interval={interval_ticks}, ppt={points_per_tick}")
 	vx0, vy0, vz0 = calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0)
 
 	base_trajectory = simulate_base_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0, points_per_tick)
@@ -197,9 +212,11 @@ def trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, durat
 		n_tick = end_tick - int((num_points - i) / points_per_tick)
 		# 轨迹粒子lifetime延长2倍
 		commands.add_spark_command(n_tick, x, y, z, 0, 0, 0, lifetime * 40)
+	log.debug(f"trajectory_with_random_offset: 生成点数量={num_points}")
 
 def thick_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, duration, lifetime, interval_ticks,
                                         points_per_tick, range_x, range_y, range_z, particle_count):
+	log.debug(f"thick_trajectory_with_random_offset: end_tick={end_tick}, duration={duration:.2f}s, particles={particle_count}")
 	vx0, vy0, vz0 = calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0)
 
 	base_trajectory = simulate_base_trajectory(vx0, vy0, vz0, x0, y0, z0, duration, k, m0, points_per_tick)
@@ -211,9 +228,11 @@ def thick_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0,
 		# 轨迹粒子lifetime延长2倍
 		commands.add_thick_spark_command(n_tick, x, y, z, 0, 0, 0, lifetime * 40, range_x, range_y, range_z,
 		                                 particle_count)
+	log.debug(f"thick_trajectory_with_random_offset: 生成点数量={num_points}")
 
 def expanding_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k, m0, duration, lifetime, interval_ticks,
                                             points_per_tick, range_x, range_y, range_z, particle_count, speed_factor):
+	log.debug(f"expanding_trajectory_with_random_offset: end_tick={end_tick}, duration={duration:.2f}s, speed_factor={speed_factor}")
 	# 计算基础轨迹的初始速度
 	vx0, vy0, vz0 = calculate_initial_velocity_bisection(x0, y0, z0, x1, y1, z1, duration, k, m0)
 
@@ -242,3 +261,4 @@ def expanding_trajectory_with_random_offset(end_tick, x0, y0, z0, x1, y1, z1, k,
 		# 轨迹粒子lifetime延长2倍
 		commands.add_thick_spark_command(n_tick, round(initial_x, 4), round(initial_y, 4), round(initial_z, 4),
 		                                 vx, vy, vz, lifetime * 40, range_x, range_y, range_z, particle_count)
+	log.debug(f"expanding_trajectory_with_random_offset: 生成点数量={num_points}")
