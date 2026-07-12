@@ -35,18 +35,13 @@ class DoubleLayerForm(FwBase):
 		self._spin_outer_speed.valueChanged.connect(self._on_extra_changed)
 		self._spin_inner_count.valueChanged.connect(self._on_extra_changed)
 		self._spin_outer_count.valueChanged.connect(self._on_extra_changed)
-		self._spin_h_angle.valueChanged.connect(self._on_extra_changed)
-		self._spin_v_angle.valueChanged.connect(self._on_extra_changed)
 
 		self.layout().addWidget(self._group_params)
 		self._sub_groups = [self._group_params]
 
 	def _load_type_sections(self, elem: FireworkElement) -> None:
-		self._group_angle.show()
 		self._group_outer.show()
 		self._group_params.show()
-		self._spin_h_angle.setValue(elem.horizontal_angle)
-		self._spin_v_angle.setValue(elem.vertical_angle)
 		self._chk_outer_gradient.setChecked(elem.outer_color.use_gradient)
 		self._color_outer_end.setEnabled(elem.outer_color.use_gradient)
 		self._color_outer_start.set_color(elem.outer_color.start)
@@ -63,6 +58,4 @@ class DoubleLayerForm(FwBase):
 		self._element.outer_speed = self._spin_outer_speed.value()
 		self._element.inner_count = self._spin_inner_count.value()
 		self._element.outer_count = self._spin_outer_count.value()
-		self._element.horizontal_angle = self._spin_h_angle.value()
-		self._element.vertical_angle = self._spin_v_angle.value()
 		self._emit("extra", None)

@@ -38,6 +38,8 @@ class FireworkElement(Element):
 
 	enable_tail_flicker: bool = False
 
+	fw_lifetime: float = 2.0
+
 	@property
 	def category(self) -> ElementCategory:
 		return ElementCategory.FIREWORK
@@ -65,6 +67,7 @@ class FireworkElement(Element):
 			"expansion_speed": self.expansion_speed,
 			"density_falloff": self.density_falloff,
 			"enable_tail_flicker": self.enable_tail_flicker,
+			"fw_lifetime": self.fw_lifetime,
 		})
 		return base
 
@@ -98,4 +101,5 @@ class FireworkElement(Element):
 			expansion_speed=data.get("expansion_speed", 2.0),
 			density_falloff=data.get("density_falloff", 2.0),
 			enable_tail_flicker=data.get("enable_tail_flicker", False),
+			fw_lifetime=data.get("fw_lifetime", 2.0),
 		)

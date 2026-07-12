@@ -41,6 +41,8 @@ class CompositeElement(Element):
 	se_secondary_speed: float = 8.0
 	se_secondary_duration: float = 1.5
 
+	se_enable_tail_flicker: bool = False
+
 	# 同步烟花 (ce_ = combo expanding-clustered)
 	ce_position: Position = field(default_factory=Position)
 	ce_cluster_color: GradientColor = field(default_factory=GradientColor)
@@ -89,6 +91,7 @@ class CompositeElement(Element):
 			"se_secondary_lifetime": self.se_secondary_lifetime,
 			"se_secondary_speed": self.se_secondary_speed,
 			"se_secondary_duration": self.se_secondary_duration,
+			"se_enable_tail_flicker": self.se_enable_tail_flicker,
 			# Combo EC
 			"ce_position": self.ce_position.to_json(),
 			"ce_cluster_color": self.ce_cluster_color.to_json(),
@@ -150,6 +153,7 @@ class CompositeElement(Element):
 			se_secondary_lifetime=data.get("se_secondary_lifetime", 1.5),
 			se_secondary_speed=data.get("se_secondary_speed", 8.0),
 			se_secondary_duration=data.get("se_secondary_duration", 1.5),
+			se_enable_tail_flicker=data.get("se_enable_tail_flicker", False),
 			# Combo EC
 			ce_position=Position.from_json(data.get("ce_position", {})),
 			ce_cluster_color=GradientColor.from_json(data.get("ce_cluster_color", {})),

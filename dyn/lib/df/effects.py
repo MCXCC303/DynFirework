@@ -17,10 +17,8 @@ def beam_effect(elem) -> None:
 	pos = elem.position
 	cmd = cmd_beam(
 		x=pos.x, y=pos.y, z=pos.z,
-		sr1=elem.beam_start_color.start.r, sg1=elem.beam_start_color.start.g, sb1=elem.beam_start_color.start.b,
-		sr2=elem.beam_start_color.end.r, sg2=elem.beam_start_color.end.g, sb2=elem.beam_start_color.end.b,
-		er1=elem.beam_end_color.start.r, eg1=elem.beam_end_color.start.g, eb1=elem.beam_end_color.start.b,
-		er2=elem.beam_end_color.end.r, eg2=elem.beam_end_color.end.g, eb2=elem.beam_end_color.end.b,
+		sr=elem.beam_start_color.start.r, sg=elem.beam_start_color.start.g, sb=elem.beam_start_color.start.b,
+		er=elem.beam_end_color.start.r, eg=elem.beam_end_color.start.g, eb=elem.beam_end_color.start.b,
 		min_speed=elem.beam_min_speed, max_speed=elem.beam_max_speed,
 		h_angle=elem.beam_h_angle, v_angle=elem.beam_v_angle,
 		spread_angle=elem.beam_spread_angle,
@@ -36,10 +34,8 @@ def spray_effect(elem) -> None:
 	pos = elem.position
 	cmd = cmd_spray(
 		x=pos.x, y=pos.y, z=pos.z,
-		sr1=elem.spray_start_color.start.r, sg1=elem.spray_start_color.start.g, sb1=elem.spray_start_color.start.b,
-		sr2=elem.spray_start_color.end.r, sg2=elem.spray_start_color.end.g, sb2=elem.spray_start_color.end.b,
-		er1=elem.spray_end_color.start.r, eg1=elem.spray_end_color.start.g, eb1=elem.spray_end_color.start.b,
-		er2=elem.spray_end_color.end.r, eg2=elem.spray_end_color.end.g, eb2=elem.spray_end_color.end.b,
+		sr=elem.spray_start_color.start.r, sg=elem.spray_start_color.start.g, sb=elem.spray_start_color.start.b,
+		er=elem.spray_end_color.start.r, eg=elem.spray_end_color.start.g, eb=elem.spray_end_color.start.b,
 		min_speed=elem.spray_min_speed, max_speed=elem.spray_max_speed,
 		h_angle=elem.spray_h_angle, v_angle=elem.spray_v_angle,
 		cone_angle=elem.spray_cone_angle,

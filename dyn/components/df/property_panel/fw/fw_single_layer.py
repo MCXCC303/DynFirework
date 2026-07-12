@@ -24,17 +24,12 @@ class SingleLayerForm(FwBase):
 
 		self._spin_speed.valueChanged.connect(self._on_extra_changed)
 		self._spin_count.valueChanged.connect(self._on_extra_changed)
-		self._spin_h_angle.valueChanged.connect(self._on_extra_changed)
-		self._spin_v_angle.valueChanged.connect(self._on_extra_changed)
 
 		self.layout().addWidget(self._group_params)
 		self._sub_groups = [self._group_params]
 
 	def _load_type_sections(self, elem: FireworkElement) -> None:
-		self._group_angle.show()
 		self._group_params.show()
-		self._spin_h_angle.setValue(elem.horizontal_angle)
-		self._spin_v_angle.setValue(elem.vertical_angle)
 		self._spin_speed.setValue(elem.speed)
 		self._spin_count.setValue(elem.particle_count)
 
@@ -43,6 +38,4 @@ class SingleLayerForm(FwBase):
 			return
 		self._element.speed = self._spin_speed.value()
 		self._element.particle_count = self._spin_count.value()
-		self._element.horizontal_angle = self._spin_h_angle.value()
-		self._element.vertical_angle = self._spin_v_angle.value()
 		self._emit("extra", None)

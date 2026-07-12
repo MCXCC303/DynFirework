@@ -8,7 +8,6 @@ from PySide6.QtGui import QPainter, QPen, QColor
 
 from .theme import TRACK_LABEL_WIDTH
 
-
 def _nice_interval(min_interval: float) -> float:
 	"""向上取整到易于阅读的数值: 1, 2, 5, 10, 20, 50, ..."""
 	if min_interval <= 0:
@@ -24,7 +23,6 @@ def _nice_interval(min_interval: float) -> float:
 	else:
 		nice = 10
 	return nice * magnitude
-
 
 class GuideLineRenderer:
 	"""刻度线与BPM节拍线渲染器 通过注入坐标转换函数适配 tick/second 坐标系.

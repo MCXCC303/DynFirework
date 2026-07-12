@@ -7,8 +7,8 @@ from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QPainter, QPen, QBrush, QPainterPath, QColor
 from PySide6.QtWidgets import QWidget
 
-from dyn.logging_config import get_logger
 from dyn.components.timeline.guide_lines import GuideLineRenderer
+from dyn.logging_config import get_logger
 from .theme import palette_colors, TRACK_LABEL_WIDTH
 
 log = get_logger(__name__)

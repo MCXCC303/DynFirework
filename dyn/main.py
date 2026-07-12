@@ -1126,8 +1126,6 @@ class MainWin(QMainWindow):
 		log.debug("应用程序关闭")
 		super().closeEvent(event)
 
-
-
 def main():
 	setup_logging()
 	log.debug("DynFirework 启动")

@@ -226,7 +226,6 @@ class ParticleexTimelineWidget(QWidget):
 		finally:
 			p.end()
 
-
 	def mousePressEvent(self, event: QMouseEvent) -> None:
 		if event.button() == Qt.MiddleButton:
 			self._panning = True
