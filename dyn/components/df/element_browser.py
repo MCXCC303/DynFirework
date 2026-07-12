@@ -4,8 +4,8 @@ from __future__ import annotations
 from PySide6.QtCore import QModelIndex, Qt
 
 from dyn.components.base.browser_model import (
-	_BaseBrowserModel, GroupNode, ElementNode,
-	_format_time_sec, _format_cb_time,
+	BaseBrowserModel, GroupNode, ElementNode,
+	format_time_sec, format_cb_time,
 )
 from dyn.models.df.base import ElementCategory, Element as Element
 from dyn.models.df.registry import get_type_key, get_type_def
@@ -28,7 +28,7 @@ def _type_display_name(elem) -> str:
 			return tk
 	return "?"
 
-class DfElementBrowserModel(_BaseBrowserModel):
+class DfElementBrowserModel(BaseBrowserModel):
 	"""DF 元素浏览器 4列 4分类 含类型列."""
 
 	def _setup_groups(self) -> None:
@@ -73,12 +73,12 @@ class DfElementBrowserModel(_BaseBrowserModel):
 					return _type_display_name(elem)
 				elif col == 2:
 					if isinstance(elem, Element):
-						return _format_time_sec(elem.start_time)
-					return _format_cb_time(elem.start_tick)
+						return format_time_sec(elem.start_time)
+					return format_cb_time(elem.start_tick)
 				elif col == 3:
 					if isinstance(elem, Element):
-						return _format_time_sec(elem.duration)
-					return _format_cb_time(elem.duration_ticks)
+						return format_time_sec(elem.duration)
+					return format_cb_time(elem.duration_ticks)
 
 		return self._style_data(node, role, col)
 

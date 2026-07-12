@@ -1,5 +1,5 @@
 """元素控制器 管理所有时间线元素的 CRUD 和属性同步.
-df: 统一存储 df 元素 (start_time/duration float)，cb 元素在加载时自动转换.
+按后端类型统一存储元素 (cb: tick / df: 秒)，加载时按 Project.backend 直存.
 """
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from dyn.models.df.composites import CompositeElement as DfCompositeElement
 from dyn.models.df.effects import EffectElement as DfEffectElement
 from dyn.models.df.fireworks import FireworkElement as DfFireworkElement
 from dyn.models.df.trajectories import TrajectoryElement as DfTrajectoryElement
-from dyn.models.particleex import Position as CbPosition
-from dyn.models.particleex import TrajFireworkElement as CbTrajFireworkElement
+from dyn.models.cb import Position as CbPosition
+from dyn.models.cb import TrajFireworkElement as CbTrajFireworkElement
 from dyn.models.df.values import (
 	FireworkType, TrajectoryType, EffectType, CompositeType, Position,
 )
@@ -304,29 +304,12 @@ class ElementController(QObject):
 	# 项目同步
 
 	def load_from_project(self, project) -> None:
-		"""从 Project 加载元素 自动将 cb 元素转换为 df."""
-		from dyn.lib.export_helpers import _ensure_df
-
+		"""从 Project 加载元素 按后端类型直接存入."""
 		self._elements.clear()
 		self._selected_id = ""
 
-		# df 单列表优先
-		df_list = getattr(project, 'elements', None)
-		if df_list:
-			for e in df_list:
-				self._elements[e.id] = e
-			return
-
-		# cb 三列表兼容
-		for e in getattr(project, 'trajectories', []):
-			df_elem = _ensure_df(e)
-			self._elements[df_elem.id] = df_elem
-		for e in getattr(project, 'fireworks', []):
-			df_elem = _ensure_df(e)
-			self._elements[df_elem.id] = df_elem
-		for e in getattr(project, 'traj_fireworks', []):
-			df_elem = _ensure_df(e)
-			self._elements[df_elem.id] = df_elem
+		for e in project.elements:
+			self._elements[e.id] = e
 
 	def to_project(self, project) -> None:
 		"""将元素写回 Project V2 单列表."""

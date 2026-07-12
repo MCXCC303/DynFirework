@@ -18,14 +18,14 @@ from dyn.service.element_controller import ElementController
 
 if TYPE_CHECKING:
 	from dyn.models.df.base import Element
-	from dyn.models.particleex.base import Element as CbElement
+	from dyn.models.cb.base import Element as CbElement
 
 log = logging.getLogger(__name__)
 
-def _format_time_sec(value: float) -> str:
+def format_time_sec(value: float) -> str:
 	return f"{value:.2f}s"
 
-def _format_cb_time(tick: int) -> str:
+def format_cb_time(tick: int) -> str:
 	return f"{tick / 20.0:.2f}s"
 
 class BaseNode:
@@ -71,7 +71,7 @@ class ProxyNode(BaseNode):
 		super().__init__(label, parent)
 		self.data: str = data
 
-class _BaseBrowserModel(QAbstractItemModel):
+class BaseBrowserModel(QAbstractItemModel):
 	"""元素浏览器共享基类 子类提供列定义、分组、数据格式化."""
 
 	selection_changed = Signal(str)

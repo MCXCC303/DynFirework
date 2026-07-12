@@ -93,3 +93,124 @@ def export_element(elem) -> None:
 	handler = EXPORT_DISPATCH.get(elem.category)
 	if handler:
 		handler(elem)
+
+# CB 导出调度 按 cb ElementType 分发到 lib/cb/ 函数
+
+def _export_cb_firework(elem) -> None:
+	from dyn.lib.cb import fireworks as _fw
+	from dyn.models.cb import TrajFireworkElement, FireworkType
+
+	pos = elem.position
+	x, y, z = pos.x, pos.y, pos.z
+	inner_start = elem.inner_color.start.as_tuple()
+	inner_end = elem.inner_color.end.as_tuple()
+	outer_start = elem.outer_color.start.as_tuple()
+	outer_end = elem.outer_color.end.as_tuple()
+
+	if isinstance(elem, TrajFireworkElement):
+		tick = elem.fw_start_tick
+		duration = elem.fw_duration_ticks / 20.0
+	else:
+		tick = elem.start_tick
+		duration = elem.duration_ticks / 20.0
+
+	lifetime = 15
+	fw_type = elem.fw_type if isinstance(elem, TrajFireworkElement) else elem.fw_type
+
+	if fw_type == FireworkType.SINGLE_LAYER.value:
+		_fw.basic_single_layer_firework(
+			tick, x, y, z, inner_start, inner_end, elem.speed,
+			elem.horizontal_angle, elem.vertical_angle, duration, lifetime)
+	elif fw_type == FireworkType.DOUBLE_LAYER.value:
+		_fw.basic_double_layer_firework(
+			tick, x, y, z, inner_start, inner_end, outer_start, outer_end,
+			elem.inner_speed, elem.outer_speed,
+			elem.horizontal_angle, elem.vertical_angle, duration, lifetime)
+	elif fw_type == FireworkType.DIRECTIONAL.value:
+		_fw.directional_firework(
+			tick, x, y, z, inner_start, inner_end, elem.speed,
+			elem.horizontal_angle, elem.vertical_angle,
+			elem.spread_angle, elem.track_count, duration, lifetime)
+	elif fw_type == FireworkType.CLUSTERED.value:
+		_fw.clustered_firework(
+			tick, x, y, z, inner_start, inner_end, elem.speed,
+			elem.horizontal_angle, elem.vertical_angle,
+			elem.track_count, elem.spread_angle, duration, lifetime)
+	elif fw_type == FireworkType.EXPANDING_SPHERE.value:
+		_fw.expanding_sphere_firework(
+			tick, x, y, z, inner_start, inner_end,
+			elem.radius, elem.track_count, elem.radial_speed, lifetime)
+
+def _export_cb_trajectory(elem) -> None:
+	from dyn.lib.cb import trajectories as _traj
+	from dyn.models.cb import TrajFireworkElement, TrajType
+
+	start = elem.start_position
+	end = elem.end_position
+	traj_color = elem.traj_color
+	start_color = traj_color.start.as_tuple()
+	end_color = traj_color.end.as_tuple()
+
+	if isinstance(elem, TrajFireworkElement):
+		end_tick = elem.traj_end_tick
+		duration = elem.traj_duration_ticks / 20.0
+	else:
+		end_tick = elem.end_tick
+		duration = elem.duration_ticks / 20.0
+
+	lifetime = 15
+	k = elem.k
+	m0 = elem.m0
+	traj_type = elem.traj_type
+
+	if traj_type == TrajType.LAUNCH.value:
+		_traj.launch_trajectory(
+			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
+			start_color, end_color, duration, k, m0, lifetime, elem.rho)
+	elif traj_type == TrajType.SPARK.value:
+		_traj.launch_spark_trajectory(
+			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
+			duration, k, m0, lifetime, elem.particle_count)
+	elif traj_type == TrajType.OFFSET.value:
+		_traj.trajectory_with_random_offset(
+			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
+			k, m0, duration, lifetime,
+			elem.interval_ticks, elem.points_per_tick)
+	elif traj_type == TrajType.THICK.value:
+		_traj.thick_trajectory_with_random_offset(
+			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
+			k, m0, duration, lifetime,
+			elem.interval_ticks, elem.points_per_tick,
+			elem.range_x, elem.range_y, elem.range_z, elem.particle_count)
+	elif traj_type == TrajType.EXPANDING.value:
+		_traj.expanding_trajectory_with_random_offset(
+			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
+			k, m0, duration, lifetime,
+			elem.interval_ticks, elem.points_per_tick,
+			elem.range_x, elem.range_y, elem.range_z,
+			elem.particle_count, elem.speed_factor)
+
+def _export_cb_traj_firework(elem) -> None:
+	_export_cb_trajectory(elem)
+	_export_cb_firework(elem)
+
+def _build_cb_export_dispatch() -> dict:
+	from dyn.models.cb import ElementType
+	return {
+		ElementType.TRAJECTORY: _export_cb_trajectory,
+		ElementType.FIREWORK: _export_cb_firework,
+		ElementType.TRAJ_FIREWORK: _export_cb_traj_firework,
+	}
+
+CB_EXPORT_DISPATCH: dict = {}
+
+def _init_cb_dispatch() -> None:
+	if CB_EXPORT_DISPATCH:
+		return
+	CB_EXPORT_DISPATCH.update(_build_cb_export_dispatch())
+
+def export_cb_element(elem) -> None:
+	_init_cb_dispatch()
+	handler = CB_EXPORT_DISPATCH.get(elem.element_type)
+	if handler:
+		handler(elem)

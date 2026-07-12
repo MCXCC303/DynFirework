@@ -23,7 +23,7 @@ _DF_ELEMENT_CLASSES: dict[str, type] = {}
 def _init_class_maps() -> None:
 	if _CB_ELEMENT_CLASSES:
 		return
-	from .particleex import (
+	from .cb import (
 		TrajectoryElement as CbTraj,
 		FireworkElement as CbFw,
 		TrajFireworkElement as CbTF,
@@ -47,7 +47,7 @@ def _init_class_maps() -> None:
 def _get_type_tag(elem, backend: Backend) -> str:
 	"""根据元素实例和后端返回序列化类型标签."""
 	if backend == Backend.CB:
-		from .particleex import (
+		from .cb import (
 			TrajectoryElement as CbTraj,
 			FireworkElement as CbFw,
 			TrajFireworkElement as CbTF,

@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from enum import Enum
 
+from dyn.models.cb.base import Element as CbElement
+from dyn.models.cb.composites import TrajFireworkElement
 from dyn.models.df.base import Element
-from dyn.models.particleex.base import Element as CbElement
-from dyn.models.particleex.composites import TrajFireworkElement
 
 class _ElementView:
 	"""秒单位视图，封装 cb/df 元素，统一 start_time/duration 接口.
@@ -124,7 +124,7 @@ def create_track_views(elements: list) -> dict[str, list[_ElementView]]:
 	"""将元素列表转换为四轨道的视图列表.
 	cb (ColorBlock) 元素通过 element_type 属性识别，df (DynFirework) 元素通过 category 属性识别.
 	"""
-	from dyn.models.particleex.base import ElementType as CbElementType
+	from dyn.models.cb.base import ElementType as CbElementType
 	from dyn.models.df.base import ElementCategory
 
 	views: dict[str, list[_ElementView]] = {

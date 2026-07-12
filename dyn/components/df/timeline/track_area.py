@@ -11,9 +11,9 @@ from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
-from dyn.models.particleex.fireworks import FireworkElement as CbFireworkElement
-from dyn.models.particleex.trajectories import TrajectoryElement as CbTrajectoryElement
-from dyn.models.particleex.values import ColorRGB
+from dyn.models.cb.fireworks import FireworkElement as CbFireworkElement
+from dyn.models.cb.trajectories import TrajectoryElement as CbTrajectoryElement
+from dyn.models.cb.values import ColorRGB
 from dyn.models.df.fireworks import FireworkElement as DfFireworkElement
 from dyn.models.df.trajectories import TrajectoryElement as DfTrajectoryElement
 from dyn.models.df.effects import EffectElement as DfEffectElement

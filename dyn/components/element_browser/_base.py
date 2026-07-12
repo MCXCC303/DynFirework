@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from dyn.components.base.browser_model import (
 	BaseNode, GroupNode, ElementNode, ProxyNode,
-	_BaseBrowserModel, _format_time_sec, _format_cb_time,
+	BaseBrowserModel, format_time_sec, format_cb_time,
 )
 
 __all__ = [
 	"BaseNode", "GroupNode", "ElementNode", "ProxyNode",
-	"_BaseBrowserModel", "_format_time_sec", "_format_cb_time",
+	"BaseBrowserModel", "format_time_sec", "format_cb_time",
 ]
