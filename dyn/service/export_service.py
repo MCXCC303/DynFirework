@@ -75,7 +75,7 @@ class _ExportTask(QRunnable):
 		pack_dir = Path(self._output_dir) / self._datapack_name
 		export_mcfunction.write_pack_mcmeta(str(pack_dir), self._pack_format, self._description)
 
-		func_dir = pack_dir / "data" / self._namespace / "functions"
+		func_dir = pack_dir / "data" / self._namespace / "function"
 		func_dir.mkdir(parents=True, exist_ok=True)
 
 		export_mcfunction.export_mcfunction(str(func_dir), self._namespace)

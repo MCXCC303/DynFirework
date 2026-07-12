@@ -59,7 +59,7 @@ def generate_auto_exec_file(output_dir, namespace):
 
 def generate_data_pack(datapack_name, datapack_namespace, datapack_desc):
 	try:
-		output_dir = global_storage.project_dir + f"/{datapack_name}/data/{datapack_namespace}/functions/"
+		output_dir = global_storage.project_dir + f"/{datapack_name}/data/{datapack_namespace}/function/"
 		datapack_dir = global_storage.project_dir + f"/{datapack_name}/"
 
 		# 确保目录存在
