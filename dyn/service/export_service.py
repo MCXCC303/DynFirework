@@ -1,5 +1,5 @@
 """导出服务 将项目元素生成为 Minecraft 数据包.
-df: 使用 EXPORT_DISPATCH + df_backend，移除 backend_registry 依赖.
+按 backend 分发: DF -> lib/df/, CB -> lib/cb/.
 """
 from __future__ import annotations
 
@@ -9,12 +9,11 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QRunnable, QThreadPool
 
 from dyn.lib import global_storage, export_mcfunction
-from dyn.lib.export_helpers import export_element
+from dyn.lib.export_helpers import export_element, export_cb_element
 from dyn.logging_config import get_logger
+from dyn.models.project import Backend
 
 log = get_logger(__name__)
-
-from dyn.models.df.base import Element
 
 class _TaskSignals(QObject):
 	finished = Signal(bool, str)
@@ -22,13 +21,15 @@ class _TaskSignals(QObject):
 
 class _ExportTask(QRunnable):
 
-	def __init__(self, elements: list[Element], output_dir: str, namespace: str,
+	def __init__(self, elements: list, output_dir: str, namespace: str,
+	             backend: Backend = Backend.DF,
 	             datapack_name: str = "DynFirework", description: str = "",
 	             pack_format: int = 48, mc_version: str = "1.21.8") -> None:
 		super().__init__()
 		self._elements = elements
 		self._output_dir = output_dir
 		self._namespace = namespace
+		self._backend = backend
 		self._datapack_name = datapack_name
 		self._description = description
 		self._pack_format = pack_format
@@ -41,7 +42,7 @@ class _ExportTask(QRunnable):
 
 	def run(self) -> None:
 		try:
-			log.debug(f"导出开始: {self._output_dir}, namespace={self._namespace}, elements={len(self._elements)}")
+			log.debug(f"导出开始: {self._output_dir}, namespace={self._namespace}, backend={self._backend.value}, elements={len(self._elements)}")
 			self._do_export()
 			self.signals.finished.emit(True, f"导出完成: {self._output_dir}")
 		except Exception as e:
@@ -56,7 +57,10 @@ class _ExportTask(QRunnable):
 		for i, elem in enumerate(self._elements):
 			if not elem.enabled:
 				continue
-			export_element(elem)
+			if self._backend == Backend.CB:
+				export_cb_element(elem)
+			else:
+				export_element(elem)
 			self.signals.progress.emit(int((i + 1) / total * 100))
 
 		cmd_count = sum(len(v) for v in global_storage.commands_by_tick.values())
@@ -80,16 +84,19 @@ class ExportService(QObject):
 
 	def export_to_datapack(
 			self,
-			elements: list[Element],
+			elements: list,
 			output_dir: str,
 			namespace: str = "fireworks1",
+			backend: Backend = Backend.DF,
 			datapack_name: str = "DynFirework",
 			description: str = "",
 			pack_format: int = 48,
 			mc_version: str = "1.21.8",
 	) -> None:
 		task = _ExportTask(elements, output_dir, namespace,
-		                   datapack_name, description, pack_format, mc_version)
+		                   backend=backend,
+		                   datapack_name=datapack_name, description=description,
+		                   pack_format=pack_format, mc_version=mc_version)
 		task.signals.finished.connect(self.export_finished)
 		task.signals.progress.connect(self.export_progress)
 		QThreadPool.globalInstance().start(task)

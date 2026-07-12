@@ -124,6 +124,18 @@ class ParticleexTimelineWidget(QWidget):
 		self.update()
 
 	@property
+	def playback_tick(self) -> int:
+		return self._playback_tick
+
+	@property
+	def fw_track(self):
+		return self._fw_track
+
+	@property
+	def traj_track(self):
+		return self._traj_track
+
+	@property
 	def pixels_per_tick(self) -> float:
 		return self._pixels_per_tick
 
@@ -304,11 +316,14 @@ class ParticleexTimelineWidget(QWidget):
 			self._controller.remove_element(self._selected_id)
 		super().keyPressEvent(event)
 
-	def _on_elements_changed(self, *args) -> None:
+	def on_elements_changed(self, *args) -> None:
 		if self._controller:
 			self._elements = list(self._controller.all_elements)
 		log.debug(f"时间线元素更新: {len(self._elements)} 个元素")
 		self._refresh_tracks()
+
+	def _on_elements_changed(self, *args) -> None:
+		self.on_elements_changed(*args)
 
 	def _on_element_updated(self, element_id: str, key: str, value: Any) -> None:
 		self._refresh_tracks()

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+from typing import Any
 from uuid import uuid4
 
 from PySide6.QtCore import QObject, Signal
@@ -13,40 +13,64 @@ from dyn.logging_config import get_logger
 
 log = get_logger(__name__)
 
+from dyn.models.project import Backend
 from dyn.models.df.base import ElementCategory, Element as DfElement
 from dyn.models.df.composites import CompositeElement as DfCompositeElement
 from dyn.models.df.effects import EffectElement as DfEffectElement
 from dyn.models.df.fireworks import FireworkElement as DfFireworkElement
 from dyn.models.df.trajectories import TrajectoryElement as DfTrajectoryElement
-from dyn.models.cb import Position as CbPosition
-from dyn.models.cb import TrajFireworkElement as CbTrajFireworkElement
 from dyn.models.df.values import (
-	FireworkType, TrajectoryType, EffectType, CompositeType, Position,
+	FireworkType as DfFireworkType, TrajectoryType as DfTrajectoryType,
+	EffectType, CompositeType, Position as DfPosition,
 )
+from dyn.models.cb.base import ElementType as CbElementType
+from dyn.models.cb.trajectories import TrajectoryElement as CbTrajectoryElement
+from dyn.models.cb.fireworks import FireworkElement as CbFireworkElement
+from dyn.models.cb.composites import TrajFireworkElement as CbTrajFireworkElement
+from dyn.models.cb.values import Position as CbPosition
 
-if TYPE_CHECKING:
-	pass
-
-_ELEMENT_CLASSES: dict[ElementCategory, type] = {
+# DF 元素工厂映射
+_DF_ELEMENT_CLASSES: dict[ElementCategory, type] = {
 	ElementCategory.FIREWORK: DfFireworkElement,
 	ElementCategory.TRAJECTORY: DfTrajectoryElement,
 	ElementCategory.EFFECT: DfEffectElement,
 	ElementCategory.COMPOSITE: DfCompositeElement,
 }
 
-_DEFAULT_TYPE_KEYS: dict[ElementCategory, str] = {
+_DF_DEFAULT_TYPE_KEYS: dict[ElementCategory, str] = {
 	ElementCategory.FIREWORK: "single_layer",
 	ElementCategory.TRAJECTORY: "launch",
 	ElementCategory.EFFECT: "beam",
 	ElementCategory.COMPOSITE: "secondary_explosion",
 }
 
-CATEGORY_DISPLAY: dict[ElementCategory, str] = {
+# CB 元素工厂映射
+_CB_ELEMENT_CLASSES: dict[CbElementType, type] = {
+	CbElementType.TRAJECTORY: CbTrajectoryElement,
+	CbElementType.FIREWORK: CbFireworkElement,
+	CbElementType.TRAJ_FIREWORK: CbTrajFireworkElement,
+}
+
+_CB_DEFAULT_TYPE_KEYS: dict[CbElementType, str] = {
+	CbElementType.TRAJECTORY: "launch",
+	CbElementType.FIREWORK: "single_layer",
+	CbElementType.TRAJ_FIREWORK: "launch",
+}
+
+DF_CATEGORY_DISPLAY: dict[ElementCategory, str] = {
 	ElementCategory.FIREWORK: "爆炸",
 	ElementCategory.TRAJECTORY: "轨迹",
 	ElementCategory.EFFECT: "效果",
 	ElementCategory.COMPOSITE: "复合",
 }
+
+CB_CATEGORY_DISPLAY: dict[CbElementType, str] = {
+	CbElementType.TRAJECTORY: "轨迹",
+	CbElementType.FIREWORK: "烟花",
+	CbElementType.TRAJ_FIREWORK: "轨迹烟花",
+}
+
+CATEGORY_DISPLAY: dict = DF_CATEGORY_DISPLAY
 
 # 由 property_panel 直接赋值的复杂类型属性，不需要 undo 记录
 _COMPLEX_KEYS: frozenset[str] = frozenset({
@@ -75,17 +99,39 @@ _PROXY_SUFFIXES: tuple[str, ...] = (
 )
 
 class ElementController(QObject):
-	"""中央元素管理服务 df: 统一存储 df 元素."""
+	"""中央元素管理服务 按后端类型统一存储元素."""
 
-	element_added = Signal(DfElement)
+	element_added = Signal(object)
 	element_removed = Signal(str)
 	element_changed = Signal(str, str, object)
 	selection_changed = Signal(str)
 
-	def __init__(self, parent: QObject | None = None) -> None:
+	def __init__(self, parent: QObject | None = None, backend: Backend = Backend.DF) -> None:
 		super().__init__(parent)
-		self._elements: dict[str, DfElement] = {}
+		self._backend = backend
+		self._elements: dict[str, Any] = {}
 		self._selected_id: str = ""
+
+	@property
+	def backend(self) -> Backend:
+		return self._backend
+
+	def set_backend(self, backend: Backend) -> None:
+		self._backend = backend
+		self._elements.clear()
+		self._selected_id = ""
+
+	@property
+	def category_display(self) -> dict:
+		if self._backend == Backend.CB:
+			return CB_CATEGORY_DISPLAY
+		return DF_CATEGORY_DISPLAY
+
+	@property
+	def categories(self) -> list:
+		if self._backend == Backend.CB:
+			return list(CbElementType)
+		return list(ElementCategory)
 
 	# 查询
 
@@ -94,7 +140,7 @@ class ElementController(QObject):
 		return self._elements
 
 	@property
-	def selected_element(self) -> DfElement | None:
+	def selected_element(self) -> Any:
 		return self._elements.get(self._selected_id)
 
 	@property
@@ -102,22 +148,30 @@ class ElementController(QObject):
 		return self._selected_id
 
 	@property
-	def all_elements(self) -> list[DfElement]:
+	def all_elements(self) -> list:
+		if self._backend == Backend.CB:
+			return sorted(self._elements.values(), key=lambda e: e.start_tick)
 		return sorted(self._elements.values(), key=lambda e: e.start_time)
 
-	def get_elements_by_category(self, cat: ElementCategory) -> list[DfElement]:
+	def get_elements_by_category(self, cat) -> list:
+		if self._backend == Backend.CB:
+			return [e for e in self._elements.values() if e.element_type == cat]
 		return [e for e in self._elements.values() if e.category == cat]
 
 	@property
 	def trajectory_count(self) -> int:
-		return len(self.get_elements_by_category(ElementCategory.TRAJECTORY))
+		cat = CbElementType.TRAJECTORY if self._backend == Backend.CB else ElementCategory.TRAJECTORY
+		return len(self.get_elements_by_category(cat))
 
 	@property
 	def firework_count(self) -> int:
-		return len(self.get_elements_by_category(ElementCategory.FIREWORK))
+		cat = CbElementType.FIREWORK if self._backend == Backend.CB else ElementCategory.FIREWORK
+		return len(self.get_elements_by_category(cat))
 
 	@property
 	def traj_firework_count(self) -> int:
+		if self._backend == Backend.CB:
+			return len(self.get_elements_by_category(CbElementType.TRAJ_FIREWORK))
 		return len(self.get_elements_by_category(ElementCategory.COMPOSITE))
 
 	@property
@@ -128,9 +182,11 @@ class ElementController(QObject):
 	def total_duration(self) -> float:
 		if not self._elements:
 			return 0.0
+		if self._backend == Backend.CB:
+			return max(e.end_tick for e in self._elements.values()) / 20.0
 		return max(e.end_time for e in self._elements.values())
 
-	def get_element(self, element_id: str) -> DfElement | None:
+	def get_element(self, element_id: str) -> Any:
 		return self._elements.get(element_id)
 
 	# 选择
@@ -145,36 +201,48 @@ class ElementController(QObject):
 
 	# 创建 / 添加
 
-	def add_element(self, elem: DfElement) -> None:
+	def add_element(self, elem) -> None:
 		if elem.id in self._elements:
 			log.warning(f"覆盖已存在元素: id={elem.id}, name={elem.name}")
 		self._elements[elem.id] = elem
-		log.debug(f"添加元素: category={elem.category.value} id={elem.id} name={elem.name}")
+		log.debug(f"添加元素: id={elem.id} name={elem.name}")
 		self.element_added.emit(elem)
 
 	def create_element(
-			self, category: ElementCategory, type_key: str = "",
+			self, category, type_key: str = "",
 			name: str = "", start_time: float = 0.0,
+	):
+		"""工厂方法 按 backend 创建对应类型的元素.
+		category: DF 用 ElementCategory，CB 用 ElementType
+		start_time: DF 为秒(float)，CB 为 tick(int)
+		"""
+		if self._backend == Backend.CB:
+			return self._create_cb_element(category, type_key, name, int(start_time))
+		return self._create_df_element(category, type_key, name, start_time)
+
+	def _create_df_element(
+			self, category: ElementCategory, type_key: str,
+			name: str, start_time: float,
 	) -> DfElement:
-		"""工厂方法 创建指定类别 + 子类型的 df 元素."""
-		cls = _ELEMENT_CLASSES.get(category)
+		"""创建 df 元素."""
+		cls = _DF_ELEMENT_CLASSES.get(category)
 		if cls is None:
 			raise ValueError(f"Unknown category: {category}")
 
-		tk = type_key or _DEFAULT_TYPE_KEYS.get(category, "")
-		cat_label = CATEGORY_DISPLAY.get(category, category.value)
+		tk = type_key or _DF_DEFAULT_TYPE_KEYS.get(category, "")
+		cat_label = DF_CATEGORY_DISPLAY.get(category, category.value)
 		count = len(self.get_elements_by_category(category))
 		elem_name = name or f"{cat_label} {count}"
 
 		if category == ElementCategory.FIREWORK:
 			elem = DfFireworkElement(
 				name=elem_name, start_time=start_time,
-				fw_type=FireworkType(tk) if tk else FireworkType.SINGLE_LAYER,
+				fw_type=DfFireworkType(tk) if tk else DfFireworkType.SINGLE_LAYER,
 			)
 		elif category == ElementCategory.TRAJECTORY:
 			elem = DfTrajectoryElement(
 				name=elem_name, start_time=start_time,
-				traj_type=TrajectoryType(tk) if tk else TrajectoryType.LAUNCH,
+				traj_type=DfTrajectoryType(tk) if tk else DfTrajectoryType.LAUNCH,
 			)
 		elif category == ElementCategory.EFFECT:
 			elem = DfEffectElement(
@@ -191,21 +259,56 @@ class ElementController(QObject):
 
 		return elem
 
+	def _create_cb_element(
+			self, element_type: CbElementType, type_key: str,
+			name: str, start_tick: int,
+	):
+		"""创建 cb 元素."""
+		cls = _CB_ELEMENT_CLASSES.get(element_type)
+		if cls is None:
+			raise ValueError(f"Unknown element type: {element_type}")
+
+		tk = type_key or _CB_DEFAULT_TYPE_KEYS.get(element_type, "")
+		cat_label = CB_CATEGORY_DISPLAY.get(element_type, element_type.name)
+		count = len(self.get_elements_by_category(element_type))
+		elem_name = name or f"{cat_label} {count}"
+
+		if element_type == CbElementType.TRAJECTORY:
+			elem = CbTrajectoryElement(
+				name=elem_name, start_tick=start_tick,
+				traj_type=tk,
+			)
+		elif element_type == CbElementType.FIREWORK:
+			elem = CbFireworkElement(
+				name=elem_name, start_tick=start_tick,
+				fw_type=tk,
+			)
+		elif element_type == CbElementType.TRAJ_FIREWORK:
+			elem = CbTrajFireworkElement(
+				name=elem_name, start_tick=start_tick,
+				traj_type=tk,
+				fw_type="single_layer",
+			)
+		else:
+			raise ValueError(f"Unknown element type: {element_type}")
+
+		return elem
+
 	# 删除
 
-	def remove_element(self, element_id: str) -> DfElement | None:
+	def remove_element(self, element_id: str) -> Any:
 		removed = self._elements.pop(element_id, None)
 		if removed is None:
 			log.warning(f"删除失败: 元素不存在 id={element_id}")
 			return None
-		log.debug(f"删除元素: category={removed.category.value} id={element_id} name={removed.name}")
+		log.debug(f"删除元素: id={element_id} name={removed.name}")
 		if self._selected_id == element_id:
 			self._selected_id = ""
 			self.selection_changed.emit("")
 		self.element_removed.emit(element_id)
 		return removed
 
-	def remove_selected(self) -> DfElement | None:
+	def remove_selected(self) -> Any:
 		if not self._selected_id:
 			return None
 		return self.remove_element(self._selected_id)
@@ -235,39 +338,38 @@ class ElementController(QObject):
 		if elem is None:
 			return False
 
-		pos = Position(x=x, y=y, z=z)
-
-		if isinstance(elem, DfTrajectoryElement):
-			if which == "end":
-				elem.end_position = pos
-			else:
-				elem.start_position = pos
-		elif isinstance(elem, DfFireworkElement):
-			elem.position = pos
-		elif isinstance(elem, DfEffectElement):
-			elem.position = pos
-		elif isinstance(elem, DfCompositeElement):
-			if which == "se_start":
-				elem.se_start_position = pos
-			elif which == "se_mid":
-				elem.se_mid_position = pos
-			else:
+		if self._backend == Backend.CB:
+			pos = CbPosition(x=x, y=y, z=z)
+			if isinstance(elem, CbTrajFireworkElement):
+				if which == "end":
+					elem.mid_position = pos
+				else:
+					elem.start_position = pos
+			elif isinstance(elem, CbTrajectoryElement):
+				if which == "end":
+					elem.end_position = pos
+				else:
+					elem.start_position = pos
+			elif isinstance(elem, CbFireworkElement):
 				elem.position = pos
 		else:
-			# cb 兼容
-			cb_pos = CbPosition(x=x, y=y, z=z)
-			if which == "end":
-				if isinstance(elem, CbTrajFireworkElement):
-					elem.mid_position = cb_pos
-				elif isinstance(elem, DfTrajectoryElement):
-					elem.end_position = cb_pos
-			else:
-				if isinstance(elem, CbTrajFireworkElement):
-					elem.start_position = cb_pos
-				elif isinstance(elem, DfTrajectoryElement):
-					elem.start_position = cb_pos
-				elif isinstance(elem, DfFireworkElement):
-					elem.position = cb_pos
+			pos = DfPosition(x=x, y=y, z=z)
+			if isinstance(elem, DfTrajectoryElement):
+				if which == "end":
+					elem.end_position = pos
+				else:
+					elem.start_position = pos
+			elif isinstance(elem, DfFireworkElement):
+				elem.position = pos
+			elif isinstance(elem, DfEffectElement):
+				elem.position = pos
+			elif isinstance(elem, DfCompositeElement):
+				if which == "se_start":
+					elem.se_start_position = pos
+				elif which == "se_mid":
+					elem.se_mid_position = pos
+				else:
+					elem.position = pos
 
 		self.element_changed.emit(element_id, "position", pos)
 		return True
@@ -292,7 +394,7 @@ class ElementController(QObject):
 
 	# 克隆
 
-	def clone_element(self, element_id: str) -> DfElement | None:
+	def clone_element(self, element_id: str) -> Any:
 		elem = self._elements.get(element_id)
 		if elem is None:
 			return None
@@ -305,6 +407,7 @@ class ElementController(QObject):
 
 	def load_from_project(self, project) -> None:
 		"""从 Project 加载元素 按后端类型直接存入."""
+		self._backend = project.backend
 		self._elements.clear()
 		self._selected_id = ""
 
@@ -312,11 +415,5 @@ class ElementController(QObject):
 			self._elements[e.id] = e
 
 	def to_project(self, project) -> None:
-		"""将元素写回 Project V2 单列表."""
+		"""将元素写回 Project 单列表."""
 		project.elements = list(self._elements.values())
-
-		# 同时填充 V1 三列表以保持向后兼容
-		project.trajectories = []
-		project.fireworks = []
-		if hasattr(project, 'traj_fireworks'):
-			project.traj_fireworks = []

@@ -100,22 +100,22 @@ def _export_cb_firework(elem) -> None:
 	from dyn.lib.cb import fireworks as _fw
 	from dyn.models.cb import TrajFireworkElement, FireworkType
 
-	pos = elem.position
+	if isinstance(elem, TrajFireworkElement):
+		pos = elem.mid_position
+		tick = elem.fw_start_tick
+		duration = elem.fw_duration_ticks / 20.0
+	else:
+		pos = elem.position
+		tick = elem.start_tick
+		duration = elem.duration_ticks / 20.0
 	x, y, z = pos.x, pos.y, pos.z
 	inner_start = elem.inner_color.start.as_tuple()
 	inner_end = elem.inner_color.end.as_tuple()
 	outer_start = elem.outer_color.start.as_tuple()
 	outer_end = elem.outer_color.end.as_tuple()
 
-	if isinstance(elem, TrajFireworkElement):
-		tick = elem.fw_start_tick
-		duration = elem.fw_duration_ticks / 20.0
-	else:
-		tick = elem.start_tick
-		duration = elem.duration_ticks / 20.0
-
 	lifetime = 15
-	fw_type = elem.fw_type if isinstance(elem, TrajFireworkElement) else elem.fw_type
+	fw_type = elem.fw_type
 
 	if fw_type == FireworkType.SINGLE_LAYER.value:
 		_fw.basic_single_layer_firework(
