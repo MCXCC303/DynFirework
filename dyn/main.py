@@ -1067,7 +1067,13 @@ class MainWin(QMainWindow):
 
 	def _on_project_settings(self) -> None:
 		proj = self._project_manager.project
-		dlg = ProjectSettingsDialog(proj.name, proj.bpm, proj.mc_version, proj.backend.value, proj.audio_offset_ms, proj.time_signature, self)
+		dlg = ProjectSettingsDialog(proj.name,
+		                            proj.bpm,
+		                            proj.mc_version,
+		                            proj.backend.value,
+		                            proj.audio_offset_ms,
+		                            proj.time_signature,
+		                            self)
 		if dlg.exec() == QDialog.DialogCode.Accepted:
 			proj.bpm = dlg.bpm
 			proj.name = dlg.project_name
@@ -1120,7 +1126,9 @@ class MainWin(QMainWindow):
 		log.debug("应用程序关闭")
 		super().closeEvent(event)
 
-if __name__ == "__main__":
+
+
+def main():
 	setup_logging()
 	log.debug("DynFirework 启动")
 	app = QApplication(sys.argv)
@@ -1129,3 +1137,6 @@ if __name__ == "__main__":
 	win = MainWin()
 	win.show()
 	sys.exit(app.exec())
+
+if __name__ == "__main__":
+	main()

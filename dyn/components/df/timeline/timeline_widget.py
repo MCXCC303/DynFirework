@@ -195,7 +195,11 @@ class DFTimelineWidget(QWidget):
 		self._layout_children()
 		self.update()
 
-	def update_music_info(self, bpm: float, audio_offset_ms: float, time_signature: tuple = (4, 4), ticks_per_beat: int = 20) -> None:
+	def update_music_info(self,
+	                      bpm: float,
+	                      audio_offset_ms: float,
+	                      time_signature: tuple = (4, 4),
+	                      ticks_per_beat: int = 20) -> None:
 		self._bpm = bpm
 		self._audio_offset_ms = audio_offset_ms
 		self._time_signature = time_signature
