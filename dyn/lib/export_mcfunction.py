@@ -31,7 +31,7 @@ def export_mcfunction(output_dir, namespace):
 			# 写入文件，每行都加换行符（Minecraft要求）
 			with open(filename, 'w', encoding='utf-8', newline='\n') as f:
 				for cmd in commands:
-					f.write(f'{cmd}\n')
+					f.write(f'{cmd.lstrip("/")}\n')
 			total_commands += len(commands)
 			total_files += 1
 			if tick % 200 == 0 and tick > 0:
