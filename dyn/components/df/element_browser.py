@@ -39,13 +39,15 @@ def _type_display_name(elem) -> str:
 
 def _type_display_name_for_fw(fw_type) -> str:
 	try:
-		tk = f"fw_{fw_type.value}"
-		return get_type_def(tk).display_name
+		return get_type_def(fw_type.value).display_name
 	except (KeyError, ValueError):
 		return "?"
 
 def _secondary_type_name(st: str) -> str:
-	return "膨胀球" if st == "expanding" else "单层烟花" if st == "single_layer" else "?"
+	try:
+		return get_type_def(st).display_name
+	except (KeyError, ValueError):
+		return "?"
 
 class DfElementBrowserModel(BaseBrowserModel):
 	"""DF 元素浏览器 4列 4分类 含类型列."""
