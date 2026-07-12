@@ -8,7 +8,7 @@ from PySide6.QtGui import QPainter, QPen, QFont
 from PySide6.QtWidgets import QWidget
 
 from dyn.logging_config import get_logger
-from .theme import palette_colors, HEADER_HEIGHT, TRACK_LABEL_WIDTH, MAJOR_TICK_INTERVAL
+from .theme import palette_colors, HEADER_HEIGHT, TRACK_LABEL_WIDTH, _nice_interval
 
 log = get_logger(__name__)
 
@@ -45,12 +45,14 @@ class _HeaderWidget(QWidget):
 			f = QFont()
 			f.setPointSize(8)
 			p.setFont(f)
-			start_time = max(0.0, int(tl.x_to_time(float(TRACK_LABEL_WIDTH))))
-			end_time = tl.x_to_time(float(self.width())) + MAJOR_TICK_INTERVAL
+			major = _nice_interval(50.0 / tl.pixels_per_second)
+			start_time = max(0.0, int(tl.x_to_time(float(TRACK_LABEL_WIDTH)) / major) * major)
+			end_time = tl.x_to_time(float(self.width())) + major
 			t = float(start_time)
 			while t <= end_time:
 				x = int(tl.time_to_x(t))
-				p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, f"{t:.1f}s")
-				t += MAJOR_TICK_INTERVAL
+				label = f"{t:.0f}" if major >= 1.0 else f"{t:.1f}"
+				p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, label)
+				t += major
 		finally:
 			p.end()

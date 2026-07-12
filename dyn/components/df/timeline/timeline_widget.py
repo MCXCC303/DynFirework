@@ -19,7 +19,7 @@ from .proxy import create_track_views
 from .theme import (
 	palette_colors, propagate_palette,
 	HEADER_HEIGHT, TRACK_LABEL_WIDTH, WAVEFORM_HEIGHT,
-	PIXELS_PER_SECOND_DEFAULT, MINOR_TICK_INTERVAL,
+	PIXELS_PER_SECOND_DEFAULT, _nice_interval,
 	TICKS_PER_SECOND,
 )
 from .track_area import _TrackArea
@@ -245,18 +245,20 @@ class DFTimelineWidget(QWidget):
 	def paint_time_marks(self, p: QPainter) -> None:
 		y_top = self._waveform.geometry().bottom() + 2
 		y_bot = self.height()
-		start_time = max(0.0, int(self.x_to_time(float(TRACK_LABEL_WIDTH))))
-		end_time = self.x_to_time(float(self.width())) + MINOR_TICK_INTERVAL
+		major = _nice_interval(50.0 / self._pixels_per_second)
+		minor = major / 5.0
+		start_time = max(0.0, int(self.x_to_time(float(TRACK_LABEL_WIDTH)) / major) * major)
+		end_time = self.x_to_time(float(self.width())) + minor
 		t = float(start_time)
 		while t <= end_time:
 			x = int(self.time_to_x(t))
-			if abs(t - round(t)) < 0.001:
+			if abs(t - round(t / major) * major) < 0.001:
 				p.setPen(QPen(self._tick_major, 1))
 				p.drawLine(x, y_top, x, y_bot)
 			else:
 				p.setPen(QPen(self._tick_minor, 1))
 				p.drawLine(x, y_top, x, y_top + 8)
-			t += MINOR_TICK_INTERVAL
+			t += minor
 
 	def paint_cursor(self, p: QPainter) -> None:
 		cx = int(self.time_to_x(self._playback_time))

@@ -18,7 +18,7 @@ from .header import _HeaderWidget
 from .overlay import _CursorOverlayWidget
 from .theme import (
 	palette_colors, propagate_palette,
-	HEADER_HEIGHT, TRACK_LABEL_WIDTH, WAVEFORM_HEIGHT, PIXELS_PER_TICK_DEFAULT,
+	HEADER_HEIGHT, TRACK_LABEL_WIDTH, WAVEFORM_HEIGHT, PIXELS_PER_TICK_DEFAULT, _nice_interval,
 )
 from .track_area import _TFProxy, _TrackArea
 
@@ -207,18 +207,21 @@ class ParticleexTimelineWidget(QWidget):
 	def _paint_tick_marks(self, p: QPainter) -> None:
 		y_top = self._waveform.geometry().bottom() + 2
 		y_bot = self.height()
-		start_tick = max(0, (self.x_to_tick(TRACK_LABEL_WIDTH) // 20) * 20)
-		end_tick = self.x_to_tick(self.width()) + 1
-		tick = (start_tick // 5) * 5
+		min_ticks = max(1.0, 50.0 / self._pixels_per_tick)
+		major = max(1, int(_nice_interval(min_ticks)))
+		minor = max(1, major // 5)
+		start_tick = max(0, (self.x_to_tick(TRACK_LABEL_WIDTH) // major) * major)
+		end_tick = self.x_to_tick(self.width()) + major
+		tick = (start_tick // minor) * minor
 		while tick <= end_tick:
 			x = int(self.tick_to_x(tick))
-			if tick % 20 == 0:
+			if tick % major == 0:
 				p.setPen(QPen(self._tick_major, 1))
 				p.drawLine(x, y_top, x, y_bot)
 			else:
 				p.setPen(QPen(self._tick_minor, 1))
 				p.drawLine(x, y_top, x, y_top + 8)
-			tick += 5
+			tick += minor
 
 	def _paint_cursor(self, p: QPainter) -> None:
 		cx = int(self.tick_to_x(self._playback_tick))

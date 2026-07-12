@@ -8,7 +8,7 @@ from PySide6.QtGui import QPainter, QPen, QFont
 from PySide6.QtWidgets import QWidget
 
 from dyn.logging_config import get_logger
-from .theme import palette_colors, HEADER_HEIGHT, TRACK_LABEL_WIDTH
+from .theme import palette_colors, HEADER_HEIGHT, TRACK_LABEL_WIDTH, _nice_interval
 
 log = get_logger(__name__)
 
@@ -42,14 +42,15 @@ class _HeaderWidget(QWidget):
 				f = QFont()
 				f.setPointSize(8)
 				p.setFont(f)
-				start_tick = max(0, (tl.x_to_tick(TRACK_LABEL_WIDTH) // 20) * 20)
-				end_tick = tl.x_to_tick(self.width()) + 1
+				min_ticks = max(1.0, 50.0 / tl.pixels_per_tick)
+				major = max(1, int(_nice_interval(min_ticks)))
+				start_tick = max(0, (tl.x_to_tick(TRACK_LABEL_WIDTH) // major) * major)
+				end_tick = tl.x_to_tick(self.width()) + major
 				tick = start_tick
 				while tick <= end_tick:
-					if tick % 20 == 0:
-						x = int(tl.tick_to_x(tick))
-						p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, str(tick))
-					tick += 20
+					x = int(tl.tick_to_x(tick))
+					p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, str(tick))
+					tick += major
 			else:
 				log.warning("时间线头: 时间线引用为空, 跳过绘制")
 		finally:
