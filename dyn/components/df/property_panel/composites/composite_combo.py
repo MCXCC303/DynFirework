@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-	QFormLayout, QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, )
+	QFormLayout, QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox, QPushButton, )
 
 from dyn.components.df.property_panel.composites.composite_base import CompositeBase
 from dyn.models.df.composites import CompositeElement
+from dyn.models.df.values import ColorRGB
 
 class ComboECForm(CompositeBase):
 	"""组合 EC 中心位置 + 集束部分 + 膨胀部分 + 时间."""
@@ -25,11 +26,14 @@ class ComboECForm(CompositeBase):
 		self._spin_ce_z.setRange(-100000, 100000)
 		self._spin_ce_z.setDecimals(2)
 		self._add_row(form, "ce_z", "Z:", self._spin_ce_z)
+		btn_ce = QPushButton("在地图上选择...")
+		btn_ce.clicked.connect(lambda: self.position_select_requested.emit("ce_pos"))
+		form.addRow("", btn_ce)
 		self.layout().addWidget(self._group_ce_pos)
 
 		self._group_cluster = QGroupBox("集束部分")
 		form = QFormLayout(self._group_cluster)
-		self._cluster_color_group, self._cluster_color_start, self._cluster_color_end = self._add_color_group("颜色")
+		self._cluster_color_group, self._cluster_color_start, self._cluster_color_end, self._chk_cluster_grad = self._add_color_group("颜色")
 		self._spin_cluster_speed = QDoubleSpinBox()
 		self._spin_cluster_speed.setRange(0.1, 100)
 		self._add_row(form, "cluster_speed", "速度:", self._spin_cluster_speed, 10.0)
@@ -46,7 +50,7 @@ class ComboECForm(CompositeBase):
 
 		self._group_sphere = QGroupBox("膨胀部分")
 		form = QFormLayout(self._group_sphere)
-		self._sphere_color_group, self._sphere_color_start, self._sphere_color_end = self._add_color_group("颜色")
+		self._sphere_color_group, self._sphere_color_start, self._sphere_color_end, self._chk_sphere_grad = self._add_color_group("颜色")
 		self._spin_sphere_count = QSpinBox()
 		self._spin_sphere_count.setRange(1, 10000)
 		self._add_row(form, "sphere_count", "粒子数:", self._spin_sphere_count, 100)
@@ -78,6 +82,8 @@ class ComboECForm(CompositeBase):
 		self._cluster_color_end.color_changed.connect(lambda c: self._on_extra_changed())
 		self._sphere_color_start.color_changed.connect(lambda c: self._on_extra_changed())
 		self._sphere_color_end.color_changed.connect(lambda c: self._on_extra_changed())
+		self._chk_cluster_grad.toggled.connect(self._on_extra_changed)
+		self._chk_sphere_grad.toggled.connect(self._on_extra_changed)
 
 		self._sub_groups = [
 			self._group_ce_pos,
@@ -109,6 +115,10 @@ class ComboECForm(CompositeBase):
 
 		self._sphere_color_start.set_color(elem.ce_sphere_color.start)
 		self._sphere_color_end.set_color(elem.ce_sphere_color.end)
+		self._chk_cluster_grad.setChecked(elem.ce_cluster_color.use_gradient)
+		self._cluster_color_end.setEnabled(elem.ce_cluster_color.use_gradient)
+		self._chk_sphere_grad.setChecked(elem.ce_sphere_color.use_gradient)
+		self._sphere_color_end.setEnabled(elem.ce_sphere_color.use_gradient)
 		self._spin_sphere_count.setValue(elem.ce_sphere_count)
 		self._chk_flicker.setChecked(elem.ce_flicker)
 
@@ -120,19 +130,25 @@ class ComboECForm(CompositeBase):
 			return
 		e = self._element
 
+		e.ce_cluster_color.use_gradient = self._chk_cluster_grad.isChecked()
+		e.ce_sphere_color.use_gradient = self._chk_sphere_grad.isChecked()
 		e.ce_position.x = self._spin_ce_x.value()
 		e.ce_position.y = self._spin_ce_y.value()
 		e.ce_position.z = self._spin_ce_z.value()
 
-		e.ce_cluster_color.start = self._cluster_color_start.color
-		e.ce_cluster_color.end = self._cluster_color_end.color
+		cc = self._cluster_color_start.color
+		e.ce_cluster_color.start = ColorRGB(r=cc.r, g=cc.g, b=cc.b)
+		cc = self._cluster_color_end.color
+		e.ce_cluster_color.end = ColorRGB(r=cc.r, g=cc.g, b=cc.b)
 		e.ce_cluster_speed = self._spin_cluster_speed.value()
 		e.ce_dir_count = self._spin_dir_count.value()
 		e.ce_track_count = self._spin_track_count.value()
 		e.ce_spread = self._spin_spread.value()
 
-		e.ce_sphere_color.start = self._sphere_color_start.color
-		e.ce_sphere_color.end = self._sphere_color_end.color
+		sc = self._sphere_color_start.color
+		e.ce_sphere_color.start = ColorRGB(r=sc.r, g=sc.g, b=sc.b)
+		sc = self._sphere_color_end.color
+		e.ce_sphere_color.end = ColorRGB(r=sc.r, g=sc.g, b=sc.b)
 		e.ce_sphere_count = self._spin_sphere_count.value()
 		e.ce_flicker = self._chk_flicker.isChecked()
 

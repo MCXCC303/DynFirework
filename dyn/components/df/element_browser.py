@@ -5,7 +5,7 @@ from PySide6.QtCore import QModelIndex, Qt
 
 from dyn.components.base.browser_model import (
 	BaseBrowserModel, GroupNode, ElementNode,
-	format_time_sec, format_cb_time,
+	format_time_sec,
 )
 from dyn.models.df.base import ElementCategory, Element as Element
 from dyn.models.df.registry import get_type_key, get_type_def
@@ -25,7 +25,7 @@ def _type_display_name(elem) -> str:
 			tk = get_type_key(elem)
 			return get_type_def(tk).display_name
 		except (KeyError, ValueError):
-			return tk
+			return "?"
 	return "?"
 
 class DfElementBrowserModel(BaseBrowserModel):
@@ -72,16 +72,12 @@ class DfElementBrowserModel(BaseBrowserModel):
 				elif col == 1:
 					return _type_display_name(elem)
 				elif col == 2:
-					if isinstance(elem, Element):
-						return format_time_sec(elem.start_time)
-					return format_cb_time(elem.start_tick)
+					return format_time_sec(elem.start_time)
 				elif col == 3:
-					if isinstance(elem, Element):
-						return format_time_sec(elem.duration)
-					return format_cb_time(elem.duration_ticks)
+					return format_time_sec(elem.duration)
 
 		return self._style_data(node, role, col)
 
 	def _change_key_column(self, key: str) -> int:
-		return {"name": 0, "start_tick": 2, "start_time": 2,
-		        "duration_ticks": 3, "duration": 3}.get(key, -1)
+		return {"name": 0, "start_time": 2,
+		        "duration": 3}.get(key, -1)

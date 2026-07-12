@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from enum import Enum
 from typing import Any, TYPE_CHECKING
 
 from PySide6.QtCore import (
@@ -48,12 +47,12 @@ class BaseNode:
 		return 0
 
 class GroupNode(BaseNode):
-	"""分组节点 data: 分类枚举值."""
+	"""分组节点 data: 分类标识 (Enum 或 str)."""
 	__slots__ = ("data",)
 
-	def __init__(self, label: str, data: Enum, parent: BaseNode | None = None) -> None:
+	def __init__(self, label: str, data: Any, parent: BaseNode | None = None) -> None:
 		super().__init__(label, parent)
-		self.data: Enum = data
+		self.data: Any = data
 
 class ElementNode(BaseNode):
 	"""元素节点 data: Element | CbElement."""

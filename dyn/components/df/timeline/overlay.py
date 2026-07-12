@@ -1,9 +1,9 @@
-"""光标覆盖层 播放头、秒刻度线、四轨道标签 (df)."""
+"""光标覆盖层 播放头、秒刻度线、轨道分隔线 (df)."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QRect, QEvent
+from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
@@ -22,7 +22,6 @@ class _CursorOverlayWidget(QWidget):
 	def _update_colors(self):
 		c = palette_colors()
 		self._divider_color = c["mid"]
-		self._label_color = c["text_dim"]
 
 	def changeEvent(self, event):
 		if event.type() == QEvent.PaletteChange:
@@ -38,20 +37,13 @@ class _CursorOverlayWidget(QWidget):
 		p.setRenderHint(QPainter.Antialiasing)
 		try:
 			tl.paint_time_marks(p)
-			f = p.font()
-			f.setPointSize(9)
-			p.setFont(f)
-			p.setPen(QPen(self._label_color, 1))
-			for i, (track_name, track) in enumerate(zip(
-					["烟花", "轨迹", "效果", "复合"],
-					[tl.fw_track, tl.traj_track, tl.effect_track, tl.composite_track],
-			)):
-				geo = track.geometry()
+			for i, track in enumerate([
+					tl.fw_track, tl.traj_track, tl.effect_track, tl.composite_track,
+			]):
 				if i > 0:
+					geo = track.geometry()
 					p.setPen(QPen(self._divider_color, 1))
 					p.drawLine(TRACK_LABEL_WIDTH + 2, geo.top(), self.width() - 2, geo.top())
-				center_y = geo.top() + geo.height() // 2
-				p.drawText(QRect(0, center_y - 10, TRACK_LABEL_WIDTH, 20), Qt.AlignCenter, track_name)
 			tl.paint_cursor(p)
 		finally:
 			p.end()

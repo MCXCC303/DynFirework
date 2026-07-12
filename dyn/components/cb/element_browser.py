@@ -48,10 +48,10 @@ class CbElementBrowserModel(BaseBrowserModel):
 		return None
 
 	@staticmethod
-	def _category_for_element(elem) -> ElementCategory:
+	def _category_for_element(elem) -> str:
 		if hasattr(elem, 'element_type'):
-			return CB_TO_CATEGORY.get(elem.element_type, ElementCategory.COMPOSITE)
-		return ElementCategory.COMPOSITE
+			return CB_TO_CATEGORY.get(elem.element_type, _CB_Category.COMPOSITE)
+		return _CB_Category.COMPOSITE
 
 	def data(self, index: QModelIndex, role: int = Qt.DisplayRole):
 		if not index.isValid():

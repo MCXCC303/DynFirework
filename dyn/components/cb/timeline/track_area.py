@@ -197,6 +197,11 @@ class _TrackArea(QWidget):
 		try:
 			p.fillRect(self.rect(), self._bg)
 			p.fillRect(QRect(0, 0, TRACK_LABEL_WIDTH, self.height()), self._label_bg)
+			p.setPen(QPen(self._text_color, 1))
+			lf = QFont()
+			lf.setPointSize(14)
+			p.setFont(lf)
+			p.drawText(QRect(0, 0, TRACK_LABEL_WIDTH, self.height()), Qt.AlignCenter, self._label)
 			p.setClipRect(QRect(TRACK_LABEL_WIDTH, 0, self.width() - TRACK_LABEL_WIDTH, self.height()))
 			for blk in self._blocks:
 				self._paint_block(p, blk)
@@ -215,15 +220,15 @@ class _TrackArea(QWidget):
 		if r.width() > 20:
 			p.setPen(QPen(QColor(255, 255, 255), 1))
 			f = QFont()
-			f.setPointSize(7)
+			f.setPointSize(9)
 			p.setFont(f)
 			p.drawText(r.adjusted(4, 0, -4, 0), Qt.AlignVCenter | Qt.AlignLeft, elem.name)
-		if r.width() > 36:
+		if r.width() > 40:
 			p.setPen(QPen(QColor(255, 255, 255, 150), 1))
 			f2 = QFont()
-			f2.setPointSize(6)
+			f2.setPointSize(8)
 			p.setFont(f2)
-			p.drawText(QRect(r.right() - 18, r.top() + 2, 14, r.height() - 4), Qt.AlignCenter, self._icon(elem))
+			p.drawText(QRect(r.right() - 20, r.top() + 2, 16, r.height() - 4), Qt.AlignCenter, self._icon(elem))
 
 	@staticmethod
 	def _paint_block_gradient(p: QPainter, elem: Element, r: QRect, sel: bool) -> None:
@@ -317,20 +322,17 @@ class _TrackArea(QWidget):
 		if isinstance(elem, _TFProxy):
 			parent = elem.parent
 			if elem.part == "traj":
-				return {"launch": "↗", "spark": "✳", "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(parent.traj_type, "⇢")
+				return {"launch": "/", "spark": "*", "offset": "?", "thick": "=", "expanding": "#"}.get(parent.traj_type, "~")
 			else:
-				return {
-					"single_layer": "✦",
-					"double_layer": "✶",
-					"directional": "➳",
-					"clustered": "❈",
-					"expanding_sphere": "◉"}.get(parent.fw_type, "★")
+				return {"single_layer": "1", "double_layer": "2",
+				        "directional": ">", "clustered": "#",
+				        "expanding_sphere": "o"}.get(parent.fw_type, "?")
 		if isinstance(elem, FireworkElement):
-			return {"single_layer": "✦", "double_layer": "✶",
-			        "directional": "➳", "clustered": "❈", "expanding_sphere": "◉"}.get(elem.fw_type, "★")
+			return {"single_layer": "1", "double_layer": "2",
+			        "directional": ">", "clustered": "#", "expanding_sphere": "o"}.get(elem.fw_type, "?")
 		if isinstance(elem, TrajectoryElement):
-			return {"launch": "↗", "spark": "✳",
-			        "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(elem.traj_type, "->")
+			return {"launch": "/", "spark": "*",
+			        "offset": "?", "thick": "=", "expanding": "#"}.get(elem.traj_type, "~")
 		return "?"
 
 	def mousePressEvent(self, event: QMouseEvent) -> None:

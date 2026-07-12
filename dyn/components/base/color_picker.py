@@ -1,11 +1,15 @@
 """颜色选择组件 与模型解耦 适用于 df 和 cb."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
 	QWidget, QHBoxLayout, QLabel, QSpinBox, QPushButton, QColorDialog,
 )
+
+log = logging.getLogger("dyn.components.color_picker")
 
 class _ColorVal:
 	"""与 V1/V2 ColorRGB 接口兼容的颜色值 支持 .r/.g/.b/.to_json()/.as_tuple()."""
@@ -71,19 +75,34 @@ class ColorPicker(QWidget):
 		self._update_button()
 
 	def _on_pick_color(self) -> None:
+		log.debug(f"打开颜色对话框, 当前: ({self._r},{self._g},{self._b})")
 		qcolor = QColorDialog.getColor(QColor(self._r, self._g, self._b), self, "选择颜色")
 		if qcolor.isValid():
-			self._r, self._g, self._b = qcolor.red(), qcolor.green(), qcolor.blue()
-			self._spin_r.setValue(self._r)
-			self._spin_g.setValue(self._g)
-			self._spin_b.setValue(self._b)
+			nr, ng, nb = qcolor.red(), qcolor.green(), qcolor.blue()
+			log.debug(f"对话框返回: ({nr},{ng},{nb})")
+			self._r, self._g, self._b = nr, ng, nb
+			self._spin_r.blockSignals(True)
+			self._spin_g.blockSignals(True)
+			self._spin_b.blockSignals(True)
+			self._spin_r.setValue(nr)
+			self._spin_g.setValue(ng)
+			self._spin_b.setValue(nb)
+			self._spin_r.blockSignals(False)
+			self._spin_g.blockSignals(False)
+			self._spin_b.blockSignals(False)
+			self._update_button()
+			cv = _ColorVal(nr, ng, nb)
+			log.debug(f"ColorPicker emit: _ColorVal(r={cv.r}, g={cv.g}, b={cv.b})")
+			self.color_changed.emit(cv)
 
 	def _on_spin_changed(self) -> None:
 		self._r = self._spin_r.value()
 		self._g = self._spin_g.value()
 		self._b = self._spin_b.value()
 		self._update_button()
-		self.color_changed.emit(_ColorVal(self._r, self._g, self._b))
+		cv = _ColorVal(self._r, self._g, self._b)
+		log.debug(f"ColorPicker emit: _ColorVal(r={cv.r}, g={cv.g}, b={cv.b})")
+		self.color_changed.emit(cv)
 
 	def _update_button(self) -> None:
 		self._btn.setStyleSheet(

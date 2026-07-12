@@ -163,6 +163,15 @@ def _export_cb_trajectory(elem) -> None:
 	m0 = elem.m0
 	traj_type = elem.traj_type
 
+	# TrajFireworkElement 缺少部分 TrajectoryElement 专属属性，使用 getattr 兜底
+	iv = getattr(elem, 'interval_ticks', 5)
+	ppt = getattr(elem, 'points_per_tick', 1)
+	rx = getattr(elem, 'range_x', 0.0)
+	ry = getattr(elem, 'range_y', 0.0)
+	rz = getattr(elem, 'range_z', 0.0)
+	pc = getattr(elem, 'particle_count', 1)
+	sf = getattr(elem, 'speed_factor', 1.0)
+
 	if traj_type == TrajType.LAUNCH.value:
 		_traj.launch_trajectory(
 			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
@@ -170,25 +179,19 @@ def _export_cb_trajectory(elem) -> None:
 	elif traj_type == TrajType.SPARK.value:
 		_traj.launch_spark_trajectory(
 			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
-			duration, k, m0, lifetime, elem.particle_count)
+			duration, k, m0, lifetime, pc)
 	elif traj_type == TrajType.OFFSET.value:
 		_traj.trajectory_with_random_offset(
 			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
-			k, m0, duration, lifetime,
-			elem.interval_ticks, elem.points_per_tick)
+			k, m0, duration, lifetime, iv, ppt)
 	elif traj_type == TrajType.THICK.value:
 		_traj.thick_trajectory_with_random_offset(
 			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
-			k, m0, duration, lifetime,
-			elem.interval_ticks, elem.points_per_tick,
-			elem.range_x, elem.range_y, elem.range_z, elem.particle_count)
+			k, m0, duration, lifetime, iv, ppt, rx, ry, rz, pc)
 	elif traj_type == TrajType.EXPANDING.value:
 		_traj.expanding_trajectory_with_random_offset(
 			end_tick, start.x, start.y, start.z, end.x, end.y, end.z,
-			k, m0, duration, lifetime,
-			elem.interval_ticks, elem.points_per_tick,
-			elem.range_x, elem.range_y, elem.range_z,
-			elem.particle_count, elem.speed_factor)
+			k, m0, duration, lifetime, iv, ppt, rx, ry, rz, pc, sf)
 
 def _export_cb_traj_firework(elem) -> None:
 	_export_cb_trajectory(elem)

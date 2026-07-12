@@ -103,8 +103,8 @@ class TrajBase(FormBase):
 		layout.addWidget(self._color_start)
 		self._color_end = ColorPicker("结束:")
 		layout.addWidget(self._color_end)
-		self._color_start.color_changed.connect(lambda c: self._emit("traj_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
-		self._color_end.color_changed.connect(lambda c: self._emit("traj_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_start.color_changed.connect(lambda c: self._emit("traj_color_start", ColorRGB(r=c.r, g=c.g, b=c.b)))
+		self._color_end.color_changed.connect(lambda c: self._emit("traj_color_end", ColorRGB(r=c.r, g=c.g, b=c.b)))
 		self.layout().addWidget(self._group_color)
 
 	def _setup_type_params(self) -> None:

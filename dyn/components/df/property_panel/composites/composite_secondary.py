@@ -1,12 +1,16 @@
 """二级爆炸表单 一级烟花 + 二级爆炸参数."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtWidgets import (
-	QFormLayout, QSpinBox, QDoubleSpinBox, QComboBox, QGroupBox, )
+	QFormLayout, QSpinBox, QDoubleSpinBox, QComboBox, QGroupBox, QPushButton, )
 
 from dyn.components.df.property_panel.composites.composite_base import CompositeBase
 from dyn.models.df.composites import CompositeElement
-from dyn.models.df.values import FireworkType
+from dyn.models.df.values import ColorRGB, FireworkType
+
+_sec_log = logging.getLogger("dyn.components.df.composite_secondary")
 
 class SecondaryExplosionForm(CompositeBase):
 	"""二级爆炸 初始/中间位置 + 一级烟花 + 二级爆炸."""
@@ -26,6 +30,9 @@ class SecondaryExplosionForm(CompositeBase):
 		self._spin_start_z.setRange(-100000, 100000)
 		self._spin_start_z.setDecimals(2)
 		self._add_row(form, "start_z", "Z:", self._spin_start_z)
+		btn_start = QPushButton("在地图上选择...")
+		btn_start.clicked.connect(lambda: self.position_select_requested.emit("se_start"))
+		form.addRow("", btn_start)
 		self.layout().addWidget(self._group_start)
 
 		self._group_mid = QGroupBox("中间位置")
@@ -42,6 +49,9 @@ class SecondaryExplosionForm(CompositeBase):
 		self._spin_mid_z.setRange(-100000, 100000)
 		self._spin_mid_z.setDecimals(2)
 		self._add_row(form, "mid_z", "Z:", self._spin_mid_z)
+		btn_mid = QPushButton("在地图上选择...")
+		btn_mid.clicked.connect(lambda: self.position_select_requested.emit("se_mid"))
+		form.addRow("", btn_mid)
 		self.layout().addWidget(self._group_mid)
 
 		self._group_primary = QGroupBox("一级烟花")
@@ -55,7 +65,7 @@ class SecondaryExplosionForm(CompositeBase):
 		self._combo_primary_type.addItem("星云", FireworkType.NEBULA)
 		self._add_row(form, "primary_type", "类型:", self._combo_primary_type, FireworkType.SINGLE_LAYER)
 		self._combo_primary_type.currentIndexChanged.connect(self._on_extra_changed)
-		self._primary_color_group, self._primary_color_start, self._primary_color_end = self._add_color_group("颜色")
+		self._primary_color_group, self._primary_color_start, self._primary_color_end, self._chk_primary_grad = self._add_color_group("颜色")
 		self._spin_primary_speed = QDoubleSpinBox()
 		self._spin_primary_speed.setRange(0.1, 100)
 		self._add_row(form, "primary_speed", "速度:", self._spin_primary_speed, 10.0)
@@ -89,7 +99,7 @@ class SecondaryExplosionForm(CompositeBase):
 		self._combo_secondary_type.addItem("单层烟花", "single_layer")
 		self._add_row(form, "secondary_type", "类型:", self._combo_secondary_type, "expanding")
 		self._combo_secondary_type.currentIndexChanged.connect(self._on_extra_changed)
-		self._secondary_color_group, self._secondary_color_start, self._secondary_color_end = self._add_color_group("颜色")
+		self._secondary_color_group, self._secondary_color_start, self._secondary_color_end, self._chk_secondary_grad = self._add_color_group("颜色")
 		self._spin_secondary_radius = QDoubleSpinBox()
 		self._spin_secondary_radius.setRange(0.1, 100)
 		self._add_row(form, "secondary_radius", "半径:", self._spin_secondary_radius, 3.0)
@@ -127,6 +137,8 @@ class SecondaryExplosionForm(CompositeBase):
 		self._primary_color_end.color_changed.connect(lambda c: self._on_extra_changed())
 		self._secondary_color_start.color_changed.connect(lambda c: self._on_extra_changed())
 		self._secondary_color_end.color_changed.connect(lambda c: self._on_extra_changed())
+		self._chk_primary_grad.toggled.connect(self._on_extra_changed)
+		self._chk_secondary_grad.toggled.connect(self._on_extra_changed)
 
 		self._sub_groups = [
 			self._group_start,
@@ -172,6 +184,10 @@ class SecondaryExplosionForm(CompositeBase):
 			self._combo_secondary_type.setCurrentIndex(idx)
 		self._secondary_color_start.set_color(elem.se_secondary_color.start)
 		self._secondary_color_end.set_color(elem.se_secondary_color.end)
+		self._chk_primary_grad.setChecked(elem.se_primary_color.use_gradient)
+		self._primary_color_end.setEnabled(elem.se_primary_color.use_gradient)
+		self._chk_secondary_grad.setChecked(elem.se_secondary_color.use_gradient)
+		self._secondary_color_end.setEnabled(elem.se_secondary_color.use_gradient)
 		self._spin_secondary_radius.setValue(elem.se_secondary_radius)
 		self._spin_secondary_count.setValue(elem.se_secondary_count)
 		self._spin_secondary_radial_speed.setValue(elem.se_secondary_radial_speed)
@@ -192,9 +208,15 @@ class SecondaryExplosionForm(CompositeBase):
 		e.se_mid_position.y = self._spin_mid_y.value()
 		e.se_mid_position.z = self._spin_mid_z.value()
 
+		e.se_primary_color.use_gradient = self._chk_primary_grad.isChecked()
+		e.se_secondary_color.use_gradient = self._chk_secondary_grad.isChecked()
 		e.se_primary_type = self._combo_primary_type.currentData()
-		e.se_primary_color.start = self._primary_color_start.color
-		e.se_primary_color.end = self._primary_color_end.color
+		pc = self._primary_color_start.color
+		_sec_log.debug(f"primary_color_start: picker=({pc.r},{pc.g},{pc.b}) type={type(pc).__name__}")
+		e.se_primary_color.start = ColorRGB(r=pc.r, g=pc.g, b=pc.b)
+		_sec_log.debug(f"primary_color_start stored: ({e.se_primary_color.start.r},{e.se_primary_color.start.g},{e.se_primary_color.start.b}) type={type(e.se_primary_color.start).__name__}")
+		pc = self._primary_color_end.color
+		e.se_primary_color.end = ColorRGB(r=pc.r, g=pc.g, b=pc.b)
 		e.se_primary_speed = self._spin_primary_speed.value()
 		e.se_primary_count = self._spin_primary_count.value()
 		e.se_primary_duration = self._spin_primary_duration.value()
@@ -205,8 +227,10 @@ class SecondaryExplosionForm(CompositeBase):
 		e.se_primary_v_angle = self._spin_primary_v_angle.value()
 
 		e.se_secondary_type = self._combo_secondary_type.currentData()
-		e.se_secondary_color.start = self._secondary_color_start.color
-		e.se_secondary_color.end = self._secondary_color_end.color
+		sc = self._secondary_color_start.color
+		e.se_secondary_color.start = ColorRGB(r=sc.r, g=sc.g, b=sc.b)
+		sc = self._secondary_color_end.color
+		e.se_secondary_color.end = ColorRGB(r=sc.r, g=sc.g, b=sc.b)
 		e.se_secondary_radius = self._spin_secondary_radius.value()
 		e.se_secondary_count = self._spin_secondary_count.value()
 		e.se_secondary_radial_speed = self._spin_secondary_radial_speed.value()

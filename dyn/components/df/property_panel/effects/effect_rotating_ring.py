@@ -4,12 +4,13 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox
 
 from dyn.components.df.property_panel.effects.effect_base import EffectBase
+from dyn.models.df.values import ColorRGB
 
 class RotatingRingForm(EffectBase):
 	"""旋转光环效果表单."""
 
 	def _setup_type_params(self):
-		self._grp_color, self._cp_color_begin, self._cp_color_end = self._add_color_group("颜色")
+		self._grp_color, self._cp_color_begin, self._cp_color_end, self._chk_color_grad = self._add_color_group("颜色")
 
 		self._grp_ring = QGroupBox("环参数")
 		form_ring = QFormLayout(self._grp_ring)
@@ -53,6 +54,7 @@ class RotatingRingForm(EffectBase):
 			w.valueChanged.connect(self._on_extra_changed)
 		self._cp_color_begin.color_changed.connect(self._on_extra_changed)
 		self._cp_color_end.color_changed.connect(self._on_extra_changed)
+		self._chk_color_grad.toggled.connect(self._on_extra_changed)
 
 		self._sub_groups = [
 			self._grp_color,
@@ -67,6 +69,8 @@ class RotatingRingForm(EffectBase):
 
 		self._cp_color_begin.set_color(elem.rr_color.start)
 		self._cp_color_end.set_color(elem.rr_color.end)
+		self._chk_color_grad.setChecked(elem.rr_color.use_gradient)
+		self._cp_color_end.setEnabled(elem.rr_color.use_gradient)
 		self._spin_rr_ring_radius.setValue(elem.rr_ring_radius)
 		self._spin_rr_tube_radius.setValue(elem.rr_tube_radius)
 		self._spin_rr_rotation_speed.setValue(elem.rr_rotation_speed)
@@ -79,8 +83,9 @@ class RotatingRingForm(EffectBase):
 		if self._loading or self._element is None:
 			return
 		e = self._element
-		e.rr_color.start = self._cp_color_begin.color
-		e.rr_color.end = self._cp_color_end.color
+		c = self._cp_color_begin.color; e.rr_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color_end.color; e.rr_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		e.rr_color.use_gradient = self._chk_color_grad.isChecked()
 		e.rr_ring_radius = self._spin_rr_ring_radius.value()
 		e.rr_tube_radius = self._spin_rr_tube_radius.value()
 		e.rr_rotation_speed = self._spin_rr_rotation_speed.value()

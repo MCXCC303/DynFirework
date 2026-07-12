@@ -4,13 +4,14 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox
 
 from dyn.components.df.property_panel.effects.effect_base import EffectBase
+from dyn.models.df.values import ColorRGB
 
 class SprayForm(EffectBase):
 	"""喷射效果表单."""
 
 	def _setup_type_params(self):
-		self._grp_spray_start, self._cp_spray_start_begin, self._cp_spray_start_end = self._add_color_group("起始颜色")
-		self._grp_spray_end, self._cp_spray_end_begin, self._cp_spray_end_end = self._add_color_group("结束颜色")
+		self._grp_spray_start, self._cp_spray_start_begin, self._cp_spray_start_end, self._chk_spray_start_grad = self._add_color_group("起始颜色")
+		self._grp_spray_end, self._cp_spray_end_begin, self._cp_spray_end_end, self._chk_spray_end_grad = self._add_color_group("结束颜色")
 
 		self._grp_speed = QGroupBox("速度")
 		form_speed = QFormLayout(self._grp_speed)
@@ -57,6 +58,8 @@ class SprayForm(EffectBase):
 		self._cp_spray_start_end.color_changed.connect(self._on_extra_changed)
 		self._cp_spray_end_begin.color_changed.connect(self._on_extra_changed)
 		self._cp_spray_end_end.color_changed.connect(self._on_extra_changed)
+		self._chk_spray_start_grad.toggled.connect(self._on_extra_changed)
+		self._chk_spray_end_grad.toggled.connect(self._on_extra_changed)
 
 		self._sub_groups = [
 			self._grp_spray_start, self._grp_spray_end,
@@ -74,6 +77,10 @@ class SprayForm(EffectBase):
 		self._cp_spray_start_end.set_color(elem.spray_start_color.end)
 		self._cp_spray_end_begin.set_color(elem.spray_end_color.start)
 		self._cp_spray_end_end.set_color(elem.spray_end_color.end)
+		self._chk_spray_start_grad.setChecked(elem.spray_start_color.use_gradient)
+		self._cp_spray_end_end.setEnabled(elem.spray_start_color.use_gradient)
+		self._chk_spray_end_grad.setChecked(elem.spray_end_color.use_gradient)
+		self._cp_spray_end_end.setEnabled(elem.spray_end_color.use_gradient)
 		self._spin_spray_min_speed.setValue(elem.spray_min_speed)
 		self._spin_spray_max_speed.setValue(elem.spray_max_speed)
 		self._spin_spray_h_angle.setValue(elem.spray_h_angle)
@@ -87,10 +94,12 @@ class SprayForm(EffectBase):
 		if self._loading or self._element is None:
 			return
 		e = self._element
-		e.spray_start_color.start = self._cp_spray_start_begin.color
-		e.spray_start_color.end = self._cp_spray_start_end.color
-		e.spray_end_color.start = self._cp_spray_end_begin.color
-		e.spray_end_color.end = self._cp_spray_end_end.color
+		c = self._cp_spray_start_begin.color; e.spray_start_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_spray_start_end.color; e.spray_start_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_spray_end_begin.color; e.spray_end_color.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_spray_end_end.color; e.spray_end_color.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		e.spray_start_color.use_gradient = self._chk_spray_start_grad.isChecked()
+		e.spray_end_color.use_gradient = self._chk_spray_end_grad.isChecked()
 		e.spray_min_speed = self._spin_spray_min_speed.value()
 		e.spray_max_speed = self._spin_spray_max_speed.value()
 		e.spray_h_angle = self._spin_spray_h_angle.value()

@@ -4,13 +4,14 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QSpinBox, QDoubleSpinBox, QGroupBox
 
 from dyn.components.df.property_panel.effects.effect_base import EffectBase
+from dyn.models.df.values import ColorRGB
 
 class DoubleHelixForm(EffectBase):
 	"""双螺旋效果表单."""
 
 	def _setup_type_params(self):
-		self._grp_color1, self._cp_color1_begin, self._cp_color1_end = self._add_color_group("颜色1")
-		self._grp_color2, self._cp_color2_begin, self._cp_color2_end = self._add_color_group("颜色2")
+		self._grp_color1, self._cp_color1_begin, self._cp_color1_end, self._chk_color1_grad = self._add_color_group("颜色1")
+		self._grp_color2, self._cp_color2_begin, self._cp_color2_end, self._chk_color2_grad = self._add_color_group("颜色2")
 
 		self._grp_helix = QGroupBox("螺旋参数")
 		form_helix = QFormLayout(self._grp_helix)
@@ -59,6 +60,8 @@ class DoubleHelixForm(EffectBase):
 		self._cp_color1_end.color_changed.connect(self._on_extra_changed)
 		self._cp_color2_begin.color_changed.connect(self._on_extra_changed)
 		self._cp_color2_end.color_changed.connect(self._on_extra_changed)
+		self._chk_color1_grad.toggled.connect(self._on_extra_changed)
+		self._chk_color2_grad.toggled.connect(self._on_extra_changed)
 
 		self._sub_groups = [
 			self._grp_color1, self._grp_color2,
@@ -76,6 +79,10 @@ class DoubleHelixForm(EffectBase):
 		self._cp_color1_end.set_color(elem.dh_color1.end)
 		self._cp_color2_begin.set_color(elem.dh_color2.start)
 		self._cp_color2_end.set_color(elem.dh_color2.end)
+		self._chk_color1_grad.setChecked(elem.dh_color1.use_gradient)
+		self._cp_color1_end.setEnabled(elem.dh_color1.use_gradient)
+		self._chk_color2_grad.setChecked(elem.dh_color2.use_gradient)
+		self._cp_color2_end.setEnabled(elem.dh_color2.use_gradient)
 		self._spin_dh_radius.setValue(elem.dh_radius)
 		self._spin_dh_rise_speed.setValue(elem.dh_rise_speed)
 		self._spin_dh_rotation_speed.setValue(elem.dh_rotation_speed)
@@ -89,10 +96,12 @@ class DoubleHelixForm(EffectBase):
 		if self._loading or self._element is None:
 			return
 		e = self._element
-		e.dh_color1.start = self._cp_color1_begin.color
-		e.dh_color1.end = self._cp_color1_end.color
-		e.dh_color2.start = self._cp_color2_begin.color
-		e.dh_color2.end = self._cp_color2_end.color
+		c = self._cp_color1_begin.color; e.dh_color1.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color1_end.color; e.dh_color1.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color2_begin.color; e.dh_color2.start = ColorRGB(r=c.r, g=c.g, b=c.b)
+		c = self._cp_color2_end.color; e.dh_color2.end = ColorRGB(r=c.r, g=c.g, b=c.b)
+		e.dh_color1.use_gradient = self._chk_color1_grad.isChecked()
+		e.dh_color2.use_gradient = self._chk_color2_grad.isChecked()
 		e.dh_radius = self._spin_dh_radius.value()
 		e.dh_rise_speed = self._spin_dh_rise_speed.value()
 		e.dh_rotation_speed = self._spin_dh_rotation_speed.value()

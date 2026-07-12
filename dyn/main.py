@@ -144,6 +144,7 @@ class MainWin(QMainWindow):
 		self._rebuild_menu()
 		self._connect_backend_signals()
 		self._undo_manager.clear()
+		self._inspector.clear()
 
 	def _deactivate_current_backend(self) -> None:
 		"""清理当前后端的所有信号和组件."""
@@ -153,6 +154,15 @@ class MainWin(QMainWindow):
 				self._controller.element_removed.disconnect()
 				self._controller.element_changed.disconnect()
 				self._controller.selection_changed.disconnect()
+			except (RuntimeError, TypeError):
+				pass
+		try:
+			self._playback.position_changed.disconnect()
+		except (RuntimeError, TypeError):
+			pass
+		if self._timeline:
+			try:
+				self._timeline.playback_cursor_changed.disconnect()
 			except (RuntimeError, TypeError):
 				pass
 		self.setCentralWidget(None)
@@ -484,12 +494,21 @@ class MainWin(QMainWindow):
 		self._activate_backend(proj.backend)
 		self._controller.load_from_project(proj)
 		self._element_browser_model.load_elements([])
+		self._inspector.clear()
 		self._playback.stop()
 		self._transport_bar.set_bpm(proj.bpm)
 		self.setWindowTitle(f"DynFirework   {proj.name}")
 		self.statusBar().showMessage(f"已创建: {proj.name} | BPM: {proj.bpm:.0f} | MC {proj.mc_version}")
 
 	def _on_open_project(self) -> None:
+		if self._project_manager.is_modified:
+			reply = QMessageBox.question(
+				self, "打开项目", "当前项目未保存，是否继续？",
+				QMessageBox.Yes | QMessageBox.No,
+			)
+			if reply == QMessageBox.No:
+				return
+
 		path, _ = QFileDialog.getOpenFileName(
 			self, "打开项目", "", "DynFirework 项目 (*.dyn);;所有文件 (*.*)"
 		)
@@ -499,6 +518,7 @@ class MainWin(QMainWindow):
 			log.debug(f"打开项目: {path}")
 			proj = self._project_manager.open_project(path)
 			self._activate_backend(proj.backend)
+			self._inspector.clear()
 			self._playback.stop()
 			self._controller.load_from_project(proj)
 			self._element_browser_model.load_elements(self._controller.all_elements)
@@ -604,7 +624,7 @@ class MainWin(QMainWindow):
 			return
 
 		proj = self._project_manager.project
-		dlg = ExportDialog(proj.name, self)
+		dlg = ExportDialog(proj.name, proj.mc_version, self)
 		if dlg.exec() != QDialog.DialogCode.Accepted:
 			return
 
@@ -954,7 +974,7 @@ class MainWin(QMainWindow):
 
 	def _on_project_settings(self) -> None:
 		proj = self._project_manager.project
-		dlg = ProjectSettingsDialog(proj.name, proj.bpm, proj.mc_version, self)
+		dlg = ProjectSettingsDialog(proj.name, proj.bpm, proj.mc_version, proj.backend.value, self)
 		if dlg.exec() == QDialog.DialogCode.Accepted:
 			proj.bpm = dlg.bpm
 			proj.name = dlg.project_name

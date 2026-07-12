@@ -1,6 +1,8 @@
 """烟花表单共享基类 提供位置 + 内外层颜色."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
 	QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
@@ -10,6 +12,8 @@ from PySide6.QtWidgets import (
 from dyn.components.base.color_picker import ColorPicker
 from dyn.components.base.form_base import FormBase
 from dyn.models.cb import Element, FireworkElement, TrajFireworkElement, Position, ColorRGB
+
+_fw_log = logging.getLogger("dyn.components.cb.fw_base")
 
 class FwBase(FormBase):
 	"""烟花表单共享基类 子类只需实现 _setup_type_sections 和 _load_type_sections."""
@@ -81,8 +85,8 @@ class FwBase(FormBase):
 		layout.addWidget(self._color_inner_start)
 		self._color_inner_end = ColorPicker("结束:")
 		layout.addWidget(self._color_inner_end)
-		self._color_inner_start.color_changed.connect(lambda c: self._emit("inner_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
-		self._color_inner_end.color_changed.connect(lambda c: self._emit("inner_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_inner_start.color_changed.connect(lambda c: self._emit("inner_color_start", ColorRGB(r=c.r, g=c.g, b=c.b)))
+		self._color_inner_end.color_changed.connect(lambda c: self._emit("inner_color_end", ColorRGB(r=c.r, g=c.g, b=c.b)))
 		self.layout().addWidget(self._group_inner)
 
 	def _setup_outer_color(self) -> None:
@@ -95,8 +99,8 @@ class FwBase(FormBase):
 		layout.addWidget(self._color_outer_start)
 		self._color_outer_end = ColorPicker("结束:")
 		layout.addWidget(self._color_outer_end)
-		self._color_outer_start.color_changed.connect(lambda c: self._emit("outer_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
-		self._color_outer_end.color_changed.connect(lambda c: self._emit("outer_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_outer_start.color_changed.connect(lambda c: self._emit("outer_color_start", ColorRGB(r=c.r, g=c.g, b=c.b)))
+		self._color_outer_end.color_changed.connect(lambda c: self._emit("outer_color_end", ColorRGB(r=c.r, g=c.g, b=c.b)))
 		self.layout().addWidget(self._group_outer)
 
 	def _setup_angle(self) -> None:
@@ -190,8 +194,11 @@ class FwBase(FormBase):
 
 		self._chk_inner_gradient.setChecked(e.inner_color.use_gradient)
 		self._color_inner_end.setEnabled(e.inner_color.use_gradient)
-		self._color_inner_start.set_color(e.inner_color.start)
-		self._color_inner_end.set_color(e.inner_color.end)
+		c = e.inner_color.start
+		_fw_log.debug(f"load inner_color.start: ColorRGB({c.r},{c.g},{c.b}) type={type(c).__name__}")
+		self._color_inner_start.set_color(c)
+		c = e.inner_color.end
+		self._color_inner_end.set_color(c)
 
 		self._load_type_sections(e)
 		self.block_signals(False)
@@ -220,7 +227,9 @@ class FwBase(FormBase):
 			self._color_outer_end.setEnabled(value)
 		elif key == "inner_color_start":
 			old_value = e.inner_color.start
+			_fw_log.debug(f"_emit {key}: old=ColorRGB({old_value.r},{old_value.g},{old_value.b}) -> new=ColorRGB({value.r},{value.g},{value.b})")
 			e.inner_color.start = value
+			_fw_log.debug(f"_emit {key}: after set, elem.inner_color.start=ColorRGB({e.inner_color.start.r},{e.inner_color.start.g},{e.inner_color.start.b})")
 		elif key == "inner_color_end":
 			old_value = e.inner_color.end
 			e.inner_color.end = value

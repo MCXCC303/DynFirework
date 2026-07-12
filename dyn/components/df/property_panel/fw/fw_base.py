@@ -76,8 +76,8 @@ class FwBase(FormBase):
 		layout.addWidget(self._color_inner_start)
 		self._color_inner_end = ColorPicker("结束:")
 		layout.addWidget(self._color_inner_end)
-		self._color_inner_start.color_changed.connect(lambda c: self._emit("inner_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
-		self._color_inner_end.color_changed.connect(lambda c: self._emit("inner_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_inner_start.color_changed.connect(lambda c: self._emit("inner_color_start", ColorRGB(r=c.r, g=c.g, b=c.b)))
+		self._color_inner_end.color_changed.connect(lambda c: self._emit("inner_color_end", ColorRGB(r=c.r, g=c.g, b=c.b)))
 		self.layout().addWidget(self._group_inner)
 
 	def _setup_outer_color(self) -> None:
@@ -90,8 +90,8 @@ class FwBase(FormBase):
 		layout.addWidget(self._color_outer_start)
 		self._color_outer_end = ColorPicker("结束:")
 		layout.addWidget(self._color_outer_end)
-		self._color_outer_start.color_changed.connect(lambda c: self._emit("outer_color_start", ColorRGB(r=c[0], g=c[1], b=c[2])))
-		self._color_outer_end.color_changed.connect(lambda c: self._emit("outer_color_end", ColorRGB(r=c[0], g=c[1], b=c[2])))
+		self._color_outer_start.color_changed.connect(lambda c: self._emit("outer_color_start", ColorRGB(r=c.r, g=c.g, b=c.b)))
+		self._color_outer_end.color_changed.connect(lambda c: self._emit("outer_color_end", ColorRGB(r=c.r, g=c.g, b=c.b)))
 		self.layout().addWidget(self._group_outer)
 
 	def _setup_angle(self) -> None:

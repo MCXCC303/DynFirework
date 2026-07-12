@@ -4,7 +4,7 @@ from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
 	QWidget, QVBoxLayout, QFormLayout,
-	QDoubleSpinBox, QPushButton, QGroupBox,
+	QDoubleSpinBox, QPushButton, QGroupBox, QCheckBox,
 )
 
 from dyn.components.base.color_picker import ColorPicker
@@ -102,13 +102,16 @@ class EffectBase(FormBase):
 		old_value = getattr(e, key, None)
 		self.property_changed.emit(e.id, key, value, old_value)
 
-	def _add_color_group(self, title: str) -> tuple[QGroupBox, ColorPicker, ColorPicker]:
-		"""创建颜色组 返回 (group, start_picker, end_picker)."""
+	def _add_color_group(self, title: str) -> tuple[QGroupBox, ColorPicker, ColorPicker, QCheckBox]:
+		"""创建颜色组 返回 (group, start_picker, end_picker, gradient_checkbox)."""
 		grp = QGroupBox(title)
 		layout = QVBoxLayout(grp)
+		chk = QCheckBox("使用渐变")
+		layout.addWidget(chk)
 		start_cp = ColorPicker("开始:")
 		layout.addWidget(start_cp)
 		end_cp = ColorPicker("结束:")
 		layout.addWidget(end_cp)
+		chk.toggled.connect(lambda v: end_cp.setEnabled(v))
 		self.layout().addWidget(grp)
-		return grp, start_cp, end_cp
+		return grp, start_cp, end_cp, chk

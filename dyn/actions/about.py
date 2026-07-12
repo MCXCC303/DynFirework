@@ -105,6 +105,10 @@ class DYNHelpWindow(QtWidgets.QDialog):
 					w.hide()
 					break
 
+		# 左右比例 20% : 80%
+		self.ui.gridLayout.setColumnStretch(0, 1)
+		self.ui.gridLayout.setColumnStretch(1, 4)
+
 		# 默认选中第一项
 		if self._tree.topLevelItemCount() > 0:
 			self._tree.setCurrentItem(self._tree.topLevelItem(0))

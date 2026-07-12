@@ -155,6 +155,11 @@ class _TrackArea(QWidget):
 		try:
 			p.fillRect(self.rect(), self._bg)
 			p.fillRect(QRect(0, 0, TRACK_LABEL_WIDTH, self.height()), self._label_bg)
+			p.setPen(QPen(self._text_color, 1))
+			lf = QFont()
+			lf.setPointSize(14)
+			p.setFont(lf)
+			p.drawText(QRect(0, 0, TRACK_LABEL_WIDTH, self.height()), Qt.AlignCenter, self._label)
 			p.setClipRect(QRect(TRACK_LABEL_WIDTH, 0, self.width() - TRACK_LABEL_WIDTH, self.height()))
 			for blk in self._blocks:
 				self._paint_block(p, blk)
@@ -174,15 +179,15 @@ class _TrackArea(QWidget):
 			if r.width() > 20:
 				p.setPen(QPen(QColor(255, 255, 255), 1))
 				f = QFont()
-				f.setPointSize(7)
+				f.setPointSize(9)
 				p.setFont(f)
 				p.drawText(r.adjusted(4, 0, -4, 0), Qt.AlignVCenter | Qt.AlignLeft, view.name)
-			if r.width() > 36:
+			if r.width() > 40:
 				p.setPen(QPen(QColor(255, 255, 255, 150), 1))
 				f2 = QFont()
-				f2.setPointSize(6)
+				f2.setPointSize(8)
 				p.setFont(f2)
-				p.drawText(QRect(r.right() - 18, r.top() + 2, 14, r.height() - 4), Qt.AlignCenter, self._icon(view))
+				p.drawText(QRect(r.right() - 20, r.top() + 2, 16, r.height() - 4), Qt.AlignCenter, self._icon(view))
 		except Exception as e:
 			log.error(f"_paint_block 异常: id={blk.element.id[:8]} type={type(blk.element.elem).__name__}: {e}", exc_info=True)
 
@@ -215,8 +220,6 @@ class _TrackArea(QWidget):
 	def _paint_block_gradient(p: QPainter, view: _ElementView, r: QRect, sel: bool) -> None:
 		disabled = not view.enabled
 		elem = view.elem
-
-		# Determine color based on element type
 		if view.is_composite_part and view.is_tf():
 			parent = elem
 			if view.part == "traj":
@@ -257,9 +260,25 @@ class _TrackArea(QWidget):
 			c_outer_start = elem.outer_color.start
 			c_outer_end = elem.outer_color.end
 		elif isinstance(elem, DfEffectElement):
-			c_start = c_end = _TrackArea._effect_color(elem)
-			use_grad = False
-			layers = 1
+			et = elem.effect_type.value if hasattr(elem.effect_type, "value") else elem.effect_type
+			if et == "rotating_ring":
+				use_grad = elem.rr_color.use_gradient
+				c_start, c_end = elem.rr_color.start, elem.rr_color.end
+				layers = 1
+			else:
+				layers = 2
+				if et == "beam":
+					use_grad = elem.beam_start_color.use_gradient
+					c_start, c_end = elem.beam_start_color.start, elem.beam_start_color.end
+					c_outer_start, c_outer_end = elem.beam_end_color.start, elem.beam_end_color.end
+				elif et == "spray":
+					use_grad = elem.spray_start_color.use_gradient
+					c_start, c_end = elem.spray_start_color.start, elem.spray_start_color.end
+					c_outer_start, c_outer_end = elem.spray_end_color.start, elem.spray_end_color.end
+				else:
+					use_grad = elem.dh_color1.use_gradient
+					c_start, c_end = elem.dh_color1.start, elem.dh_color1.end
+					c_outer_start, c_outer_end = elem.dh_color2.start, elem.dh_color2.end
 		elif isinstance(elem, DfCompositeElement):
 			c_start = c_end = _TrackArea._composite_color(elem)
 			use_grad = False
@@ -278,8 +297,8 @@ class _TrackArea(QWidget):
 		if layers == 2:
 			half_w = r.width() // 2
 			half_h = r.height() // 2
-			in_grad = None
-			out_grad = None
+			in_grad = use_grad
+			out_grad = use_grad
 			if view.is_composite_part and view.is_tf():
 				parent = elem
 				in_grad = parent.inner_color.use_gradient
@@ -287,6 +306,17 @@ class _TrackArea(QWidget):
 			elif isinstance(elem, (CbFireworkElement, DfFireworkElement)):
 				in_grad = elem.inner_color.use_gradient
 				out_grad = elem.outer_color.use_gradient
+			elif isinstance(elem, DfEffectElement):
+				et = elem.effect_type.value if hasattr(elem.effect_type, "value") else elem.effect_type
+				if et == "beam":
+					in_grad = elem.beam_start_color.use_gradient
+					out_grad = elem.beam_end_color.use_gradient
+				elif et == "spray":
+					in_grad = elem.spray_start_color.use_gradient
+					out_grad = elem.spray_end_color.use_gradient
+				else:
+					in_grad = elem.dh_color1.use_gradient
+					out_grad = elem.dh_color2.use_gradient
 			if in_grad:
 				p.fillRect(QRect(r.x(), r.y(), half_w, half_h), QBrush(qc(c_start)))
 				p.fillRect(QRect(r.x() + half_w, r.y(), r.width() - half_w, half_h), QBrush(qc(c_end)))
@@ -338,26 +368,23 @@ class _TrackArea(QWidget):
 		if view.is_composite_part and view.is_tf():
 			parent = elem
 			if view.part == "traj":
-				return {"launch": "↗", "spark": "✳", "offset": "↝", "thick": "≣", "expanding": "⬍"}.get(parent.traj_type, "⇢")
+				return {"launch": "/", "spark": "*", "offset": "?", "thick": "=", "expanding": "#"}.get(parent.traj_type, "~")
 			else:
-				return {
-					"single_layer": "✦",
-					"double_layer": "✶",
-					"directional": "➳",
-					"clustered": "❈",
-					"expanding_sphere": "◉"}.get(parent.fw_type, "★")
+				return {"single_layer": "1", "double_layer": "2",
+				        "directional": ">", "clustered": "#",
+				        "expanding_sphere": "o"}.get(parent.fw_type, "?")
 		if isinstance(elem, (CbFireworkElement, DfFireworkElement)):
-			return {"single_layer": "✦", "double_layer": "✶", "nebula": "☁",
-			        "directional": "➳", "clustered": "❈", "expanding_sphere": "◉"}.get(
-				elem.fw_type.value if hasattr(elem.fw_type, "value") else elem.fw_type, "★")
+			return {"single_layer": "1", "double_layer": "2", "nebula": "~",
+			        "directional": ">", "clustered": "#", "expanding_sphere": "o"}.get(
+				elem.fw_type.value if hasattr(elem.fw_type, "value") else elem.fw_type, "?")
 		if isinstance(elem, (CbTrajectoryElement, DfTrajectoryElement)):
-			return {"launch": "↗", "launch_spark": "✳", "spiral": "∿",
-			        "expanding": "⬍"}.get(
-				elem.traj_type.value if hasattr(elem.traj_type, "value") else elem.traj_type, "->")
+			return {"launch": "/", "launch_spark": "*", "spiral": "@",
+			        "expanding": "#"}.get(
+				elem.traj_type.value if hasattr(elem.traj_type, "value") else elem.traj_type, "~")
 		if isinstance(elem, DfEffectElement):
-			return {"beam": "|", "spray": "≈", "double_helix": "♲", "rotating_ring": "○"}.get(elem.effect_type.value, "-")
+			return {"beam": "|", "spray": ":", "double_helix": "&", "rotating_ring": "o"}.get(elem.effect_type.value, "-")
 		if isinstance(elem, DfCompositeElement):
-			return {"secondary_explosion": "✳", "combo_ec": "✿"}.get(elem.composite_type.value, "+")
+			return {"secondary_explosion": "x", "combo_ec": "+"}.get(elem.composite_type.value, "+")
 		return "?"
 
 	def mousePressEvent(self, event: QMouseEvent) -> None:

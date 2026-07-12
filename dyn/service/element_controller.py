@@ -368,6 +368,8 @@ class ElementController(QObject):
 					elem.se_start_position = pos
 				elif which == "se_mid":
 					elem.se_mid_position = pos
+				elif which == "ce_pos":
+					elem.ce_position = pos
 				else:
 					elem.position = pos
 

@@ -35,7 +35,7 @@ class CbPropertyPanel(QScrollArea):
 	根据 ElementType 路由:
 		TrajectoryElement  -> 按 traj_type 选取轨迹表单
 		FireworkElement    -> 按 fw_type 选取烟花表单
-		TrajFireworkElement -> 同 FireworkElement (共享 fw_type)
+		TrajFireworkElement -> 按 part 决定显示轨迹或烟花表单
 	"""
 
 	property_changed = Signal(str, str, object, object)
@@ -46,6 +46,7 @@ class CbPropertyPanel(QScrollArea):
 		super().__init__(parent)
 		self._controller = controller
 		self._current_element: Element | None = None
+		self._current_part: str = ""
 		self._loading: bool = False
 		self._forms: dict[str, QWidget] = {}
 		self._active_form: QWidget | None = None
@@ -108,13 +109,15 @@ class CbPropertyPanel(QScrollArea):
 		if new_type is None:
 			return
 		e = self._current_element
-		old_key = e.traj_type if isinstance(e, TrajectoryElement) else e.fw_type
+		old_key = self._current_type_key(e)
 		if new_type == old_key:
 			return
 		log.debug(f"类型变更: {old_key} -> {new_type}")
-		if isinstance(e, TrajectoryElement):
+		if isinstance(e, TrajFireworkElement) and self._current_part == "traj":
 			e.traj_type = new_type
-		elif isinstance(e, (FireworkElement, TrajFireworkElement)):
+		elif isinstance(e, TrajectoryElement):
+			e.traj_type = new_type
+		else:
 			e.fw_type = new_type
 		self._swap_form(new_type)
 		self.property_changed.emit(e.id, "element_type", new_type, old_key)
@@ -133,7 +136,10 @@ class CbPropertyPanel(QScrollArea):
 		if hasattr(form, 'load'):
 			e = self._current_element
 			if isinstance(e, TrajFireworkElement):
-				form.load(e, tf_part=True)
+				if self._current_part == "traj":
+					form.load(e, tf_part=True)
+				else:
+					form.load(e, read_only_pos=True)
 			else:
 				form.load(e)
 		form.show()
@@ -199,6 +205,7 @@ class CbPropertyPanel(QScrollArea):
 
 	def _do_load_element(self, elem: Element | None, part: str) -> None:
 		self._current_element = elem
+		self._current_part = part
 		if elem is None:
 			self._hide_all()
 			self.setEnabled(False)
@@ -224,8 +231,16 @@ class CbPropertyPanel(QScrollArea):
 			self._active_form.hide()
 			self._active_form = None
 
-		type_key = self._get_type_key(elem)
-		cat = elem.element_type
+		# 按 element 类型 + part 确定显示轨迹还是烟花类型
+		if isinstance(elem, TrajFireworkElement) and part == "traj":
+			type_key = elem.traj_type
+			cat = ElementType.TRAJECTORY
+		elif isinstance(elem, TrajectoryElement):
+			type_key = elem.traj_type
+			cat = ElementType.TRAJECTORY
+		else:
+			type_key = elem.fw_type if hasattr(elem, 'fw_type') else "single_layer"
+			cat = ElementType.FIREWORK
 		types = _TRAJ_TYPES if cat == ElementType.TRAJECTORY else _FW_TYPES
 
 		self._lbl_type.setText("轨迹类型:" if cat == ElementType.TRAJECTORY else "烟花类型:")
@@ -243,13 +258,12 @@ class CbPropertyPanel(QScrollArea):
 		self._swap_form(type_key)
 		self._block_all(False)
 
-	@staticmethod
-	def _get_type_key(elem: Element) -> str:
+	def _current_type_key(self, elem: Element) -> str:
+		if isinstance(elem, TrajFireworkElement) and self._current_part == "traj":
+			return elem.traj_type
 		if isinstance(elem, TrajectoryElement):
 			return elem.traj_type
-		if isinstance(elem, TrajFireworkElement):
-			return elem.fw_type
-		return elem.fw_type
+		return elem.fw_type if hasattr(elem, 'fw_type') else "single_layer"
 
 	def _hide_all(self) -> None:
 		self._group_common.hide()
