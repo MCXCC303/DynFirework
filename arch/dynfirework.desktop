@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=DynFirework
+Comment=Minecraft particle firework design tool
+Comment[zh_CN]=Minecraft 粒子烟花设计工具
+Exec=dynfirework
+Terminal=false
+Type=Application
+Categories=Development;Graphics;
+Keywords=Minecraft;firework;particle;command;

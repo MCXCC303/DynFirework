@@ -2,7 +2,6 @@
 .vscode/
 .claude/
 .deepseek/
-arch/
 *venv/
 
 CLAUDE.md
