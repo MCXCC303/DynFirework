@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from dyn.components.df.property_panel import get_form, _init_form_registry
+from dyn.components.df.property_panel.composites.composite_base import PART_TO_TYPE_KEY
 from dyn.logging_config import get_logger
 from dyn.models.df.base import ElementCategory
 from dyn.models.df.composites import CompositeElement
@@ -177,16 +178,16 @@ class PropertyPanel(QScrollArea):
 		return form
 
 	def load_element(self, elem, part: str = "") -> None:
-		# 对V1的兼容签名适配
 		if self._loading:
 			return
 		self._loading = True
 		try:
-			self._do_load_element(elem)
+			self._current_part = part
+			self._do_load_element(elem, part)
 		finally:
 			self._loading = False
 
-	def _do_load_element(self, elem) -> None:
+	def _do_load_element(self, elem, part: str = "") -> None:
 		self._current_element = elem
 		if elem is None:
 			self._hide_all()
@@ -208,8 +209,14 @@ class PropertyPanel(QScrollArea):
 			self._active_form.hide()
 			self._active_form = None
 
+		is_composite_sub = False
+		if isinstance(elem, CompositeElement) and part in PART_TO_TYPE_KEY:
+			type_key = PART_TO_TYPE_KEY[part]
+			is_composite_sub = True
+		else:
+			type_key = get_type_key(elem)
+
 		cat = elem.category
-		type_key = get_type_key(elem)
 		types = get_types_by_category(cat)
 
 		self._lbl_type.setText(_CAT_LABELS.get(cat, "类型:"))
@@ -221,8 +228,12 @@ class PropertyPanel(QScrollArea):
 		if idx >= 0:
 			self._combo_type.setCurrentIndex(idx)
 		self._combo_type.blockSignals(False)
-		self._lbl_type.show()
-		self._combo_type.show()
+		if is_composite_sub:
+			self._lbl_type.hide()
+			self._combo_type.hide()
+		else:
+			self._lbl_type.show()
+			self._combo_type.show()
 
 		self._swap_form(type_key)
 		self._block_all(False)

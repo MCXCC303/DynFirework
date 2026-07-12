@@ -27,8 +27,12 @@ def _init_form_registry() -> None:
 	from .effects.effect_spray import SprayForm
 	from .effects.effect_double_helix import DoubleHelixForm
 	from .effects.effect_rotating_ring import RotatingRingForm
-	from .composites.composite_secondary import SecondaryExplosionForm
-	from .composites.composite_combo import ComboECForm
+	from .composites.parent.se import ParentSEForm
+	from .composites.parent.ce import ParentCEForm
+	from .composites.sub.primary import SubPrimaryForm
+	from .composites.sub.secondary import SubSecondaryForm
+	from .composites.sub.cluster import SubClusterForm
+	from .composites.sub.expanding import SubExpandingForm
 
 	FORM_REGISTRY.update({
 		"single_layer": SingleLayerForm,
@@ -45,8 +49,12 @@ def _init_form_registry() -> None:
 		"spray": SprayForm,
 		"double_helix": DoubleHelixForm,
 		"rotating_ring": RotatingRingForm,
-		"secondary_explosion": SecondaryExplosionForm,
-		"combo_ec": ComboECForm,
+		"secondary_explosion": ParentSEForm,
+		"combo_ec": ParentCEForm,
+		"_comp_primary": SubPrimaryForm,
+		"_comp_secondary": SubSecondaryForm,
+		"_comp_clustered": SubClusterForm,
+		"_comp_expanding": SubExpandingForm,
 	})
 
 def get_form(type_key: str):

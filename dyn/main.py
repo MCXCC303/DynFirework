@@ -756,18 +756,31 @@ class MainWin(QMainWindow):
 		parent_elem = parent_node.data
 		self._controller._selected_id = parent_elem.id
 		self._controller.selection_changed.emit(parent_elem.id)
-		if part == "_tf_traj":
-			self._timeline._selected_id = parent_elem.id
-			for t in self._get_df_tracks():
-				t.set_selection("")
+
+		part_map = {
+			"_comp_primary": "primary",
+			"_comp_secondary": "secondary",
+			"_comp_clustered": "clustered",
+			"_comp_expanding": "expanding",
+			"_tf_traj": "traj",
+			"_tf_fw": "fw",
+		}
+		part_id = part_map.get(part, part)
+
+		proxy_id: str = parent_elem.id
+		if part_id != "traj":
+			proxy_id = f"{parent_elem.id}::{part_id}"
+
+		self._timeline._selected_id = proxy_id
+		for t in self._get_df_tracks():
+			t.set_selection("")
+
+		if part_id == "traj":
 			self._timeline.traj_track.set_selection(parent_elem.id)
 		else:
-			proxy_id = parent_elem.id + "::fw"
-			self._timeline._selected_id = proxy_id
-			for t in self._get_df_tracks():
-				t.set_selection("")
 			self._timeline.fw_track.set_selection(proxy_id)
-		self._property_panel.load_element(parent_elem, part)
+
+		self._property_panel.load_element(parent_elem, part_id)
 
 	def _get_df_tracks(self) -> list:
 		return [
