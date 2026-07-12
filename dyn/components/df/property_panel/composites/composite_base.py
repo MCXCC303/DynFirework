@@ -12,22 +12,40 @@ from dyn.components.base.form_base import FormBase
 from dyn.models.df.composites import CompositeElement
 from dyn.models.df.values import Position
 
+# 子元素 part 标识符 供浏览器 ProxyNode / 面板路由 / 主窗口选中共用
+PART_PRIMARY = "primary"
+PART_SECONDARY = "secondary"
+PART_CLUSTER = "clustered"
+PART_EXPANDING = "expanding"
+
+PART_TO_TYPE_KEY: dict[str, str] = {
+	PART_PRIMARY: "_comp_primary",
+	PART_SECONDARY: "_comp_secondary",
+	PART_CLUSTER: "_comp_clustered",
+	PART_EXPANDING: "_comp_expanding",
+}
+
+PROXY_DATA_PREFIX = "_comp_"
+
 class CompositeBase(FormBase):
 	"""df 复合表单共享基类 子类实现 _setup_type_params 和 _load_type_params."""
 
 	property_changed = Signal(str, str, object, object)
 	position_select_requested = Signal(str)
 
-	def __init__(self, parent: QWidget | None = None) -> None:
+	def __init__(self, parent: QWidget | None = None, has_position: bool = True) -> None:
 		super().__init__(parent)
 		self._element: CompositeElement | None = None
 		self._loading: bool = False
+		self._prefix: str = ""
+		self._has_position: bool = has_position
 
 		layout = QVBoxLayout(self)
 		layout.setContentsMargins(0, 0, 0, 0)
 		layout.setSpacing(8)
 
-		self._setup_position()
+		if has_position:
+			self._setup_position()
 		self._setup_type_params()
 		layout.addStretch()
 
@@ -66,7 +84,8 @@ class CompositeBase(FormBase):
 		"""子类重写以添加类型专属参数组."""
 
 	def _hide_all(self) -> None:
-		self._group_pos.hide()
+		if self._has_position:
+			self._group_pos.hide()
 		for grp in getattr(self, '_sub_groups', []):
 			grp.hide()
 
@@ -76,11 +95,11 @@ class CompositeBase(FormBase):
 		self.block_signals(True)
 
 		self._hide_all()
-		self._group_pos.show()
-
-		self._spin_pos_x.setValue(elem.position.x)
-		self._spin_pos_y.setValue(elem.position.y)
-		self._spin_pos_z.setValue(elem.position.z)
+		if self._has_position:
+			self._group_pos.show()
+			self._spin_pos_x.setValue(elem.position.x)
+			self._spin_pos_y.setValue(elem.position.y)
+			self._spin_pos_z.setValue(elem.position.z)
 
 		self._load_type_params(elem)
 		self.block_signals(False)
@@ -101,6 +120,22 @@ class CompositeBase(FormBase):
 		e = self._element
 		old_value = getattr(e, key, None)
 		self.property_changed.emit(e.id, key, value, old_value)
+
+	def _get(self, name: str, default=None):
+		"""读取带前缀的 CompositeElement 属性."""
+		if self._element is None:
+			return default
+		return getattr(self._element, self._prefix + name, default)
+
+	def _set(self, name: str, value) -> None:
+		"""写入带前缀的 CompositeElement 属性."""
+		if self._element is None:
+			return
+		full = self._prefix + name
+		old = getattr(self._element, full, None)
+		if hasattr(self._element, full):
+			setattr(self._element, full, value)
+		self.property_changed.emit(self._element.id, full, value, old)
 
 	def _add_color_group(self, title: str) -> tuple[QGroupBox, ColorPicker, ColorPicker, QCheckBox]:
 		"""创建颜色组 返回 (group, start_picker, end_picker, gradient_checkbox)."""

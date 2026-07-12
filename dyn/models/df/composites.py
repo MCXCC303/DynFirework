@@ -25,6 +25,9 @@ class CompositeElement(Element):
 	se_primary_spread: float = 15.0
 	se_primary_h_angle: float = 30.0
 	se_primary_v_angle: float = 30.0
+	se_primary_radius: float = 3.0
+	se_primary_radial_speed: float = 2.0
+	se_primary_density_falloff: float = 2.0
 
 	se_secondary_type: str = "expanding"
 	se_secondary_color: GradientColor = field(default_factory=GradientColor)
@@ -46,6 +49,8 @@ class CompositeElement(Element):
 	ce_lifetime: float = 2.0
 	ce_sphere_color: GradientColor = field(default_factory=GradientColor)
 	ce_sphere_count: int = 100
+	ce_sphere_radius: float = 3.0
+	ce_sphere_radial_speed: float = 2.0
 	ce_flicker: bool = False
 
 	@property
@@ -70,6 +75,9 @@ class CompositeElement(Element):
 			"se_primary_spread": self.se_primary_spread,
 			"se_primary_h_angle": self.se_primary_h_angle,
 			"se_primary_v_angle": self.se_primary_v_angle,
+			"se_primary_radius": self.se_primary_radius,
+			"se_primary_radial_speed": self.se_primary_radial_speed,
+			"se_primary_density_falloff": self.se_primary_density_falloff,
 			"se_secondary_type": self.se_secondary_type,
 			"se_secondary_color": self.se_secondary_color.to_json(),
 			"se_secondary_radius": self.se_secondary_radius,
@@ -89,6 +97,8 @@ class CompositeElement(Element):
 			"ce_lifetime": self.ce_lifetime,
 			"ce_sphere_color": self.ce_sphere_color.to_json(),
 			"ce_sphere_count": self.ce_sphere_count,
+			"ce_sphere_radius": self.ce_sphere_radius,
+			"ce_sphere_radial_speed": self.ce_sphere_radial_speed,
 			"ce_flicker": self.ce_flicker,
 		})
 		return base
@@ -113,6 +123,9 @@ class CompositeElement(Element):
 			se_primary_spread=data.get("se_primary_spread", 15.0),
 			se_primary_h_angle=data.get("se_primary_h_angle", 30.0),
 			se_primary_v_angle=data.get("se_primary_v_angle", 30.0),
+			se_primary_radius=data.get("se_primary_radius", 3.0),
+			se_primary_radial_speed=data.get("se_primary_radial_speed", 2.0),
+			se_primary_density_falloff=data.get("se_primary_density_falloff", 2.0),
 			se_secondary_type=data.get("se_secondary_type", "expanding"),
 			se_secondary_color=GradientColor.from_json(data.get("se_secondary_color", {})),
 			se_secondary_radius=data.get("se_secondary_radius", 3.0),
@@ -132,5 +145,7 @@ class CompositeElement(Element):
 			ce_lifetime=data.get("ce_lifetime", 2.0),
 			ce_sphere_color=GradientColor.from_json(data.get("ce_sphere_color", {})),
 			ce_sphere_count=data.get("ce_sphere_count", 100),
+			ce_sphere_radius=data.get("ce_sphere_radius", 3.0),
+			ce_sphere_radial_speed=data.get("ce_sphere_radial_speed", 2.0),
 			ce_flicker=data.get("ce_flicker", False),
 		)
