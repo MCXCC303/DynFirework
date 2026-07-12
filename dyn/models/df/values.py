@@ -1,0 +1,100 @@
+"""值对象：ColorRGB, Position, GradientColor + 类型枚举."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+
+from dyn.logging_config import get_logger
+
+log = get_logger(__name__)
+
+class FireworkType(Enum):
+	SINGLE_LAYER = "single_layer"
+	DOUBLE_LAYER = "double_layer"
+	DIRECTIONAL = "directional"
+	CLUSTERED = "clustered"
+	EXPANDING_SPHERE = "expanding_sphere"
+	NEBULA = "nebula"
+
+class TrajectoryType(Enum):
+	LAUNCH = "launch"
+	LAUNCH_SPARK = "launch_spark"
+	EXPANDING = "expanding"
+	SPIRAL = "spiral"
+
+class EffectType(Enum):
+	BEAM = "beam"
+	SPRAY = "spray"
+	DOUBLE_HELIX = "double_helix"
+	ROTATING_RING = "rotating_ring"
+
+class CompositeType(Enum):
+	SECONDARY_EXPLOSION = "secondary_explosion"
+	COMBO_EC = "combo_ec"
+
+@dataclass
+class ColorRGB:
+	r: int = 255
+	g: int = 165
+	b: int = 0
+
+	def as_tuple(self) -> tuple[int, int, int]:
+		return (self.r, self.g, self.b)
+
+	def to_json(self) -> dict:
+		return {"r": self.r, "g": self.g, "b": self.b}
+
+	@classmethod
+	def from_json(cls, data: dict) -> ColorRGB:
+		try:
+			return cls(r=data["r"], g=data["g"], b=data["b"])
+		except KeyError:
+			log.warning(f"ColorRGB.from_json 缺少键: {list(data.keys())}")
+			raise
+
+@dataclass
+class Position:
+	x: float = 0.0
+	y: float = 64.0
+	z: float = 0.0
+
+	def as_tuple(self) -> tuple[float, float, float]:
+		return (self.x, self.y, self.z)
+
+	def to_json(self) -> dict:
+		return {"x": self.x, "y": self.y, "z": self.z}
+
+	@classmethod
+	def from_json(cls, data: dict) -> Position:
+		try:
+			return cls(x=data["x"], y=data["y"], z=data["z"])
+		except KeyError:
+			log.warning(f"Position.from_json 缺少键: {list(data.keys())}")
+			raise
+
+@dataclass
+class GradientColor:
+	start: ColorRGB = field(default_factory=ColorRGB)
+	end: ColorRGB = field(default_factory=lambda: ColorRGB(r=255, g=100, b=0))
+	use_gradient: bool = False
+
+	def to_json(self) -> dict:
+		return {
+			"start": self.start.to_json(),
+			"end": self.end.to_json(),
+			"use_gradient": self.use_gradient,
+		}
+
+	@classmethod
+	def from_json(cls, data: dict) -> GradientColor:
+		try:
+			start = ColorRGB.from_json(data["start"])
+			end = ColorRGB.from_json(data["end"])
+		except KeyError:
+			log.warning(f"GradientColor.from_json 缺少键: {list(data.keys())}")
+			raise
+		return cls(
+			start=start,
+			end=end,
+			use_gradient=data.get("use_gradient", False),
+		)

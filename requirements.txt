@@ -1,3 +1,5 @@
-scipy~=1.14.1
-pillow~=11.1.0
-PyQt5~=5.15.9
+scipy
+pillow
+PyQt5
+PySide6
+soundfile

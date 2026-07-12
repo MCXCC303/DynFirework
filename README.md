@@ -19,7 +19,6 @@
 ## > 公告
 
 [*DynFirework Mod v2.0*](https://github.com/TianKong-y/DynFireworkMod)已开源，内置多种烟花样式，可直接通过调整指令参数实现基于客户端的烟花召唤，可用于服务器场景，发包数量极少，网络占用小。
-当前版本的*DynFirework*烟花生成工具仍然基于旧版逐个粒子召唤的方式，我们会尽快适配新版Mod，编写新GUI，有感兴趣的朋友们可以加入[技术交流/反馈群](https://qm.qq.com/q/m6XfOuCtVe)了解~
 
 ## > 简介
 

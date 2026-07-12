@@ -1,3 +1,5 @@
+# pylint: skip-file
+# flake8: noqa
 from PyQt5.QtWidgets import (QApplication, QLabel, QLineEdit, QTextEdit, QGridLayout, 
                           QGroupBox, QMessageBox, QWidget, QPushButton, QHBoxLayout)
 from PyQt5.QtCore import Qt
