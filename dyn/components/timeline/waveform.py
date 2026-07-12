@@ -34,7 +34,7 @@ class _WaveformWidget(QWidget):
 		self._samples = samples or []
 		if self._samples:
 			seconds = len(self._samples) / sample_rate
-			self._total_ticks = int(seconds * bpm / 60.0 * 20)
+			self._total_ticks = int(seconds * 20)
 		else:
 			self._total_ticks = 0
 		self.update()

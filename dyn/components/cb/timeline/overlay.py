@@ -1,4 +1,4 @@
-"""光标覆盖层 播放头、刻度线、轨道分隔线 (tick-based)."""
+"""光标覆盖层 播放头、刻度线、BPM辅助线、轨道分隔线 (tick-based)."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -40,7 +40,9 @@ class _CursorOverlayWidget(QWidget):
 		p = QPainter(self)
 		p.setRenderHint(QPainter.Antialiasing)
 		try:
-			tl._paint_tick_marks(p)
+			if tl._show_time_marks:
+				tl._paint_tick_marks(p)
+			tl._paint_beat_lines(p)
 			mid_y = tl._fw_track.geometry().bottom()
 			p.setPen(QPen(self._divider_color, 3))
 			p.drawLine(TRACK_LABEL_WIDTH + 2, mid_y, self.width() - 2, mid_y)

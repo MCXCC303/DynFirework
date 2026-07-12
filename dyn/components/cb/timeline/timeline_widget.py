@@ -6,7 +6,7 @@ from typing import Any
 
 from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import (
-	QPainter, QPen, QBrush, QPainterPath,
+	QPainter, QPen, QBrush, QPainterPath, QColor,
 	QMouseEvent, QWheelEvent, QKeyEvent, QResizeEvent,
 )
 from PySide6.QtWidgets import QWidget
@@ -41,6 +41,12 @@ class ParticleexTimelineWidget(QWidget):
 		self._selected_id: str = ""
 		self._playback_tick: int = 0
 		self._waveform_samples: list[float] | None = None
+		self._bpm: float = 120.0
+		self._audio_offset_ms: float = 0.0
+		self._time_signature: tuple = (4, 4)
+		self._ticks_per_beat: int = 20
+		self._show_beat_lines: bool = True
+		self._show_time_marks: bool = True
 
 		self._update_colors()
 
@@ -75,6 +81,8 @@ class ParticleexTimelineWidget(QWidget):
 		self._waveform_color = c["highlight_alpha"]
 		self._text_color = c["text"]
 		self._divider_color = c["mid"]
+		self._beat_minor = QColor(255, 150, 50)
+		self._beat_major = QColor(255, 150, 50)
 
 	def changeEvent(self, event):
 		if event.type() == QEvent.PaletteChange:
@@ -137,6 +145,21 @@ class ParticleexTimelineWidget(QWidget):
 		self._layout_children()
 		self.update()
 
+	def update_music_info(self, bpm: float, audio_offset_ms: float, time_signature: tuple = (4, 4), ticks_per_beat: int = 20) -> None:
+		self._bpm = bpm
+		self._audio_offset_ms = audio_offset_ms
+		self._time_signature = time_signature
+		self._ticks_per_beat = ticks_per_beat
+		self.update()
+
+	def set_show_beat_lines(self, visible: bool) -> None:
+		self._show_beat_lines = visible
+		self.update()
+
+	def set_show_time_marks(self, visible: bool) -> None:
+		self._show_time_marks = visible
+		self.update()
+
 	def seek_playback(self, tick: int) -> None:
 		self._playback_tick = tick
 		self.update()
@@ -157,11 +180,11 @@ class ParticleexTimelineWidget(QWidget):
 	def pixels_per_tick(self) -> float:
 		return self._pixels_per_tick
 
-	def tick_to_x(self, tick: int) -> float:
+	def tick_to_x(self, tick: float) -> float:
 		return TRACK_LABEL_WIDTH + tick * self._pixels_per_tick - self._scroll_offset
 
-	def x_to_tick(self, x: float) -> int:
-		return max(0, int((x - TRACK_LABEL_WIDTH + self._scroll_offset) / self._pixels_per_tick))
+	def x_to_tick(self, x: float) -> float:
+		return max(0.0, (x - TRACK_LABEL_WIDTH + self._scroll_offset) / self._pixels_per_tick)
 
 	def _refresh_tracks(self) -> None:
 		traj: list[Element] = [e for e in self._elements if e.element_type == ElementType.TRAJECTORY]
@@ -216,12 +239,41 @@ class ParticleexTimelineWidget(QWidget):
 		while tick <= end_tick:
 			x = int(self.tick_to_x(tick))
 			if tick % major == 0:
-				p.setPen(QPen(self._tick_major, 1))
+				p.setPen(QPen(self._tick_major, 0))
 				p.drawLine(x, y_top, x, y_bot)
 			else:
-				p.setPen(QPen(self._tick_minor, 1))
-				p.drawLine(x, y_top, x, y_top + 8)
+				p.setPen(QPen(self._tick_minor, 0))
+				p.drawLine(x, y_top, x, y_top + 4)
 			tick += minor
+
+	def _paint_beat_lines(self, p: QPainter) -> None:
+		if not self._show_beat_lines or self._bpm <= 0:
+			return
+		beat_ticks = (60.0 / self._bpm) * 20
+		beats_per_measure = self._time_signature[0]
+		measure_ticks = beat_ticks * beats_per_measure
+		offset_ticks = self._audio_offset_ms / 1000.0 * 20
+		y_top = self._waveform.geometry().bottom() + 2
+		y_bot = self.height()
+
+		start_tick = max(0.0, self.x_to_tick(TRACK_LABEL_WIDTH) - measure_ticks)
+		end_tick = self.x_to_tick(self.width()) + measure_ticks
+
+		start_beat = int((start_tick - offset_ticks) / beat_ticks) - 1
+		beat = start_beat
+		while True:
+			tick = offset_ticks + beat * beat_ticks
+			if tick > end_tick:
+				break
+			if tick >= start_tick:
+				x = int(self.tick_to_x(tick))
+				if TRACK_LABEL_WIDTH <= x <= self.width():
+					if beat % beats_per_measure == 0:
+						p.setPen(QPen(self._beat_major, 3))
+					else:
+						p.setPen(QPen(self._beat_minor, 1))
+					p.drawLine(x, y_top, x, y_bot)
+			beat += 1
 
 	def _paint_cursor(self, p: QPainter) -> None:
 		cx = int(self.tick_to_x(self._playback_tick))
@@ -244,7 +296,7 @@ class ParticleexTimelineWidget(QWidget):
 		if event.button() == Qt.LeftButton:
 			x = event.position().x()
 			if x > TRACK_LABEL_WIDTH:
-				tick = self.x_to_tick(int(x))
+				tick = int(self.x_to_tick(x))
 				self._playback_tick = max(0, tick)
 				self.playback_cursor_changed.emit(self._playback_tick)
 				self._dragging_cursor = True
@@ -261,7 +313,7 @@ class ParticleexTimelineWidget(QWidget):
 			self.update()
 			return
 		if self._dragging_cursor:
-			tick = self.x_to_tick(int(event.position().x()))
+			tick = int(self.x_to_tick(event.position().x()))
 			self._playback_tick = max(0, tick)
 			x = event.position().x()
 			margin = 40

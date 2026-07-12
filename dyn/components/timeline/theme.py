@@ -26,6 +26,7 @@ def palette_colors():
 		"text": pal.color(QPalette.Text),
 		"text_dim": pal.color(QPalette.Text).lighter(150),
 		"mid": pal.color(QPalette.Mid),
+		"midlight": pal.color(QPalette.Midlight),
 		"dark": pal.color(QPalette.Dark),
 		"highlight": hl,
 		"highlight_alpha": QColor(hl.red(), hl.green(), hl.blue(), 120),

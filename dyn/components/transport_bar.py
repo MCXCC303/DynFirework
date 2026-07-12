@@ -1,7 +1,7 @@
 """播放控制栏 音乐播放/暂停/停止和时间显示 df 秒单位."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import (
 	QWidget, QHBoxLayout, QPushButton, QLabel, QSlider,
 )
@@ -14,6 +14,9 @@ log = get_logger(__name__)
 class TransportBar(QWidget):
 	"""播放传输控制条."""
 
+	beat_lines_toggled = Signal(bool)
+	time_marks_toggled = Signal(bool)
+
 	def __init__(
 			self,
 			controller: PlaybackController,
@@ -21,6 +24,8 @@ class TransportBar(QWidget):
 	) -> None:
 		super().__init__(parent)
 		self._controller = controller
+		self._show_beat_lines: bool = True
+		self._show_time_marks: bool = True
 		self._setup_ui()
 		self._setup_connections()
 
@@ -39,10 +44,24 @@ class TransportBar(QWidget):
 		self._btn_stop.setToolTip("停止")
 		layout.addWidget(self._btn_stop)
 
-		self._btn_start = QPushButton("⏮")
+		self._btn_start = QPushButton("󰑙")
 		self._btn_start.setFixedSize(32, 32)
 		self._btn_start.setToolTip("跳转到开头")
 		layout.addWidget(self._btn_start)
+
+		self._btn_beat = QPushButton("♮")
+		self._btn_beat.setFixedSize(32, 32)
+		self._btn_beat.setToolTip("显示/隐藏 BPM 辅助线")
+		self._btn_beat.setCheckable(True)
+		self._btn_beat.setChecked(True)
+		layout.addWidget(self._btn_beat)
+
+		self._btn_time_marks = QPushButton("")
+		self._btn_time_marks.setFixedSize(32, 32)
+		self._btn_time_marks.setToolTip("显示/隐藏时间刻度线")
+		self._btn_time_marks.setCheckable(True)
+		self._btn_time_marks.setChecked(True)
+		layout.addWidget(self._btn_time_marks)
 
 		layout.addSpacing(12)
 
@@ -97,6 +116,8 @@ class TransportBar(QWidget):
 		self._btn_play.clicked.connect(self._on_play_pause)
 		self._btn_stop.clicked.connect(self._on_stop)
 		self._btn_start.clicked.connect(self._on_go_to_start)
+		self._btn_beat.toggled.connect(self._on_beat_toggled)
+		self._btn_time_marks.toggled.connect(self._on_time_marks_toggled)
 		self._slider_volume.valueChanged.connect(self._on_volume_changed)
 		self._controller.position_changed.connect(self._on_position_changed)
 		self._controller.state_changed.connect(self._on_state_changed)
@@ -116,6 +137,16 @@ class TransportBar(QWidget):
 	def _on_go_to_start(self) -> None:
 		log.debug("跳转到开头")
 		self._controller.seek_to_tick(0)
+
+	@Slot(bool)
+	def _on_beat_toggled(self, checked: bool) -> None:
+		self._show_beat_lines = checked
+		self.beat_lines_toggled.emit(checked)
+
+	@Slot(bool)
+	def _on_time_marks_toggled(self, checked: bool) -> None:
+		self._show_time_marks = checked
+		self.time_marks_toggled.emit(checked)
 
 	@Slot(int)
 	def _on_volume_changed(self, value: int) -> None:
@@ -137,7 +168,7 @@ class TransportBar(QWidget):
 	def _on_state_changed(self, state: str) -> None:
 		log.debug(f"播放状态变更: state={state}")
 		if state == "playing":
-			self._btn_play.setText("⏸")
+			self._btn_play.setText("")
 		else:
 			self._btn_play.setText("▶")
 

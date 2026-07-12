@@ -95,6 +95,8 @@ class Project:
 	music_data: bytes | None = field(default=None, repr=False, compare=False)
 	music_original_name: str = field(default="", repr=False, compare=False)
 
+	audio_offset_ms: float = 0.0
+
 	@property
 	def music_path(self) -> str:
 		return self.music_original_name
@@ -162,6 +164,7 @@ class Project:
 				"ticks_per_beat": self.ticks_per_beat,
 				"mc_version": self.mc_version,
 				"music_original_name": self.music_original_name,
+				"audio_offset_ms": self.audio_offset_ms,
 			},
 			"elements": elements_payload,
 			"saved_positions": self.saved_positions,
@@ -203,6 +206,7 @@ class Project:
 			ticks_per_beat=proj_data.get("ticks_per_beat", 20),
 			mc_version=proj_data.get("mc_version", "1.21.8"),
 			music_original_name=music_name,
+			audio_offset_ms=proj_data.get("audio_offset_ms", 0.0),
 			elements=elements,
 			saved_positions=data.get("saved_positions", []),
 			timeline_zoom=ts_data.get("zoom", 1.0),
@@ -247,6 +251,7 @@ class Project:
 			ticks_per_beat=proj_data.get("ticks_per_beat", 20),
 			mc_version=proj_data.get("mc_version", "1.21.8"),
 			music_original_name=music_name,
+			audio_offset_ms=proj_data.get("audio_offset_ms", 0.0),
 			elements=elements,
 			saved_positions=result.positions,
 			timeline_zoom=result.timeline_state.get("zoom", 1.0),
@@ -273,6 +278,7 @@ class Project:
 			"time_signature": list(self.time_signature),
 			"ticks_per_beat": self.ticks_per_beat,
 			"mc_version": self.mc_version,
+			"audio_offset_ms": self.audio_offset_ms,
 		}
 
 		elements_payload: list[dict[str, Any]] = []

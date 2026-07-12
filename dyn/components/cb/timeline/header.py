@@ -49,7 +49,7 @@ class _HeaderWidget(QWidget):
 				tick = start_tick
 				while tick <= end_tick:
 					x = int(tl.tick_to_x(tick))
-					p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, str(tick))
+					p.drawText(QRect(x - 20, 2, 40, HEADER_HEIGHT - 4), Qt.AlignCenter, str(int(tick)))
 					tick += major
 			else:
 				log.warning("时间线头: 时间线引用为空, 跳过绘制")

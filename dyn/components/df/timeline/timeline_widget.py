@@ -5,7 +5,7 @@ from typing import Any
 
 from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import (
-	QPainter, QPen, QBrush, QPainterPath,
+	QPainter, QPen, QBrush, QPainterPath, QColor,
 	QMouseEvent, QWheelEvent, QKeyEvent, QResizeEvent,
 )
 from PySide6.QtWidgets import QWidget
@@ -45,6 +45,11 @@ class DFTimelineWidget(QWidget):
 		self._playback_time: float = 0.0
 
 		self._waveform_samples: list[float] | None = None
+		self._bpm: float = 120.0
+		self._audio_offset_ms: float = 0.0
+		self._time_signature: tuple = (4, 4)
+		self._show_beat_lines: bool = True
+		self._show_time_marks: bool = True
 
 		self._update_colors()
 
@@ -131,6 +136,8 @@ class DFTimelineWidget(QWidget):
 		self._waveform_color = c["highlight_alpha"]
 		self._text_color = c["text"]
 		self._divider_color = c["mid"]
+		self._beat_minor = QColor(255, 150, 50)
+		self._beat_major = QColor(255, 150, 50)
 
 	def changeEvent(self, event):
 		if event.type() == QEvent.PaletteChange:
@@ -186,6 +193,20 @@ class DFTimelineWidget(QWidget):
 		self._waveform_samples = samples
 		self._waveform.set_samples(samples, sample_rate, bpm)
 		self._layout_children()
+		self.update()
+
+	def update_music_info(self, bpm: float, audio_offset_ms: float, time_signature: tuple = (4, 4), ticks_per_beat: int = 20) -> None:
+		self._bpm = bpm
+		self._audio_offset_ms = audio_offset_ms
+		self._time_signature = time_signature
+		self.update()
+
+	def set_show_beat_lines(self, visible: bool) -> None:
+		self._show_beat_lines = visible
+		self.update()
+
+	def set_show_time_marks(self, visible: bool) -> None:
+		self._show_time_marks = visible
 		self.update()
 
 	def seek_playback(self, time_sec: float) -> None:
@@ -253,12 +274,41 @@ class DFTimelineWidget(QWidget):
 		while t <= end_time:
 			x = int(self.time_to_x(t))
 			if abs(t - round(t / major) * major) < 0.001:
-				p.setPen(QPen(self._tick_major, 1))
+				p.setPen(QPen(self._tick_major, 0))
 				p.drawLine(x, y_top, x, y_bot)
 			else:
-				p.setPen(QPen(self._tick_minor, 1))
-				p.drawLine(x, y_top, x, y_top + 8)
+				p.setPen(QPen(self._tick_minor, 0))
+				p.drawLine(x, y_top, x, y_top + 4)
 			t += minor
+
+	def paint_beat_lines(self, p: QPainter) -> None:
+		if not self._show_beat_lines or self._bpm <= 0:
+			return
+		beat_interval = 60.0 / self._bpm
+		beats_per_measure = self._time_signature[0]
+		measure_interval = beat_interval * beats_per_measure
+		offset_sec = self._audio_offset_ms / 1000.0
+		y_top = self._waveform.geometry().bottom() + 2
+		y_bot = self.height()
+
+		start_time = max(0.0, self.x_to_time(float(TRACK_LABEL_WIDTH)) - measure_interval)
+		end_time = self.x_to_time(float(self.width())) + measure_interval
+
+		start_beat = int((start_time - offset_sec) / beat_interval) - 1
+		beat = start_beat
+		while True:
+			t = offset_sec + beat * beat_interval
+			if t > end_time:
+				break
+			if t >= start_time:
+				x = int(self.time_to_x(t))
+				if TRACK_LABEL_WIDTH <= x <= self.width():
+					if beat % beats_per_measure == 0:
+						p.setPen(QPen(self._beat_major, 3))
+					else:
+						p.setPen(QPen(self._beat_minor, 1))
+					p.drawLine(x, y_top, x, y_bot)
+			beat += 1
 
 	def paint_cursor(self, p: QPainter) -> None:
 		cx = int(self.time_to_x(self._playback_time))

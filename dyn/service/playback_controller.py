@@ -135,11 +135,7 @@ class PlaybackController(QObject):
 		self.state_changed.emit(state_map.get(state, "stopped"))
 
 	def _ticks_to_ms(self, ticks: int) -> int:
-		beats = ticks / self._ticks_per_beat
-		seconds = beats * 60.0 / self._bpm
-		return int(seconds * 1000)
+		return int(ticks * 1000 / 20)
 
 	def _ms_to_ticks(self, ms: int) -> int:
-		seconds = ms / 1000.0
-		beats = seconds * self._bpm / 60.0
-		return int(beats * self._ticks_per_beat)
+		return int(ms * 20 / 1000)
