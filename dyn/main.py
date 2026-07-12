@@ -315,6 +315,32 @@ class MainWin(QMainWindow):
 		act.triggered.connect(self._pos_selector.showNormal)
 		view_menu.addAction(act)
 
+		view_menu.addSeparator()
+
+		act_vl = QAction("元素列表", self)
+		act_vl.setCheckable(True)
+		act_vl.setChecked(True)
+		act_vl.toggled.connect(self._left_panel.setVisible)
+		view_menu.addAction(act_vl)
+
+		act_vp = QAction("属性面板", self)
+		act_vp.setCheckable(True)
+		act_vp.setChecked(True)
+		act_vp.toggled.connect(self._property_panel.setVisible)
+		view_menu.addAction(act_vp)
+
+		act_vi = QAction("检查器", self)
+		act_vi.setCheckable(True)
+		act_vi.setChecked(True)
+		act_vi.toggled.connect(self._right_panel.setVisible)
+		view_menu.addAction(act_vi)
+
+		act_vt = QAction("时间线", self)
+		act_vt.setCheckable(True)
+		act_vt.setChecked(True)
+		act_vt.toggled.connect(self._bottom_panel.setVisible)
+		view_menu.addAction(act_vt)
+
 		# 项目
 		proj_menu = mb.addMenu("项目(&P)")
 
@@ -350,8 +376,8 @@ class MainWin(QMainWindow):
 		top_splitter = QSplitter(Qt.Horizontal)
 
 		# 左: 元素列表
-		left_frame = QFrame()
-		left_layout = QVBoxLayout(left_frame)
+		self._left_panel = QFrame()
+		left_layout = QVBoxLayout(self._left_panel)
 		left_layout.setContentsMargins(4, 4, 4, 4)
 		left_layout.addWidget(QLabel("元素列表"))
 
@@ -364,24 +390,24 @@ class MainWin(QMainWindow):
 		self._tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
 		self._tree_view.customContextMenuRequested.connect(self._on_tree_context_menu)
 		left_layout.addWidget(self._tree_view)
-		top_splitter.addWidget(left_frame)
+		top_splitter.addWidget(self._left_panel)
 
 		# 中: 属性面板
 		top_splitter.addWidget(self._property_panel)
 
 		# 右: 检查器
-		right_frame = QFrame()
-		right_layout = QVBoxLayout(right_frame)
+		self._right_panel = QFrame()
+		right_layout = QVBoxLayout(self._right_panel)
 		right_layout.setContentsMargins(4, 4, 4, 4)
 		right_layout.addWidget(self._inspector)
-		top_splitter.addWidget(right_frame)
+		top_splitter.addWidget(self._right_panel)
 		top_splitter.setSizes([220, 480, 280])
 
 		main_splitter.addWidget(top_splitter)
 
 		# 下部: 传输条 + 时间线
-		bottom_widget = QWidget()
-		bottom_layout = QVBoxLayout(bottom_widget)
+		self._bottom_panel = QWidget()
+		bottom_layout = QVBoxLayout(self._bottom_panel)
 		bottom_layout.setContentsMargins(0, 0, 0, 0)
 		bottom_layout.setSpacing(0)
 
@@ -394,7 +420,7 @@ class MainWin(QMainWindow):
 		scroll.setWidget(self._timeline)
 		bottom_layout.addWidget(scroll, stretch=1)
 
-		main_splitter.addWidget(bottom_widget)
+		main_splitter.addWidget(self._bottom_panel)
 		main_splitter.setSizes([450, 250])
 
 	# Statusbar & Shortcuts
