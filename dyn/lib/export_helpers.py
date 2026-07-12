@@ -56,7 +56,7 @@ def _init_maps() -> None:
 	TRAJ_FUNC_MAP.update(_build_traj_dispatch())
 	EFFECT_FUNC_MAP.update(_build_effect_dispatch())
 	COMPOSITE_FUNC_MAP.update(_build_composite_dispatch())
-	log.info("初始化 DF 导出映射")
+	log.debug("初始化 DF 导出映射")
 
 def export_firework(elem) -> None:
 	_init_maps()

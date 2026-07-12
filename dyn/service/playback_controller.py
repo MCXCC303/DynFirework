@@ -126,7 +126,7 @@ class PlaybackController(QObject):
 		pass
 
 	def _on_state_changed(self, state) -> None:
-		log.info(f"播放状态变更: {state}")
+		log.debug(f"播放状态变更: {state}")
 		state_map = {
 			QMediaPlayer.PlaybackState.PlayingState: "playing",
 			QMediaPlayer.PlaybackState.PausedState: "paused",

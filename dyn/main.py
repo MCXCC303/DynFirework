@@ -561,7 +561,7 @@ class MainWin(QMainWindow):
 		self._playback.stop()
 		self._transport_bar.set_bpm(proj.bpm)
 		self._timeline.update_music_info(proj.bpm, proj.audio_offset_ms, proj.time_signature, proj.ticks_per_beat)
-		log.info(f"新建项目: name={proj.name}, backend={proj.backend.value}, bpm={proj.bpm}, mc={proj.mc_version}")
+		log.debug(f"新建项目: name={proj.name}, backend={proj.backend.value}, bpm={proj.bpm}, mc={proj.mc_version}")
 		self.setWindowTitle(f"DynFirework   {proj.name}")
 		self.statusBar().showMessage(f"已创建: {proj.name} | BPM: {proj.bpm:.0f} | MC {proj.mc_version}")
 

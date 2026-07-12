@@ -136,13 +136,13 @@ class Project:
 		for i, e in enumerate(self.elements):
 			if e.id == element_id:
 				removed = self.elements.pop(i)
-				log.info(f"移除元素: id={removed.id}, name={removed.name}")
+				log.debug(f"移除元素: id={removed.id}, name={removed.name}")
 				return removed
 		log.warning(f"移除元素未找到: id={element_id}")
 		return None
 
 	def add_element(self, elem) -> None:
-		log.info(f"添加元素: id={elem.id}, name={elem.name}")
+		log.debug(f"添加元素: id={elem.id}, name={elem.name}")
 		self.elements.append(elem)
 
 	def to_json(self) -> dict[str, Any]:
