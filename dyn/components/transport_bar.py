@@ -14,6 +14,7 @@ class TransportBar(QObject):
 
 	beat_lines_toggled = Signal(bool)
 	time_marks_toggled = Signal(bool)
+	metronome_toggled = Signal(bool)
 
 	def __init__(
 			self,
@@ -28,6 +29,7 @@ class TransportBar(QObject):
 			slider_volume: QSlider,
 			label_music: QLabel,
 			label_bpm: QLabel,
+			btn_metronome: QToolButton | None = None,
 			parent: QObject | None = None,
 	) -> None:
 		super().__init__(parent)
@@ -42,6 +44,7 @@ class TransportBar(QObject):
 		self._slider_volume = slider_volume
 		self._label_music = label_music
 		self._label_bpm = label_bpm
+		self._btn_metronome = btn_metronome
 		self._setup_connections()
 
 	def _setup_connections(self) -> None:
@@ -50,6 +53,8 @@ class TransportBar(QObject):
 		self._btn_replay.clicked.connect(lambda: self._controller.seek_to_tick(0))
 		self._btn_hint_tick.toggled.connect(self.beat_lines_toggled.emit)
 		self._btn_time_tick.toggled.connect(self.time_marks_toggled.emit)
+		if self._btn_metronome is not None:
+			self._btn_metronome.toggled.connect(self.metronome_toggled.emit)
 		self._slider_volume.valueChanged.connect(self._on_volume_changed)
 		self._controller.position_changed.connect(self._on_position_changed)
 		self._controller.state_changed.connect(self._on_state_changed)

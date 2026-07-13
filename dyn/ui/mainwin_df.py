@@ -162,6 +162,10 @@ class Ui_MainWindow(object):
         self.export_datapack_action.setIcon(icon4)
         self.new_complex_elem_action = QAction(MainWindow)
         self.new_complex_elem_action.setObjectName(u"new_complex_elem_action")
+        self.metronome_action_toggle = QAction(MainWindow)
+        self.metronome_action_toggle.setObjectName(u"metronome_action_toggle")
+        self.metronome_action_toggle.setCheckable(True)
+        self.metronome_action_toggle.setEnabled(False)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
@@ -352,6 +356,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.timeline_toggle_time_tick)
 
+        self.timeline_metronome_toggle = QToolButton(self.timeline_transport_bar)
+        self.timeline_metronome_toggle.setObjectName(u"timeline_metronome_toggle")
+        self.timeline_metronome_toggle.setEnabled(False)
+        self.timeline_metronome_toggle.setCheckable(True)
+
+        self.horizontalLayout.addWidget(self.timeline_metronome_toggle)
+
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
@@ -513,6 +524,7 @@ class Ui_MainWindow(object):
         self.view_menu.addAction(self.property_panel_action_toggle)
         self.view_menu.addAction(self.inspector_action_toggle)
         self.view_menu.addAction(self.timeline_action_toggle)
+        self.view_menu.addAction(self.metronome_action_toggle)
         self.proj_menu.addAction(self.proj_settings_action)
         self.about_menu.addAction(self.help_action)
         self.about_menu.addAction(self.about_DynFirework_action)
@@ -603,6 +615,7 @@ class Ui_MainWindow(object):
         self.export_datapack_action.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Alt+Shift+S", None))
 #endif // QT_CONFIG(shortcut)
         self.new_complex_elem_action.setText(QCoreApplication.translate("MainWindow", u"\u590d\u5408\u5143\u7d20", None))
+        self.metronome_action_toggle.setText(QCoreApplication.translate("MainWindow", u"\u8282\u62cd\u5668\uff08\u6d4b\u8bd5\uff09", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"<PROJECT_NAME> - <MC_VERSION>", None))
         self.element_list_label.setText(QCoreApplication.translate("MainWindow", u"\u5143\u7d20\u5217\u8868", None))
         self.inspector_label.setText(QCoreApplication.translate("MainWindow", u"\u68c0\u67e5\u5668\uff1a", None))
@@ -627,6 +640,10 @@ class Ui_MainWindow(object):
         self.timeline_toggle_time_tick.setToolTip(QCoreApplication.translate("MainWindow", u"\u663e\u793a/\u9690\u85cf\u65f6\u95f4\u523b\u5ea6\u7ebf", None))
 #endif // QT_CONFIG(tooltip)
         self.timeline_toggle_time_tick.setText(QCoreApplication.translate("MainWindow", u"\uf017", None))
+#if QT_CONFIG(tooltip)
+        self.timeline_metronome_toggle.setToolTip(QCoreApplication.translate("MainWindow", u"\u8282\u62cd\u5668\uff08\u6d4b\u8bd5\uff09", None))
+#endif // QT_CONFIG(tooltip)
+        self.timeline_metronome_toggle.setText(QCoreApplication.translate("MainWindow", u"\u266c", None))
         self.timeline_time.setText(QCoreApplication.translate("MainWindow", u"00:00", None))
         self.timeline_tick.setText(QCoreApplication.translate("MainWindow", u"Tick: 0", None))
         self.timeline_volume.setText(QCoreApplication.translate("MainWindow", u"\u97f3\u91cf", None))

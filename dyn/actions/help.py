@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 
-from dyn.ui_new.about.help import Ui_MainWindow as HelpUI
+from dyn.ui.about.help import Ui_MainWindow as HelpUI
 
 log = logging.getLogger("dyn.actions.help")
 

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 	QMessageBox,
 )
 
-from dyn.ui_new.components.pos_selector.pos_selector import Ui_MainWindow as PosSelectMainUI
+from dyn.ui.components.pos_selector.pos_selector import Ui_MainWindow as PosSelectMainUI
 from dyn.lib.units import MinecraftPosition
 from dyn.components.pos_select.grid_select import (
 	_BaseGraphWidget, PixGraphWidget, PixElementList,

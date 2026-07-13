@@ -10,7 +10,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
 from dyn import env
-from dyn.ui_new.about.about import Ui_Dialog as AboutUI
+from dyn.ui.about.about import Ui_Dialog as AboutUI
 
 log = logging.getLogger("dyn.actions.about")
 

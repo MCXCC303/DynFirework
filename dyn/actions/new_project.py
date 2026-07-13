@@ -5,7 +5,7 @@ import logging
 
 from PySide6 import QtWidgets
 
-from dyn.ui_new.actions.new_proj_dialog import Ui_Dialog
+from dyn.ui.actions.new_proj_dialog import Ui_Dialog
 
 log = logging.getLogger(__name__)
 

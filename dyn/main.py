@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from dyn.env import RESOURCE_DIR
+from dyn.env import RESOURCE_DIR, get_flag
 from dyn.logging_config import setup_logging, get_logger
 
 log = get_logger(__name__)
@@ -33,6 +33,7 @@ from dyn.service.element_controller import (
 	ElementController, DF_CATEGORY_DISPLAY, CB_CATEGORY_DISPLAY,
 )
 from dyn.service.export_service import ExportService
+from dyn.service.metronome import Metronome
 from dyn.service.playback_controller import PlaybackController
 from dyn.service.project_manager import ProjectManager
 from dyn.service.undo_manager import UndoManager
@@ -96,10 +97,14 @@ class MainWin(QMainWindow):
 		self._backend: Backend | None = None
 		self._controller: ElementController | None = None
 
+		# 测试模式
+		self._test_mode = get_flag("DYN_TEST_ENABLED")
+
 		# 共享服务
 		self._project_manager = ProjectManager(self)
 		self._export_service = ExportService(self)
 		self._playback = PlaybackController(self)
+		self._metronome = Metronome(self) if self._test_mode else None
 		self._pos_selector = PosSelectMainWindow()
 
 		# 共享 UI
@@ -136,9 +141,9 @@ class MainWin(QMainWindow):
 		self._backend = backend
 
 		if backend == Backend.CB:
-			from dyn.ui_new.mainwin_cb import Ui_MainWindow as MWUI
+			from dyn.ui.mainwin_cb import Ui_MainWindow as MWUI
 		else:
-			from dyn.ui_new.mainwin_df import Ui_MainWindow as MWUI
+			from dyn.ui.mainwin_df import Ui_MainWindow as MWUI
 		self._ui = MWUI()
 		self._ui.setupUi(self)
 
@@ -183,6 +188,10 @@ class MainWin(QMainWindow):
 				pass
 			try:
 				self._transport_bar.time_marks_toggled.disconnect()
+			except (RuntimeError, TypeError):
+				pass
+			try:
+				self._transport_bar.metronome_toggled.disconnect()
 			except (RuntimeError, TypeError):
 				pass
 		self._timeline = None
@@ -260,6 +269,7 @@ class MainWin(QMainWindow):
 			slider_volume=ui.timeline_volume_adjust,
 			label_music=ui.timeline_music_name,
 			label_bpm=ui.timeline_bpm,
+			btn_metronome=ui.timeline_metronome_toggle if self._test_mode else None,
 		)
 
 		# 时间线 - 设入 timeline_area
@@ -313,6 +323,7 @@ class MainWin(QMainWindow):
 
 		# 视图
 		ui.pos_selector_action.triggered.connect(self._pos_selector.showNormal)
+		self._setup_test_features()
 		# 面板可见性 action 已在 .ui 中预连接到对应 frame
 
 		# 项目
@@ -358,6 +369,46 @@ class MainWin(QMainWindow):
 	def _on_playback_state_for_actions(self, state: str) -> None:
 		"""播放状态改变时更新菜单 action 的启用状态."""
 		self._update_media_actions()
+
+	def _set_metronome_enabled(self, enabled: bool) -> None:
+		"""同步菜单 action、传输栏按钮和 Metronome 的启用状态."""
+		if self._metronome is None:
+			return
+		self._metronome.enabled = enabled
+		if self._ui is not None:
+			self._ui.metronome_action_toggle.setChecked(enabled)
+			self._ui.timeline_metronome_toggle.setChecked(enabled)
+
+	def _on_metronome_state_changed(self, state: str) -> None:
+		if self._metronome is not None:
+			self._metronome.notify_state(state)
+
+	def _sync_metronome_settings(self) -> None:
+		"""从当前项目同步节拍器参数."""
+		if self._metronome is None:
+			return
+		proj = self._project_manager.project
+		self._metronome.set_bpm(proj.bpm)
+		self._metronome.set_time_signature(proj.time_signature)
+		self._metronome.set_audio_offset_ms(proj.audio_offset_ms)
+
+	def _setup_test_features(self) -> None:
+		"""集中管理测试功能：根据 _test_mode 切换 enable/disable 状态."""
+		ui = self._ui
+		test_actions = [
+			ui.metronome_action_toggle,
+			ui.palette_action,
+			ui.pos_selector_3d_action,
+		]
+		for action in test_actions:
+			action.setEnabled(self._test_mode)
+		ui.timeline_metronome_toggle.setEnabled(self._test_mode)
+		if self._test_mode:
+			try:
+				ui.metronome_action_toggle.toggled.disconnect(self._set_metronome_enabled)
+			except (RuntimeError, TypeError):
+				pass
+			ui.metronome_action_toggle.toggled.connect(self._set_metronome_enabled)
 
 	# Shared Signals
 
@@ -416,6 +467,11 @@ class MainWin(QMainWindow):
 		# 辅助线/刻度线切换 (每次切换后端需重连)
 		self._transport_bar.beat_lines_toggled.connect(self._timeline.set_show_beat_lines)
 		self._transport_bar.time_marks_toggled.connect(self._timeline.set_show_time_marks)
+		if self._metronome is not None:
+			self._transport_bar.metronome_toggled.connect(self._set_metronome_enabled)
+			self._playback.position_changed.connect(self._metronome.on_tick)
+			self._playback.state_changed.connect(self._on_metronome_state_changed)
+			self._sync_metronome_settings()
 
 	def _connect_cb_timeline_signals(self) -> None:
 		tracks = [self._timeline.fw_track, self._timeline.traj_track]
@@ -469,6 +525,7 @@ class MainWin(QMainWindow):
 		self._playback.stop()
 		self._transport_bar.set_bpm(proj.bpm)
 		self._timeline.update_music_info(proj.bpm, proj.audio_offset_ms, proj.time_signature, proj.ticks_per_beat)
+		self._sync_metronome_settings()
 		log.debug(f"新建项目: name={proj.name}, backend={proj.backend.value}, bpm={proj.bpm}, mc={proj.mc_version}")
 		self._ui.label.setText(f"{proj.name} - {proj.mc_version}")
 		self.setWindowTitle(f"DynFirework   {proj.name}")
@@ -510,6 +567,7 @@ class MainWin(QMainWindow):
 			self._tree_view.expandAll()
 			self._transport_bar.set_bpm(proj.bpm)
 			self._timeline.update_music_info(proj.bpm, proj.audio_offset_ms, proj.time_signature, proj.ticks_per_beat)
+			self._sync_metronome_settings()
 			self._ui.label.setText(f"{proj.name} - {proj.mc_version}")
 			self.setWindowTitle(f"DynFirework   {proj.name}")
 			self.statusBar().showMessage(f"已打开: {path}")
@@ -994,6 +1052,7 @@ class MainWin(QMainWindow):
 			self._playback.set_bpm(proj.bpm)
 			self._transport_bar.set_bpm(proj.bpm)
 			self._timeline.update_music_info(proj.bpm, proj.audio_offset_ms, proj.time_signature, proj.ticks_per_beat)
+			self._sync_metronome_settings()
 			self._project_manager.mark_modified()
 			log.debug(f"项目设置更新: name={proj.name}, bpm={proj.bpm:.0f}, ts={proj.time_signature}, mc_version={proj.mc_version}")
 			self._ui.label.setText(f"{proj.name} - {proj.mc_version}")

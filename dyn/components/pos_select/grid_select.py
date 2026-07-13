@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 	QApplication,
 )
 
-from dyn.ui_new.components.pos_selector.create_new_point import Ui_Dialog as NewPointDialogUI
+from dyn.ui.components.pos_selector.create_new_point import Ui_Dialog as NewPointDialogUI
 from dyn.lib.units import MinecraftPosition
 from dyn.components.pos_select.undo_commands import (
 	AddPointCommand,
@@ -477,7 +477,7 @@ class NewPointEditorDialog(QDialog):
 	def __init__(self, xz_pos: tuple, edit_mode: bool = False) -> None:
 		super().__init__()
 		if edit_mode:
-			from dyn.ui_new.components.pos_selector.edit_point import Ui_Dialog as EditPointUI
+			from dyn.ui.components.pos_selector.edit_point import Ui_Dialog as EditPointUI
 			self.ui = EditPointUI()
 		else:
 			self.ui = NewPointDialogUI()
