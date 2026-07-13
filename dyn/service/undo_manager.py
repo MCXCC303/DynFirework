@@ -168,5 +168,5 @@ class UndoManager(QObject):
 		log.debug(f"重做完成: '{text}' | 执行后元素状态: {list(elems_after.values())}")
 
 	def clear(self) -> None:
-		log.info("清空撤销栈")
+		log.debug("清空撤销栈")
 		self._stack.clear()

@@ -117,11 +117,12 @@ class ElementController(QObject):
 		return self._backend
 
 	def set_backend(self, backend: Backend) -> None:
+		# @removal
 		old_count = len(self._elements)
 		self._backend = backend
 		self._elements.clear()
 		self._selected_id = ""
-		log.info(f"切换后端: -> {backend.value}, 已丢弃 {old_count} 个元素")
+		log.debug(f"切换后端: -> {backend.value}, 已丢弃 {old_count} 个元素")
 
 	@property
 	def category_display(self) -> dict:
@@ -394,7 +395,7 @@ class ElementController(QObject):
 	                          value: object, old_value: object) -> bool:
 		"""应用属性变更 复杂类型(面板已直改)返回True，简单类型执行 set_property 返回False(需undo)."""
 		if key in _COMPLEX_KEYS:
-			log.info(f"应用属性变更(复杂): id={element_id}, key={key}")
+			log.debug(f"应用属性变更(复杂): id={element_id}, key={key}")
 			return True
 		log.debug(f"应用属性变更: id={element_id}, key={key}")
 		self.set_property(element_id, key, value)
@@ -431,7 +432,7 @@ class ElementController(QObject):
 
 		for e in project.elements:
 			self._elements[e.id] = e
-		log.info(f"从项目加载: backend={project.backend.value}, {len(project.elements)} 个元素")
+		log.debug(f"从项目加载: backend={project.backend.value}, {len(project.elements)} 个元素")
 
 	def to_project(self, project) -> None:
 		"""将元素写回 Project 单列表."""

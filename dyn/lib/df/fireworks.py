@@ -22,7 +22,7 @@ def single_layer_firework(elem) -> None:
 			r1=elem.inner_color.start.r, g1=elem.inner_color.start.g, b1=elem.inner_color.start.b,
 			r2=elem.inner_color.end.r, g2=elem.inner_color.end.g, b2=elem.inner_color.end.b,
 			speed=elem.speed, particle_count=elem.particle_count,
-			duration=elem.duration, lifetime=elem.duration, flicker=elem.enable_tail_flicker,
+			duration=elem.duration, lifetime=elem.fw_lifetime, flicker=elem.enable_tail_flicker,
 		)
 		global_storage.add_command(tick, cmd)
 	except AttributeError as e:
@@ -41,8 +41,7 @@ def double_layer_firework(elem) -> None:
 			or2=elem.outer_color.end.r, og2=elem.outer_color.end.g, ob2=elem.outer_color.end.b,
 			inner_speed=elem.inner_speed, outer_speed=elem.outer_speed,
 			inner_count=elem.inner_count, outer_count=elem.outer_count,
-			h_angle=elem.horizontal_angle, v_angle=elem.vertical_angle,
-			duration=elem.duration, lifetime=elem.duration, flicker=elem.enable_tail_flicker,
+			duration=elem.duration, lifetime=elem.fw_lifetime, flicker=elem.enable_tail_flicker,
 		)
 		global_storage.add_command(tick, cmd)
 	except AttributeError as e:
@@ -59,7 +58,7 @@ def directional_firework(elem) -> None:
 			r2=elem.inner_color.end.r, g2=elem.inner_color.end.g, b2=elem.inner_color.end.b,
 			speed=elem.speed, h_angle=elem.horizontal_angle, v_angle=elem.vertical_angle,
 			spread_angle=elem.spread_angle, track_count=elem.track_count,
-			duration=elem.duration, lifetime=elem.duration, flicker=elem.enable_tail_flicker,
+			duration=elem.duration, lifetime=elem.fw_lifetime, flicker=elem.enable_tail_flicker,
 		)
 		global_storage.add_command(tick, cmd)
 	except AttributeError as e:
@@ -74,10 +73,9 @@ def clustered_firework(elem) -> None:
 			x=pos.x, y=pos.y, z=pos.z,
 			r1=elem.inner_color.start.r, g1=elem.inner_color.start.g, b1=elem.inner_color.start.b,
 			r2=elem.inner_color.end.r, g2=elem.inner_color.end.g, b2=elem.inner_color.end.b,
-			speed=elem.speed, h_angle=elem.horizontal_angle, v_angle=elem.vertical_angle,
-			direction_count=elem.direction_count, spread_angle=elem.spread_angle,
-			track_count=elem.track_count,
-			duration=elem.duration, lifetime=elem.duration, flicker=elem.enable_tail_flicker,
+			speed=elem.speed, direction_count=elem.direction_count,
+			track_count=elem.track_count, spread=elem.spread_angle,
+			duration=elem.duration, lifetime=elem.fw_lifetime, flicker=elem.enable_tail_flicker,
 		)
 		global_storage.add_command(tick, cmd)
 	except AttributeError as e:
@@ -92,8 +90,8 @@ def expanding_sphere_firework(elem) -> None:
 			x=pos.x, y=pos.y, z=pos.z,
 			r1=elem.inner_color.start.r, g1=elem.inner_color.start.g, b1=elem.inner_color.start.b,
 			r2=elem.inner_color.end.r, g2=elem.inner_color.end.g, b2=elem.inner_color.end.b,
-			radius=elem.radius, radial_speed=elem.radial_speed,
-			particle_count=elem.track_count, lifetime=elem.duration,
+			radius=elem.radius, particle_count=elem.particle_count,
+			radial_speed=elem.radial_speed, lifetime=elem.fw_lifetime,
 			flicker=elem.enable_tail_flicker,
 		)
 		global_storage.add_command(tick, cmd)
@@ -110,8 +108,7 @@ def nebula_firework(elem) -> None:
 			r1=elem.inner_color.start.r, g1=elem.inner_color.start.g, b1=elem.inner_color.start.b,
 			r2=elem.inner_color.end.r, g2=elem.inner_color.end.g, b2=elem.inner_color.end.b,
 			particle_count=elem.particle_count, expansion_speed=elem.expansion_speed,
-			density_falloff=elem.density_falloff, duration=elem.duration,
-			flicker=elem.enable_tail_flicker,
+			lifetime=elem.fw_lifetime, density_falloff=elem.density_falloff,
 		)
 		global_storage.add_command(tick, cmd)
 	except AttributeError as e:

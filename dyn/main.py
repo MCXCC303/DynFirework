@@ -561,7 +561,7 @@ class MainWin(QMainWindow):
 		self._playback.stop()
 		self._transport_bar.set_bpm(proj.bpm)
 		self._timeline.update_music_info(proj.bpm, proj.audio_offset_ms, proj.time_signature, proj.ticks_per_beat)
-		log.info(f"新建项目: name={proj.name}, backend={proj.backend.value}, bpm={proj.bpm}, mc={proj.mc_version}")
+		log.debug(f"新建项目: name={proj.name}, backend={proj.backend.value}, bpm={proj.bpm}, mc={proj.mc_version}")
 		self.setWindowTitle(f"DynFirework   {proj.name}")
 		self.statusBar().showMessage(f"已创建: {proj.name} | BPM: {proj.bpm:.0f} | MC {proj.mc_version}")
 
@@ -1067,7 +1067,13 @@ class MainWin(QMainWindow):
 
 	def _on_project_settings(self) -> None:
 		proj = self._project_manager.project
-		dlg = ProjectSettingsDialog(proj.name, proj.bpm, proj.mc_version, proj.backend.value, proj.audio_offset_ms, proj.time_signature, self)
+		dlg = ProjectSettingsDialog(proj.name,
+		                            proj.bpm,
+		                            proj.mc_version,
+		                            proj.backend.value,
+		                            proj.audio_offset_ms,
+		                            proj.time_signature,
+		                            self)
 		if dlg.exec() == QDialog.DialogCode.Accepted:
 			proj.bpm = dlg.bpm
 			proj.name = dlg.project_name
@@ -1120,7 +1126,7 @@ class MainWin(QMainWindow):
 		log.debug("应用程序关闭")
 		super().closeEvent(event)
 
-if __name__ == "__main__":
+def main():
 	setup_logging()
 	log.debug("DynFirework 启动")
 	app = QApplication(sys.argv)
@@ -1129,3 +1135,6 @@ if __name__ == "__main__":
 	win = MainWin()
 	win.show()
 	sys.exit(app.exec())
+
+if __name__ == "__main__":
+	main()

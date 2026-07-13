@@ -35,6 +35,7 @@ class FwBase(FormBase):
 		self._setup_outer_color()
 		self._setup_angle()
 		self._setup_tail_flicker()
+		self._setup_lifetime()
 		self._setup_type_sections()
 		layout.addStretch()
 
@@ -154,11 +155,22 @@ class FwBase(FormBase):
 		self._chk_tail_flicker.toggled.connect(lambda v: self._emit("enable_tail_flicker", v))
 		self.layout().addWidget(self._chk_tail_flicker)
 
+	def _setup_lifetime(self) -> None:
+		self._group_lifetime = QGroupBox("粒子参数")
+		form = QFormLayout(self._group_lifetime)
+		self._spin_fw_lifetime = QDoubleSpinBox()
+		self._spin_fw_lifetime.setRange(0.1, 60)
+		self._spin_fw_lifetime.setSingleStep(0.5)
+		self._spin_fw_lifetime.setDecimals(1)
+		self._add_row(form, "fw_lifetime", "粒子生命周期(秒):", self._spin_fw_lifetime, default=2.0)
+		self._spin_fw_lifetime.valueChanged.connect(lambda v: self._emit("fw_lifetime", v))
+		self.layout().addWidget(self._group_lifetime)
+
 	def _setup_type_sections(self) -> None:
 		"""子类重写以添加类型专属参数组."""
 
 	def _hide_all(self) -> None:
-		for grp in [self._group_pos, self._group_inner, self._group_outer, self._group_angle]:
+		for grp in [self._group_pos, self._group_inner, self._group_outer, self._group_angle, self._group_lifetime]:
 			grp.hide()
 		self._chk_tail_flicker.hide()
 		for grp in getattr(self, '_sub_groups', []):
@@ -173,7 +185,9 @@ class FwBase(FormBase):
 		self._hide_all()
 		self._group_pos.show()
 		self._group_inner.show()
-		self._chk_tail_flicker.show()
+		self._group_lifetime.show()
+		if elem.fw_type.value != "nebula":
+			self._chk_tail_flicker.show()
 
 		self._spin_pos_x.setValue(elem.position.x)
 		self._spin_pos_y.setValue(elem.position.y)
@@ -185,6 +199,7 @@ class FwBase(FormBase):
 		self._color_inner_end.set_color(elem.inner_color.end)
 
 		self._chk_tail_flicker.setChecked(elem.enable_tail_flicker)
+		self._spin_fw_lifetime.setValue(elem.fw_lifetime)
 
 		self._load_type_sections(elem)
 		self.block_signals(False)
@@ -223,6 +238,9 @@ class FwBase(FormBase):
 		elif key == "outer_color_end":
 			old_value = e.outer_color.end
 			e.outer_color.end = value
+		elif key == "fw_lifetime":
+			old_value = e.fw_lifetime
+			e.fw_lifetime = value
 		elif key == "position":
 			pass
 		elif key == "extra":

@@ -6,7 +6,7 @@ from typing import Any
 
 from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import (
-	QPainter, QPen, QBrush, QPainterPath, QColor,
+	QPainter, QPen,
 	QMouseEvent, QWheelEvent, QKeyEvent, QResizeEvent,
 )
 from PySide6.QtWidgets import QWidget
@@ -18,7 +18,7 @@ from .header import _HeaderWidget
 from .overlay import _CursorOverlayWidget
 from .theme import (
 	palette_colors, propagate_palette,
-	HEADER_HEIGHT, TRACK_LABEL_WIDTH, WAVEFORM_HEIGHT, PIXELS_PER_TICK_DEFAULT, _nice_interval,
+	HEADER_HEIGHT, TRACK_LABEL_WIDTH, WAVEFORM_HEIGHT, PIXELS_PER_TICK_DEFAULT,
 )
 from .track_area import _TFProxy, _TrackArea
 
@@ -75,14 +75,9 @@ class ParticleexTimelineWidget(QWidget):
 	def _update_colors(self):
 		c = palette_colors()
 		self._bg_color = c["bg_dark"]
-		self._tick_major = c["dark"]
-		self._tick_minor = c["mid"]
-		self._cursor_color = c["cursor"]
 		self._waveform_color = c["highlight_alpha"]
 		self._text_color = c["text"]
 		self._divider_color = c["mid"]
-		self._beat_minor = QColor(255, 150, 50)
-		self._beat_major = QColor(255, 150, 50)
 
 	def changeEvent(self, event):
 		if event.type() == QEvent.PaletteChange:
@@ -145,7 +140,11 @@ class ParticleexTimelineWidget(QWidget):
 		self._layout_children()
 		self.update()
 
-	def update_music_info(self, bpm: float, audio_offset_ms: float, time_signature: tuple = (4, 4), ticks_per_beat: int = 20) -> None:
+	def update_music_info(self,
+	                      bpm: float,
+	                      audio_offset_ms: float,
+	                      time_signature: tuple = (4, 4),
+	                      ticks_per_beat: int = 20) -> None:
 		self._bpm = bpm
 		self._audio_offset_ms = audio_offset_ms
 		self._time_signature = time_signature
@@ -226,66 +225,6 @@ class ParticleexTimelineWidget(QWidget):
 			p.drawLine(TRACK_LABEL_WIDTH, div_y, self.width(), div_y)
 		finally:
 			p.end()
-
-	def _paint_tick_marks(self, p: QPainter) -> None:
-		y_top = self._waveform.geometry().bottom() + 2
-		y_bot = self.height()
-		min_ticks = max(1.0, 50.0 / self._pixels_per_tick)
-		major = max(1, int(_nice_interval(min_ticks)))
-		minor = max(1, major // 5)
-		start_tick = max(0, (self.x_to_tick(TRACK_LABEL_WIDTH) // major) * major)
-		end_tick = self.x_to_tick(self.width()) + major
-		tick = (start_tick // minor) * minor
-		while tick <= end_tick:
-			x = int(self.tick_to_x(tick))
-			if tick % major == 0:
-				p.setPen(QPen(self._tick_major, 0))
-				p.drawLine(x, y_top, x, y_bot)
-			else:
-				p.setPen(QPen(self._tick_minor, 0))
-				p.drawLine(x, y_top, x, y_top + 4)
-			tick += minor
-
-	def _paint_beat_lines(self, p: QPainter) -> None:
-		if not self._show_beat_lines or self._bpm <= 0:
-			return
-		beat_ticks = (60.0 / self._bpm) * 20
-		beats_per_measure = self._time_signature[0]
-		measure_ticks = beat_ticks * beats_per_measure
-		offset_ticks = self._audio_offset_ms / 1000.0 * 20
-		y_top = self._waveform.geometry().bottom() + 2
-		y_bot = self.height()
-
-		start_tick = max(0.0, self.x_to_tick(TRACK_LABEL_WIDTH) - measure_ticks)
-		end_tick = self.x_to_tick(self.width()) + measure_ticks
-
-		start_beat = int((start_tick - offset_ticks) / beat_ticks) - 1
-		beat = start_beat
-		while True:
-			tick = offset_ticks + beat * beat_ticks
-			if tick > end_tick:
-				break
-			if tick >= start_tick:
-				x = int(self.tick_to_x(tick))
-				if TRACK_LABEL_WIDTH <= x <= self.width():
-					if beat % beats_per_measure == 0:
-						p.setPen(QPen(self._beat_major, 3))
-					else:
-						p.setPen(QPen(self._beat_minor, 1))
-					p.drawLine(x, y_top, x, y_bot)
-			beat += 1
-
-	def _paint_cursor(self, p: QPainter) -> None:
-		cx = int(self.tick_to_x(self._playback_tick))
-		if TRACK_LABEL_WIDTH <= cx <= self.width():
-			p.setPen(QPen(self._cursor_color, 3))
-			p.drawLine(cx, 0, cx, self.height())
-			path = QPainterPath()
-			path.moveTo(cx - 6, 0)
-			path.lineTo(cx + 6, 0)
-			path.lineTo(cx, 8)
-			path.closeSubpath()
-			p.fillPath(path, QBrush(self._cursor_color))
 
 	def mousePressEvent(self, event: QMouseEvent) -> None:
 		if event.button() == Qt.MiddleButton:

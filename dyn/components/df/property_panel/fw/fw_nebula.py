@@ -30,17 +30,12 @@ class NebulaForm(FwBase):
 		self._spin_expansion.valueChanged.connect(self._on_extra_changed)
 		self._spin_falloff.valueChanged.connect(self._on_extra_changed)
 		self._spin_count.valueChanged.connect(self._on_extra_changed)
-		self._spin_h_angle.valueChanged.connect(self._on_extra_changed)
-		self._spin_v_angle.valueChanged.connect(self._on_extra_changed)
 
 		self.layout().addWidget(self._group_params)
 		self._sub_groups = [self._group_params]
 
 	def _load_type_sections(self, elem: FireworkElement) -> None:
-		self._group_angle.show()
 		self._group_params.show()
-		self._spin_h_angle.setValue(elem.horizontal_angle)
-		self._spin_v_angle.setValue(elem.vertical_angle)
 		self._spin_expansion.setValue(elem.expansion_speed)
 		self._spin_falloff.setValue(elem.density_falloff)
 		self._spin_count.setValue(elem.particle_count)
@@ -51,6 +46,4 @@ class NebulaForm(FwBase):
 		self._element.expansion_speed = self._spin_expansion.value()
 		self._element.density_falloff = self._spin_falloff.value()
 		self._element.particle_count = self._spin_count.value()
-		self._element.horizontal_angle = self._spin_h_angle.value()
-		self._element.vertical_angle = self._spin_v_angle.value()
 		self._emit("extra", None)

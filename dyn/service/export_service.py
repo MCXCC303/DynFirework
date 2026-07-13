@@ -44,7 +44,7 @@ class _ExportTask(QRunnable):
 		try:
 			log.debug(f"导出开始: {self._output_dir}, namespace={self._namespace}, backend={self._backend.value}, elements={len(self._elements)}")
 			self._do_export()
-			log.info(f"导出成功: {self._output_dir}, {len(self._elements)} 元素")
+			log.debug(f"导出成功: {self._output_dir}, {len(self._elements)} 元素")
 			self.signals.finished.emit(True, f"导出完成: {self._output_dir}")
 		except Exception as e:
 			log.exception("导出失败")
@@ -75,7 +75,7 @@ class _ExportTask(QRunnable):
 		pack_dir = Path(self._output_dir) / self._datapack_name
 		export_mcfunction.write_pack_mcmeta(str(pack_dir), self._pack_format, self._description)
 
-		func_dir = pack_dir / "data" / self._namespace / "functions"
+		func_dir = pack_dir / "data" / self._namespace / "function"
 		func_dir.mkdir(parents=True, exist_ok=True)
 
 		export_mcfunction.export_mcfunction(str(func_dir), self._namespace)
@@ -99,7 +99,7 @@ class ExportService(QObject):
 			pack_format: int = 48,
 			mc_version: str = "1.21.8",
 	) -> None:
-		log.info(f"开始导出: {len(elements)} 元素 -> {output_dir}, namespace={namespace}, backend={backend}")
+		log.debug(f"开始导出: {len(elements)} 元素 -> {output_dir}, namespace={namespace}, backend={backend}")
 		task = _ExportTask(elements, output_dir, namespace,
 		                   backend=backend,
 		                   datapack_name=datapack_name, description=description,

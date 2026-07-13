@@ -34,17 +34,17 @@ class TransportBar(QWidget):
 		layout.setContentsMargins(8, 4, 8, 4)
 		layout.setSpacing(6)
 
-		self._btn_play = QPushButton("▶")
+		self._btn_play = QPushButton("")
 		self._btn_play.setFixedSize(32, 32)
 		self._btn_play.setToolTip("播放/暂停 (Space)")
 		layout.addWidget(self._btn_play)
 
-		self._btn_stop = QPushButton("■")
+		self._btn_stop = QPushButton("")
 		self._btn_stop.setFixedSize(32, 32)
 		self._btn_stop.setToolTip("停止")
 		layout.addWidget(self._btn_stop)
 
-		self._btn_start = QPushButton("󰑙")
+		self._btn_start = QPushButton("")
 		self._btn_start.setFixedSize(32, 32)
 		self._btn_start.setToolTip("跳转到开头")
 		layout.addWidget(self._btn_start)
@@ -66,10 +66,9 @@ class TransportBar(QWidget):
 		layout.addSpacing(12)
 
 		# 时间显示
-		self._label_time = QLabel("0.00s")
+		self._label_time = QLabel("00:00")
 		self._label_time.setFixedWidth(80)
 		self._label_time.setAlignment(Qt.AlignCenter)
-		self._label_time.setStyleSheet("font-family: monospace; font-size: 14px;")
 		layout.addWidget(self._label_time)
 
 		# Tick 显示
@@ -160,8 +159,10 @@ class TransportBar(QWidget):
 	@Slot(int)
 	def _on_position_changed(self, tick: int) -> None:
 		log.debug(f"位置变更: tick={tick}")
-		seconds = tick / 20.0
-		self._label_time.setText(f"{seconds:.2f}s")
+		total_seconds = tick // 20
+		minutes = total_seconds // 60
+		secs = total_seconds % 60
+		self._label_time.setText(f"{minutes:02d}:{secs:02d}")
 		self._label_tick.setText(f"Tick: {tick}")
 
 	@Slot(str)

@@ -39,14 +39,16 @@ class LaunchSparkForm(TrajBase):
 		self._chk_add_shell.toggled.connect(self._on_shell_toggled)
 		shell_layout.addWidget(self._chk_add_shell)
 		self._color_shell = ColorPicker("颜色:")
-		self._color_shell.hide()
+		self._color_shell.setEnabled(False)
 		shell_layout.addWidget(self._color_shell)
 		self._spin_shell_size = QDoubleSpinBox()
 		self._spin_shell_size.setRange(0.1, 20)
 		self._spin_shell_size.setSingleStep(0.5)
 		self._spin_shell_size.setDecimals(1)
-		self._spin_shell_size.hide()
-		shell_layout.addWidget(self._spin_shell_size)
+		self._spin_shell_size.setEnabled(False)
+		shell_form = QFormLayout()
+		self._add_row(shell_form, "shell_size", "外壳大小:", self._spin_shell_size, default=1.0)
+		shell_layout.addLayout(shell_form)
 		self.layout().addWidget(self._group_shell)
 
 		for w in (self._spin_k, self._spin_m0, self._spin_lifetime, self._spin_particle_count, self._spin_shell_size):
@@ -56,6 +58,7 @@ class LaunchSparkForm(TrajBase):
 		self._sub_groups = [self._group_physics, self._group_shell]
 
 	def _load_type_params(self, elem: TrajectoryElement) -> None:
+		self._group_color.hide()
 		for grp in self._sub_groups:
 			grp.show()
 		self._spin_k.setValue(elem.k)
@@ -64,13 +67,13 @@ class LaunchSparkForm(TrajBase):
 		self._spin_particle_count.setValue(elem.particle_count)
 		self._chk_add_shell.setChecked(elem.add_shell)
 		self._color_shell.set_color(elem.shell_color)
-		self._color_shell.setVisible(elem.add_shell)
+		self._color_shell.setEnabled(elem.add_shell)
 		self._spin_shell_size.setValue(elem.shell_size)
-		self._spin_shell_size.setVisible(elem.add_shell)
+		self._spin_shell_size.setEnabled(elem.add_shell)
 
 	def _on_shell_toggled(self, checked: bool) -> None:
-		self._color_shell.setVisible(checked)
-		self._spin_shell_size.setVisible(checked)
+		self._color_shell.setEnabled(checked)
+		self._spin_shell_size.setEnabled(checked)
 		self._on_extra_changed()
 
 	def _on_extra_changed(self) -> None:

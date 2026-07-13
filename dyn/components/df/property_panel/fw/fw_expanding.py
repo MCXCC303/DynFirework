@@ -27,14 +27,9 @@ class ExpandingForm(FwBase):
 		self._spin_count.setRange(1, 10000)
 		self._add_row(form, "particle_count", "粒子数:", self._spin_count, default=100)
 
-		self._spin_track_count = QSpinBox()
-		self._spin_track_count.setRange(1, 100)
-		self._add_row(form, "track_count", "轨迹数:", self._spin_track_count, default=5)
-
 		self._spin_radius.valueChanged.connect(self._on_extra_changed)
 		self._spin_radial_speed.valueChanged.connect(self._on_extra_changed)
 		self._spin_count.valueChanged.connect(self._on_extra_changed)
-		self._spin_track_count.valueChanged.connect(self._on_extra_changed)
 
 		self.layout().addWidget(self._group_params)
 		self._sub_groups = [self._group_params]
@@ -44,7 +39,6 @@ class ExpandingForm(FwBase):
 		self._spin_radius.setValue(elem.radius)
 		self._spin_radial_speed.setValue(elem.radial_speed)
 		self._spin_count.setValue(elem.particle_count)
-		self._spin_track_count.setValue(elem.track_count)
 
 	def _on_extra_changed(self) -> None:
 		if self._loading or self._element is None:
@@ -52,5 +46,4 @@ class ExpandingForm(FwBase):
 		self._element.radius = self._spin_radius.value()
 		self._element.radial_speed = self._spin_radial_speed.value()
 		self._element.particle_count = self._spin_count.value()
-		self._element.track_count = self._spin_track_count.value()
 		self._emit("extra", None)
