@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 _log = logging.getLogger("dyn.env")
@@ -10,7 +11,15 @@ _log = logging.getLogger("dyn.env")
 ENV_LOG_LEVEL = "DYN_LOG_LEVEL"
 ENV_LOG_FILE = "DYN_LOG_FILE"
 ENV_TEST = "DYN_TEST_ENABLED"
-RESOURCE_DIR = Path(__file__).parent / "resources"
+
+def _resolve_resources() -> Path:
+	"""返回 resources 目录路径 兼容开发和 pip install 后运行."""
+	try:
+		return Path(str(files("dyn") / "resources"))
+	except Exception:
+		return Path(__file__).parent / "resources"
+
+RESOURCE_DIR = _resolve_resources()
 
 def get_str(name: str, default: str = "") -> str:
 	val = os.environ.get(name, "")
