@@ -34,17 +34,17 @@ class TransportBar(QWidget):
 		layout.setContentsMargins(8, 4, 8, 4)
 		layout.setSpacing(6)
 
-		self._btn_play = QPushButton("▶")
+		self._btn_play = QPushButton("")
 		self._btn_play.setFixedSize(32, 32)
 		self._btn_play.setToolTip("播放/暂停 (Space)")
 		layout.addWidget(self._btn_play)
 
-		self._btn_stop = QPushButton("■")
+		self._btn_stop = QPushButton("")
 		self._btn_stop.setFixedSize(32, 32)
 		self._btn_stop.setToolTip("停止")
 		layout.addWidget(self._btn_stop)
 
-		self._btn_start = QPushButton("󰑙")
+		self._btn_start = QPushButton("")
 		self._btn_start.setFixedSize(32, 32)
 		self._btn_start.setToolTip("跳转到开头")
 		layout.addWidget(self._btn_start)
