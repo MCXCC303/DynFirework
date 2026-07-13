@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import subprocess
 from pathlib import Path
 
@@ -10,29 +9,25 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
+from dyn import env
 from dyn.ui_new.about.about import Ui_Dialog as AboutUI
 
 log = logging.getLogger("dyn.actions.about")
 
 def _resolve_version() -> str:
-	"""DYN_TEST_ENABLED=1 时返回 git describe 版本，否则返回正式版."""
-	if os.environ.get("DYN_TEST_ENABLED") == "1":
-		try:
-			r = subprocess.run(
-				["git", "describe", "--tags", "--long", "--dirty"],
-				capture_output=True, text=True,
-				cwd=Path(__file__).parent.parent,
-			)
-			if r.returncode == 0:
-				desc = r.stdout.strip().lstrip("v")
-				parts = desc.split("-")
-				tag = parts[0]
-				if tag.count(".") == 1:
-					tag += ".0"
-				commits = parts[1] if len(parts) > 1 else "0"
-				return f"v{tag}.r{commits}.g{parts[2]}" if len(parts) > 2 else f"v{tag}"
-		except Exception:
-			pass
+	dev_mode = env.get_flag(env.ENV_TEST)
+	if dev_mode:
+		log.debug("DYN_TEST_ENABLED=1，使用详细版本号")
+	try:
+		args = ["git", "describe", "--tags", "--long"] if dev_mode else ["git", "describe", "--tags", "--abbrev=0"]
+		r = subprocess.run(
+			args, capture_output=True, text=True,
+			cwd=Path(__file__).parent.parent,
+		)
+		if r.returncode == 0:
+			return r.stdout.strip()
+	except Exception:
+		log.debug("git 不可用")
 	return "v1.3"
 
 class DYNAboutWindow(QtWidgets.QDialog):

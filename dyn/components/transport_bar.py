@@ -16,19 +16,19 @@ class TransportBar(QObject):
 	time_marks_toggled = Signal(bool)
 
 	def __init__(
-		self,
-		controller: PlaybackController,
-		btn_play: QToolButton,
-		btn_stop: QToolButton,
-		btn_replay: QToolButton,
-		btn_hint_tick: QToolButton,
-		btn_time_tick: QToolButton,
-		label_time: QLabel,
-		label_tick: QLabel,
-		slider_volume: QSlider,
-		label_music: QLabel,
-		label_bpm: QLabel,
-		parent: QObject | None = None,
+			self,
+			controller: PlaybackController,
+			btn_play: QToolButton,
+			btn_stop: QToolButton,
+			btn_replay: QToolButton,
+			btn_hint_tick: QToolButton,
+			btn_time_tick: QToolButton,
+			label_time: QLabel,
+			label_tick: QLabel,
+			slider_volume: QSlider,
+			label_music: QLabel,
+			label_bpm: QLabel,
+			parent: QObject | None = None,
 	) -> None:
 		super().__init__(parent)
 		self._controller = controller

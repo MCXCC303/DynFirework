@@ -97,12 +97,6 @@ class Ui_Dialog(object):
         self.gridLayout.addWidget(self.widget, 8, 1, 1, 1)
 
         self.mc_version_box = QComboBox(self.full_widget)
-        self.mc_version_box.addItem("")
-        self.mc_version_box.addItem("")
-        self.mc_version_box.addItem("")
-        self.mc_version_box.addItem("")
-        self.mc_version_box.addItem("")
-        self.mc_version_box.addItem("")
         self.mc_version_box.setObjectName(u"mc_version_box")
 
         self.gridLayout.addWidget(self.mc_version_box, 1, 1, 1, 1)
@@ -263,14 +257,7 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
         self.create_new_proj.setText(QCoreApplication.translate("Dialog", u"**\u521b\u5efa\u65b0\u7684\u9879\u76ee**", None))
         self.time_signature_split.setText(QCoreApplication.translate("Dialog", u"/", None))
-        self.mc_version_box.setItemText(0, QCoreApplication.translate("Dialog", u"1.12.2, Forge", None))
-        self.mc_version_box.setItemText(1, QCoreApplication.translate("Dialog", u"1.16.5, Forge", None))
-        self.mc_version_box.setItemText(2, QCoreApplication.translate("Dialog", u"1.20.1, Forge", None))
-        self.mc_version_box.setItemText(3, QCoreApplication.translate("Dialog", u"1.20.4, Forge", None))
-        self.mc_version_box.setItemText(4, QCoreApplication.translate("Dialog", u"1.21, Fabric", None))
-        self.mc_version_box.setItemText(5, QCoreApplication.translate("Dialog", u"1.21.8, Fabric", None))
-
-        self.mc_version_box.setCurrentText(QCoreApplication.translate("Dialog", u"1.12.2, Forge", None))
+        self.mc_version_box.setCurrentText("")
         self.proj_name.setText(QCoreApplication.translate("Dialog", u"\u9879\u76ee\u540d\u79f0\uff1a", None))
         self.editables.setText(QCoreApplication.translate("Dialog", u"\u4f60\u53ef\u4ee5\u5728\u9879\u76ee\u521b\u5efa\u540e\u66f4\u6539\u4ee5\u4e0b\u6761\u76ee\u7684\u503c\u3002", None))
         self.time_signature.setText(QCoreApplication.translate("Dialog", u"\u62cd\u53f7\uff1a", None))

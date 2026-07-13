@@ -50,7 +50,6 @@ class DYNHelpWindow(QtWidgets.QMainWindow):
 		self.ui = HelpUI()
 		self.ui.setupUi(self)
 
-		self._file_map: dict[QtWidgets.QListWidgetItem, str] = {}
 		self._populate_list(_discover_tree(self._HELP_DIR))
 
 		self.ui.listWidget.currentItemChanged.connect(self._on_item_changed)
@@ -71,12 +70,12 @@ class DYNHelpWindow(QtWidgets.QMainWindow):
 				if dir_path:
 					intro_dir = self._HELP_DIR / dir_path
 					for f in sorted(intro_dir.glob('00-*.md')):
-						self._file_map[item] = str(f.relative_to(self._HELP_DIR))
+						item.setData(Qt.ItemDataRole.UserRole, str(f.relative_to(self._HELP_DIR)))
 						break
 				self._populate_list(value, level + 1)
 			else:
 				item = QtWidgets.QListWidgetItem("  " * (level + 1) + display)
-				self._file_map[item] = value
+				item.setData(Qt.ItemDataRole.UserRole, value)
 				self.ui.listWidget.addItem(item)
 
 	def _on_item_changed(
@@ -84,7 +83,7 @@ class DYNHelpWindow(QtWidgets.QMainWindow):
 			current: QtWidgets.QListWidgetItem,
 			previous: QtWidgets.QListWidgetItem | None,  # noqa: ARG002
 	) -> None:
-		filename = self._file_map.get(current)
+		filename = current.data(Qt.ItemDataRole.UserRole)
 		if filename:
 			filepath = self._HELP_DIR / filename
 			if filepath.exists():

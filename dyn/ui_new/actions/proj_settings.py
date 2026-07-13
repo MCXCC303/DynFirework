@@ -90,7 +90,9 @@ class Ui_Dialog(object):
         self.backend_text.setObjectName(u"backend_text")
         sizePolicy.setHeightForWidth(self.backend_text.sizePolicy().hasHeightForWidth())
         self.backend_text.setSizePolicy(sizePolicy)
-        self.backend_text.setFont(font1)
+        font3 = QFont()
+        font3.setFamilies([u"Monocraft Nerd Font"])
+        self.backend_text.setFont(font3)
 
         self.gridLayout.addWidget(self.backend_text, 0, 1, 1, 1)
 
@@ -227,11 +229,11 @@ class Ui_Dialog(object):
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.namespace_strict.sizePolicy().hasHeightForWidth())
         self.namespace_strict.setSizePolicy(sizePolicy4)
-        font3 = QFont()
-        font3.setFamilies([u"Ark Pixel 12px P zh_cn"])
-        font3.setPointSize(9)
-        font3.setItalic(True)
-        self.namespace_strict.setFont(font3)
+        font4 = QFont()
+        font4.setFamilies([u"Ark Pixel 12px P zh_cn"])
+        font4.setPointSize(9)
+        font4.setItalic(False)
+        self.namespace_strict.setFont(font4)
 
         self.gridLayout.addWidget(self.namespace_strict, 5, 1, 1, 1)
 

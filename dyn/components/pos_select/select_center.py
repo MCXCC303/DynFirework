@@ -180,8 +180,11 @@ class PosSelectMainWindow(QMainWindow):
 		self.ui.proper_size_action.triggered.connect(self._on_proper_size)
 		self.ui.delete_point_button.clicked.connect(self._on_del_button)
 		self.ui.edit_point_button.clicked.connect(self._on_edit_button)
+		self.ui.delete_action.triggered.connect(self._on_del_button)
 		self.ui.import_action.triggered.connect(self.import_data)
 		self.ui.export_action.triggered.connect(self.export_data)
+		self._shared_undo_stack.canUndoChanged.connect(self.ui.undo_action.setEnabled)
+		self._shared_undo_stack.canRedoChanged.connect(self.ui.redo_action.setEnabled)
 
 	def _on_del_button(self) -> None:
 		if self._active_graph is not None and self._active_graph.selected_point is not None:
@@ -229,6 +232,11 @@ class PosSelectMainWindow(QMainWindow):
 		self.selection_text_change()
 		self.selection_point_border_change()
 		self.update_list_selection()
+		has_selection = self.chosen_point is not None
+		self.ui.edit_point_button.setEnabled(has_selection)
+		self.ui.delete_point_button.setEnabled(has_selection)
+		self.ui.delete_action.setEnabled(has_selection)
+		self.ui.move_center_action.setEnabled(has_selection)
 
 	def update_list_selection(self):
 		if self.chosen_point not in self._points:
