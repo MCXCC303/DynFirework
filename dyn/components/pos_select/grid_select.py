@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 	QApplication,
 )
 
-from dyn.ui.pos_select.create_new_point_ui import Ui_Dialog as NewPointDialogUI
+from dyn.ui_new.components.pos_selector.create_new_point import Ui_Dialog as NewPointDialogUI
 from dyn.lib.units import MinecraftPosition
 from dyn.components.pos_select.undo_commands import (
 	AddPointCommand,
@@ -223,7 +223,7 @@ class _BaseGraphWidget(QWidget):
 
 	def _edit_point(self, pt: MinecraftPosition) -> None:
 		log.debug(f"编辑位置点: ({pt.x}, {pt.y}, {pt.z}), label={pt.label}")
-		dlg = NewPointEditorDialog((int(pt.x), int(pt.z)))
+		dlg = NewPointEditorDialog((int(pt.x), int(pt.z)), edit_mode=True)
 		dlg.ui.doubleSpinBox_X.setValue(pt.x)
 		dlg.ui.doubleSpinBox_Z.setValue(pt.z)
 		dlg.ui.doubleSpinBox_Y.setValue(pt.y)
@@ -474,9 +474,13 @@ class PixGraphWidget(_BaseGraphWidget):
 class NewPointEditorDialog(QDialog):
 	"""新建/编辑位置点对话框."""
 
-	def __init__(self, xz_pos: tuple) -> None:
+	def __init__(self, xz_pos: tuple, edit_mode: bool = False) -> None:
 		super().__init__()
-		self.ui = NewPointDialogUI()
+		if edit_mode:
+			from dyn.ui_new.components.pos_selector.edit_point import Ui_Dialog as EditPointUI
+			self.ui = EditPointUI()
+		else:
+			self.ui = NewPointDialogUI()
 		self.ui.setupUi(self)
 		self.xz_pos = xz_pos
 		self.set_default()
