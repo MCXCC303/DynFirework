@@ -137,7 +137,8 @@ class MainWin(QMainWindow):
 		"""根据后端初始化/切换整个 UI 组件树."""
 		if self._backend == backend and self._controller is not None:
 			return
-		self._deactivate_current_backend()
+		if self._backend is not None:
+			self._deactivate_current_backend()
 		self._backend = backend
 
 		if backend == Backend.CB:
@@ -171,11 +172,21 @@ class MainWin(QMainWindow):
 				self._controller.selection_changed.disconnect()
 			except (RuntimeError, TypeError):
 				pass
+		for slot in (self._on_playback_position_cb, self._on_playback_position_df):
+			try:
+				self._playback.position_changed.disconnect(slot)
+			except (RuntimeError, TypeError):
+				pass
 		try:
-			self._playback.position_changed.disconnect()
-			self._playback.state_changed.disconnect()
+			self._playback.state_changed.disconnect(self._on_playback_state_for_actions)
 		except (RuntimeError, TypeError):
 			pass
+		if self._metronome is not None:
+			try:
+				self._playback.position_changed.disconnect(self._metronome.on_tick)
+				self._playback.state_changed.disconnect(self._on_metronome_state_changed)
+			except (RuntimeError, TypeError):
+				pass
 		if self._timeline:
 			try:
 				self._timeline.playback_cursor_changed.disconnect()
@@ -295,8 +306,10 @@ class MainWin(QMainWindow):
 		ui.open_proj_action.triggered.connect(self._on_open_project)
 		ui.save_action.triggered.connect(self._on_save_project)
 		ui.save_as_action.triggered.connect(self._on_save_as_project)
-		ui.import_music_action_2.triggered.connect(self._on_import_music)
+		ui.import_music_action.triggered.connect(self._on_import_music)
+		ui.import_point_action.triggered.connect(self._pos_selector.import_data)
 		ui.export_datapack_action.triggered.connect(self._on_export_datapack)
+		ui.export_point_action.triggered.connect(self._pos_selector.export_data)
 
 		# 编辑 - 新建元素 (按后端)
 		self._connect_new_element_actions()

@@ -329,7 +329,7 @@ class _BaseGraphWidget(QWidget):
 			p.setPen(QPen(QColor(60, 120, 220), 2))
 			p.drawRoundedRect(int(x), int(y), s, s, 3, 3)
 		except Exception:
-			pass
+			log.warning("绘制选中点失败", exc_info=True)
 
 # PixElementList 列表模型
 class PixElementList(QAbstractListModel):
